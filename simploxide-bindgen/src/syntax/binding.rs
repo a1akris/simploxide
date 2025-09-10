@@ -1,3 +1,6 @@
+//! Here all magic happens. A module that generates interpreters for SimpleX chat command syntax
+//!
+
 use crate::{
     syntax::{EnumSubstitutions, MaybeBool, lex},
     types::{ApiType, EnumType, Field, RecordType, enum_type::EnumVariant},
@@ -16,6 +19,15 @@ macro_rules! bufwriteln {
     };
 }
 
+/// Represents a type with a syntax that can be interpreted as a SimpleX command. The impl should
+/// return Ok(None) when the syntax string is empty or the full implementation of the following
+/// trait:
+///
+/// ```ignore
+/// trait CommandSyntax {
+///     fn interpret(&self) -> String;
+/// }
+/// ```
 pub trait Interpretable {
     fn command_syntax_impl(&self) -> Result<Option<String>, String>;
 }
@@ -44,6 +56,7 @@ impl Interpretable for RecordType {
     }
 }
 
+/// Has helper methods specific for different typekinds and generates the actual impl.
 pub struct Binder<'a, T> {
     typ: &'a T,
 }
@@ -126,9 +139,8 @@ impl<'a> Binder<'a, EnumType> {
 
         if self.typ.variants.len() != enum_subs.iter().count() {
             return Err(format!(
-                "Bad enum syntax: `{}`. Variants count mismatch.\n\
+                "Variants count mismatch.\n\
                  The enum {} has {} variants while the syntax defines {literals_count} literals",
-                self.typ.syntax,
                 self.typ.name,
                 self.typ.variants.len()
             ));
@@ -216,9 +228,8 @@ impl<'a> Binder<'a, RecordType> {
                         let field = self.field_by_api_name(member_name, el, &mut curr_field_ix)?;
                         self.interpret_vec_sub(InterpretField::Root(field), delim, 8, code_buffer);
                     }
-                    el @ SyntaxElement::Optional { unparsed } => {
-                        let field = self.field_by_ix(el, &mut curr_field_ix)?;
-                        self.interpret_optional(field, unparsed, 8, code_buffer)?;
+                    SyntaxElement::Optional { unparsed } => {
+                        self.interpret_optional(&mut curr_field_ix, unparsed, 8, code_buffer)?;
                     }
                 },
                 Err(e) => return Err(e),
@@ -230,88 +241,112 @@ impl<'a> Binder<'a, RecordType> {
 
     fn interpret_optional(
         &self,
-        field: &Field,
+        curr_field_ix: &mut usize,
         unparsed: &str,
         offset: usize,
         code_buffer: &mut String,
     ) -> Result<(), String> {
-        if !field.is_optional() && !field.is_bool() {
-            return Err(format!(
-                "Expected an optional or a bool field for optional element [{unparsed}] but got {field:?}"
-            ));
+        let mut inner_buf = String::with_capacity(128);
+
+        enum UnwrapStatement {
+            Bool,
+            NotBool,
+            Opt,
         }
 
-        if field.is_optional() {
-            bufwriteln!(
-                code_buffer,
-                :>offset, "if let Some(ref {0}) = self.{0} {{",
-                field.rust_name
-            );
-        } else {
-            bufwriteln!(code_buffer, :>offset, "if self.{} {{", field.rust_name);
-        }
+        let mut field = None;
+        let mut statement = UnwrapStatement::Opt;
 
         for tok in lex(unparsed) {
             match tok {
                 Ok(element) => match element {
-                    SyntaxElement::Literal(lit) => interpret_literal(lit, offset + 4, code_buffer),
+                    SyntaxElement::Literal(lit) => {
+                        interpret_literal(lit, offset + 4, &mut inner_buf)
+                    }
                     SyntaxElement::EnumSubstitutions(_) => {
                         // Add on demand
                         return Err(format!(
                             "Enum substitutions are unsupported in optional contexts. Got [{unparsed}]",
                         ));
                     }
-                    SyntaxElement::MaybeBool(maybe_bool) => match maybe_bool {
-                        MaybeBool::On => {
-                            interpret_literal("on", offset + 4, code_buffer);
+                    el @ SyntaxElement::MaybeBool(maybe_bool) => {
+                        let bool_field = self.field_by_ix(el, curr_field_ix)?;
+
+                        match maybe_bool {
+                            MaybeBool::On => {
+                                if !bool_field.is_bool() {
+                                    return Err(format!(
+                                        "Expected a regular bool field but got {bool_field:?} while processing an element {el:?} in optional span [{unparsed}]"
+                                    ));
+                                }
+
+                                interpret_literal("on", offset + 4, &mut inner_buf);
+                                statement = UnwrapStatement::Bool;
+                            }
+                            MaybeBool::Off => {
+                                if !bool_field.is_bool() {
+                                    return Err(format!(
+                                        "Expected a regular bool field but got {bool_field:?} while processing an element {el:?} in optional span [{unparsed}]"
+                                    ));
+                                }
+
+                                interpret_literal("off", offset + 4, &mut inner_buf);
+                                statement = UnwrapStatement::NotBool;
+                            }
+                            MaybeBool::Either => {
+                                if !bool_field.is_optional() {
+                                    return Err(format!(
+                                        "Expected an optional bool field but got {bool_field:?} while processing an element {el:?} in optional span [{unparsed}]"
+                                    ));
+                                }
+
+                                self.interpret_bool(
+                                    InterpretField::Unwrapped(bool_field),
+                                    offset + 4,
+                                    &mut inner_buf,
+                                )?;
+                                statement = UnwrapStatement::Opt;
+                            }
                         }
-                        MaybeBool::Off => {
-                            // This could be a bit tricky to add because Off requires a negation of
-                            // the if statement written above.
-                            return Err(format!(
-                                "\"=off\" is unsupported for booleans in optional contexts. Got [{unparsed}]"
-                            ));
-                        }
-                        MaybeBool::Either => {
-                            self.interpret_bool(
-                                InterpretField::Unwrapped(field),
-                                offset + 4,
-                                code_buffer,
-                            )?;
-                        }
-                    },
+
+                        field = Some(bool_field);
+                    }
                     el @ SyntaxElement::TrivialMemberSubstitution { member_name } => {
-                        self.ensure_field(el, field, member_name)?;
+                        let opt_field = self.field_by_api_name(member_name, el, curr_field_ix)?;
                         self.interpret_trivial_sub(
-                            InterpretField::Unwrapped(field),
+                            InterpretField::Unwrapped(opt_field),
                             offset + 4,
-                            code_buffer,
+                            &mut inner_buf,
                         );
+                        field = Some(opt_field);
                     }
                     el @ SyntaxElement::DelegateMemberSubstitution { member_name } => {
-                        self.ensure_field(el, field, member_name)?;
+                        let opt_field = self.field_by_api_name(member_name, el, curr_field_ix)?;
                         self.interpret_delegate_sub(
-                            InterpretField::Unwrapped(field),
+                            InterpretField::Unwrapped(opt_field),
                             offset + 4,
-                            code_buffer,
+                            &mut inner_buf,
                         );
+                        field = Some(opt_field);
                     }
                     el @ SyntaxElement::JsonMemberSubstitution { member_name } => {
-                        self.ensure_field(el, field, member_name)?;
+                        let opt_field = self.field_by_api_name(member_name, el, curr_field_ix)?;
                         self.interpret_json_sub(
-                            InterpretField::Unwrapped(field),
+                            InterpretField::Unwrapped(opt_field),
                             offset + 4,
-                            code_buffer,
+                            &mut inner_buf,
                         );
+                        field = Some(opt_field);
                     }
                     el @ SyntaxElement::VecMemberSubstitution { member_name, delim } => {
-                        self.ensure_field(el, field, member_name)?;
+                        let opt_field = self.field_by_api_name(member_name, el, curr_field_ix)?;
                         self.interpret_vec_sub(
-                            InterpretField::Unwrapped(field),
+                            InterpretField::Unwrapped(opt_field),
                             delim,
                             offset + 4,
-                            code_buffer,
+                            &mut inner_buf,
                         );
+                        field = Some(opt_field);
                     }
                     SyntaxElement::Optional { unparsed } => {
                         // Add on demand
@@ -324,7 +359,27 @@ impl<'a> Binder<'a, RecordType> {
             }
         }
 
+        let Some(field) = field else {
+            return Err(format!(
+                "Failed to deduce field for optional span [{unparsed}]"
+            ));
+        };
+
+        match statement {
+            UnwrapStatement::Bool => {
+                bufwriteln!(code_buffer, :>offset, "if self.{} {{", field.rust_name);
+            }
+            UnwrapStatement::NotBool => {
+                bufwriteln!(code_buffer, :>offset, "if !self.{} {{", field.rust_name);
+            }
+            UnwrapStatement::Opt => {
+                bufwriteln!(code_buffer, :>offset, "if let Some(ref {0}) = self.{0} {{", field.rust_name);
+            }
+        }
+
+        code_buffer.push_str(&inner_buf);
         bufwriteln!(code_buffer, :>offset, "}}");
+
         Ok(())
     }
 
@@ -436,22 +491,6 @@ impl<'a> Binder<'a, RecordType> {
             field.rust_name,
             maybe_unwrap(&field)
         );
-    }
-
-    fn ensure_field(
-        &self,
-        el: SyntaxElement<'_>,
-        field: &Field,
-        expected: &str,
-    ) -> Result<(), String> {
-        if expected != field.api_name {
-            Err(format!(
-                "Optional field mismatch. Expected field {expected:?} but got field {:?} while processing an element {el:?}",
-                field.api_name
-            ))
-        } else {
-            Ok(())
-        }
     }
 
     fn field_by_ix(&self, el: SyntaxElement<'_>, ix: &mut usize) -> Result<&Field, String> {

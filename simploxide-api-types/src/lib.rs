@@ -4091,6 +4091,8 @@ pub enum SimplexLinkType {
     Group,
     #[serde(rename = "channel")]
     Channel,
+    #[serde(rename = "relay")]
+    Relay,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

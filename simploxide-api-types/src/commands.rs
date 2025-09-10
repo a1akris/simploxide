@@ -1176,21 +1176,21 @@ impl CommandSyntax for ApiConnectPlan {
 ///
 /// ----
 ///
-/// Connect via SimpleX link. The link can be 1-time invitation link, contact address or group link
+/// Connect via prepared SimpleX link. The link can be 1-time invitation link, contact address or group link
 ///
 /// *Network usage*: interactive.
 ///
 /// *Syntax:*
 ///
 /// ```
-/// /_connect <userId> <str(connLink_)>
+/// /_connect <userId>[ <str(preparedLink_)>]
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 pub struct ApiConnect {
     pub user_id: i64,
     pub incognito: bool,
-    pub conn_link: Option<CreatedConnLink>,
+    pub prepared_link: Option<CreatedConnLink>,
 }
 
 impl CommandSyntax for ApiConnect {
@@ -1198,8 +1198,44 @@ impl CommandSyntax for ApiConnect {
         let mut buf = String::with_capacity(256);
         buf.push_str("/_connect ");
         buf.push_str(&self.user_id.to_string());
-        buf.push(' ');
-        buf.push_str(&self.conn_link.interpret());
+        if let Some(ref prepared_link) = self.prepared_link {
+            buf.push(' ');
+            buf.push_str(&prepared_link.interpret());
+        }
+        buf
+    }
+}
+
+/// ### Connection commands
+///
+/// These commands may be used to create connections. Most bots do not need to use them - bot users will connect via bot address with auto-accept enabled.
+///
+/// ----
+///
+/// Connect via SimpleX link as string in the active user profile.
+///
+/// *Network usage*: interactive.
+///
+/// *Syntax:*
+///
+/// ```
+/// /connect[ <connLink_>]
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct Connect {
+    pub incognito: bool,
+    pub conn_link: Option<String>,
+}
+
+impl CommandSyntax for Connect {
+    fn interpret(&self) -> String {
+        let mut buf = String::with_capacity(64);
+        buf.push_str("/connect");
+        if let Some(ref conn_link) = self.conn_link {
+            buf.push(' ');
+            buf.push_str(&conn_link.to_string());
+        }
         buf
     }
 }

@@ -3,6 +3,7 @@
 set -e
 
 git submodule init
+git submodule update
 cd simploxide-bindgen/
 cargo run
 mv generated/*rs ../simploxide-api-types/src/
@@ -12,3 +13,4 @@ cargo clippy --all-features --all-targets
 
 echo ""
 echo "[+] API types generated successfully"
+echo ""

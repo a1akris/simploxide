@@ -804,19 +804,45 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
-    /// Connect via SimpleX link. The link can be 1-time invitation link, contact address or group link
+    /// Connect via prepared SimpleX link. The link can be 1-time invitation link, contact address or group link
     ///
     /// *Network usage*: interactive.
     ///
     /// *Syntax:*
     ///
     /// ```
-    /// /_connect <userId> <str(connLink_)>
+    /// /_connect <userId>[ <str(preparedLink_)>]
     /// ```
     fn api_connect(
         &self,
         command: ApiConnect,
     ) -> impl Future<Output = Result<Arc<ApiConnectResponse>, Self::Error>> + Send {
+        async move {
+            let response = self.send_raw(command.interpret()).await?;
+            // Safe to unwrap because unrecognized JSON goes to undocumented variant
+            Ok(serde_json::from_value(response).unwrap())
+        }
+    }
+
+    /// ### Connection commands
+    ///
+    /// These commands may be used to create connections. Most bots do not need to use them - bot users will connect via bot address with auto-accept enabled.
+    ///
+    /// ----
+    ///
+    /// Connect via SimpleX link as string in the active user profile.
+    ///
+    /// *Network usage*: interactive.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /connect[ <connLink_>]
+    /// ```
+    fn connect(
+        &self,
+        command: Connect,
+    ) -> impl Future<Output = Result<Arc<ConnectResponse>, Self::Error>> + Send {
         async move {
             let response = self.send_raw(command.interpret()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant

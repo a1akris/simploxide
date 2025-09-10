@@ -10,10 +10,6 @@ pub enum AgentCryptoError {
     DecryptCb,
     #[serde(rename = "RATCHET_HEADER")]
     RatchetHeader,
-    #[serde(rename = "RATCHET_EARLIER")]
-    RatchetEarlier(u32),
-    #[serde(rename = "RATCHET_SKIPPED")]
-    RatchetSkipped(u32),
     #[serde(rename = "RATCHET_SYNC")]
     RatchetSync,
     #[serde(untagged)]
