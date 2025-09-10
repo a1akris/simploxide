@@ -1,0 +1,10 @@
+[package]
+name = "simploxide-api-types"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-aux = "4"
+bon = { version = "3", optional = true }

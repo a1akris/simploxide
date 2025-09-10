@@ -1,0 +1,14 @@
+#!/usr/bin/bash
+
+set -e
+
+git submodule init
+cd simploxide-bindgen/
+cargo run
+mv generated/*rs ../simploxide-api-types/src/
+cd ../simploxide-api-types/
+cargo fmt
+cargo clippy --all-features --all-targets
+
+echo ""
+echo "[+] API types generated successfully"

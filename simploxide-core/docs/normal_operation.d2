@@ -1,0 +1,35 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+
+shape: sequence_diagram
+
+WS_In
+Dispatcher
+Router: {
+  width: 300
+}
+Client
+WS_Out
+
+parallel: {
+  A: {
+    Client -> Router: corrId
+    Client -> WS_Out: Request
+  }
+  B: {
+    WS_In -> Dispatcher: Raw event
+
+    alt: {
+      a: has corrId: {
+        Dispatcher -> Router: corrId + Response
+        Router -> Client: Response\n(by corrId)
+      }
+      b: no corrId: {
+        Dispatcher -> Dispatcher: Queue Event
+      }
+    }
+  }
+}

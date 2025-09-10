@@ -1,0 +1,49 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+
+shape: sequence_diagram
+
+WS_In
+Dispatcher
+Router: {
+  width: 300
+}
+Client
+WS_Out
+
+Client.c -> Client.c: Disconnect
+Client.c -> Router.r: Shutdown
+
+optional1: optional(Cannot send any further\nrequests after disconnect) {
+  Client.c -> Router.r: corrId
+  Router.r -> Client.c: Err(AlreadyClosed)
+}
+
+Router.r -> Client.c: Interrupt
+
+loop1: "loop: [for buffered requests]" {
+  Client.c -> WS_Out: Buffered Request
+}
+
+loop2: "loop: [until all corrIds are resolved]" {
+  WS_In -> Dispatcher.d: Event
+  alt: {
+    a: has corrId: {
+      Dispatcher.d -> Router.r: corrId + Response
+      Router.r -> Client.c: Response\n(by corrId)
+    }
+    b: no corrId: {
+      Dispatcher.d -> Dispatcher.d: Queue Event
+    }
+  }
+}
+
+Router.r -> Dispatcher.d: Interrupt
+loop3: "loop: [for all buffered events]" {
+  Dispatcher.d -> Dispatcher.d: Queue event
+}
+Dispatcher.d -> WS_In: Connection:\nDrop
+Client.c -> WS_Out: Connection:\nDrop

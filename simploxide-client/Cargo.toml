@@ -1,0 +1,17 @@
+[package]
+name = "simploxide-client"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+bon = ["simploxide-api-types/bon"]
+
+
+[dependencies]
+futures.workspace = true
+serde_json.workspace = true
+tokio-stream.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+simploxide-core.path = "../simploxide-core"
+simploxide-api-types.path = "../simploxide-api-types"

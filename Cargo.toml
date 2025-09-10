@@ -1,0 +1,22 @@
+[workspace]
+resolver = "3"
+
+members = [
+    "simploxide-api-types",
+    "simploxide-client",
+    "simploxide-core"
+]
+
+# This is a standalone tool that generates sources of `simploxide-api-types` and
+# `simploxide-client` crates and it should be touched only when
+# SimpleX releases a new stable version.
+exclude = ["simploxide-bindgen"]
+
+
+[workspace.dependencies]
+futures = "0.3"
+log = "0.4"
+serde_json = "1"
+serde = { version = "1", features = ["derive", "rc"] }
+tokio = { version = "1", features = ["sync"] }
+tokio-stream = { version = "0.1" }

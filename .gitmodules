@@ -1,0 +1,4 @@
+[submodule "simploxide-bindgen/simplex-chat"]
+	path = simploxide-bindgen/simplex-chat
+	url = https://github.com/simplex-chat/simplex-chat.git
+	branch = stable

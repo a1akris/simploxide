@@ -1,0 +1,44 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+
+shape: sequence_diagram
+
+WS_In
+Dispatcher
+Router: {
+  width: 300
+}
+Client
+WS_Out
+
+optional: {
+  Client.c -> Router: corrId
+  Client.c -> WS_Out: Request
+  WS_Out -> Client.c: ERROR
+  Client.c -> Client.c: Drop buffered requests
+}
+
+WS_In -> Dispatcher.a: ERROR
+Dispatcher.a -> Dispatcher.a: Queue ERROR event
+Dispatcher.a -> Router.a: Shutdown:\nERROR
+
+loop1: "loop: [for received responses]" {
+  Router.a -> Client.c: Buffered response
+}
+
+loop2: "loop: [for remaining futures]" {
+  Router.a -> Client.c: ERROR
+}
+
+optional2: "optional(if not already dropped)" {
+  Router.a -> Client.c: Interrupt
+  Client.c -> Client.c: Drop buffered requests
+}
+
+optional3: optional(further requests) {
+  Client.c -> Router.a: corrId
+  Router.a -> Client.c: Err(AlreadyClosed)
+}

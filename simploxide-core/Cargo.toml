@@ -1,0 +1,15 @@
+[package]
+name = "simploxide-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+futures.workspace = true
+log.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+tokio = { workspace = true, features = ["sync", "rt", "macros"] }
+
+tokio-tungstenite = "0.27"
+tokio-stream = "0.1"
+tokio-util = "0.7"

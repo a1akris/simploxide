@@ -1,0 +1,243 @@
+use convert_case::{Case, Casing as _};
+
+use crate::{
+    parse_utils,
+    types::{
+        DiscriminatedUnionType, RecordType, TopLevelDocs,
+        discriminated_union_type::DiscriminatedUnionVariant,
+    },
+};
+
+pub struct CommandResponse {
+    pub command: RecordType,
+    pub response: DiscriminatedUnionType,
+}
+
+impl CommandResponse {
+    pub fn as_trait_method(&self) -> CommandResponseTraitMethod<'_> {
+        CommandResponseTraitMethod {
+            command: &self.command,
+            response: &self.response,
+        }
+    }
+}
+
+pub struct CommandResponseTraitMethod<'a> {
+    pub command: &'a RecordType,
+    pub response: &'a DiscriminatedUnionType,
+}
+
+impl<'a> CommandResponseTraitMethod<'a> {
+    fn can_simplify_args(&self) -> bool {
+        !self
+            .command
+            .fields
+            .iter()
+            .any(|f| f.is_optional() || f.is_bool())
+    }
+}
+
+impl<'a> std::fmt::Display for CommandResponseTraitMethod<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.command.write_docs_fmt(f)?;
+        write!(f, "    fn {}(&self", self.command.name.to_case(Case::Snake))?;
+
+        if self.can_simplify_args() {
+            for field in self.command.fields.iter() {
+                write!(f, ", {}: {}", field.rust_name, field.typ)?;
+            }
+
+            writeln!(
+                f,
+                ") -> impl Future<Output = Result<Arc<{}>, Self::Error>> + Send {{ async move {{",
+                self.response.name
+            )?;
+            write!(f, "        let command = {} {{", self.command.name)?;
+
+            for (ix, field) in self.command.fields.iter().enumerate() {
+                if ix > 0 {
+                    write!(f, ", ")?;
+                }
+
+                write!(f, "{}", field.rust_name)?;
+            }
+            writeln!(f, "}};")?;
+        } else {
+            writeln!(
+                f,
+                ", command: {}) -> impl Future<Output = Result<Arc<{}>, Self::Error>> + Send {{ async move {{",
+                self.command.name, self.response.name
+            )?;
+        }
+
+        writeln!(
+            f,
+            "        let response = self.send_raw(command.interpret()).await?;"
+        )?;
+
+        writeln!(
+            f,
+            "        // Safe to unwrap because unrecognized JSON goes to undocumented variant"
+        )?;
+        writeln!(f, "        Ok(serde_json::from_value(response).unwrap())")?;
+        writeln!(f, "    }}")?;
+        writeln!(f, "    }}")
+    }
+}
+
+pub fn parse(commands_md: &str) -> impl Iterator<Item = Result<CommandResponse, String>> {
+    let mut parser = Parser::default();
+
+    commands_md
+        .split("---")
+        .skip(1)
+        .filter_map(|s| {
+            let trimmed = s.trim();
+            (!trimmed.is_empty()).then_some(trimmed)
+        })
+        .map(move |blk| parser.parse_block(blk))
+}
+
+pub struct CommandFmt<'a>(pub &'a RecordType);
+
+impl std::fmt::Display for CommandFmt<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.write_docs_fmt(f)?;
+
+        writeln!(f, "#[derive(Debug, Clone, PartialEq)]")?;
+        writeln!(f, "#[cfg_attr(feature = \"bon\", derive(::bon::Builder))]")?;
+
+        writeln!(f, "pub struct {} {{", self.0.name)?;
+
+        for field in self.0.fields.iter() {
+            writeln!(f, "    pub {}: {},", field.rust_name, field.typ)?;
+        }
+
+        writeln!(f, "}}")
+    }
+}
+
+#[derive(Default)]
+struct Parser {
+    current_doc_section: Option<DocSection>,
+}
+
+impl Parser {
+    pub fn parse_block(&mut self, block: &str) -> Result<CommandResponse, String> {
+        self.parser(block.lines().map(str::trim))
+            .map_err(|e| format!("{e} in block\n```\n{block}\n```"))
+    }
+
+    fn parser<'a>(
+        &mut self,
+        mut lines: impl Iterator<Item = &'a str>,
+    ) -> Result<CommandResponse, String> {
+        const DOC_SECTION_PAT: &str = parse_utils::H2;
+        const TYPENAME_PAT: &str = parse_utils::H3;
+        const TYPEKINDS_PAT: &str = parse_utils::BOLD;
+
+        let mut next =
+            parse_utils::skip_empty(&mut lines).ok_or_else(|| "Got an empty block".to_owned())?;
+
+        let mut command_docs: Vec<String> = Vec::new();
+
+        let (typename, mut typekind) = loop {
+            if let Some(section_name) = next.strip_prefix(DOC_SECTION_PAT) {
+                let mut doc_section = DocSection::new(section_name.to_owned());
+
+                next = parse_utils::parse_doc_lines(&mut lines, &mut doc_section.contents, |s| {
+                    s.starts_with(TYPENAME_PAT)
+                })
+                .ok_or_else(|| format!("Failed to find a typename by pattern {TYPENAME_PAT:?} after the doc section"))?;
+
+                self.current_doc_section.replace(doc_section);
+            } else if let Some(name) = next.strip_prefix(TYPENAME_PAT) {
+                next = parse_utils::parse_doc_lines(&mut lines, &mut command_docs, |s| {
+                    s.starts_with(TYPEKINDS_PAT)
+                })
+                .map(|s| s.strip_prefix(TYPEKINDS_PAT).unwrap())
+                .ok_or_else(|| format!("Failed to find a typekind by pattern {TYPEKINDS_PAT:?} after the inner docs "))?;
+
+                break (name, next);
+            }
+        };
+
+        let command_name = typename.to_case(Case::Pascal);
+        let mut command = RecordType::new(command_name.clone(), vec![]);
+
+        loop {
+            if typekind.starts_with("Parameters") {
+                typekind = parse_utils::parse_record_fields(
+                    &mut lines,
+                    &mut command.fields,
+                    |s| s.starts_with(TYPEKINDS_PAT),
+                )?
+                .map(|s| s.strip_prefix(TYPEKINDS_PAT).unwrap())
+                .ok_or_else(|| format!(
+                    "Failed to find a command syntax after parameters by pattern {TYPENAME_PAT:?}"
+                ))?;
+            } else if typekind.starts_with("Syntax") {
+                parse_utils::parse_syntax(&mut lines, &mut command.syntax)?;
+                break;
+            }
+        }
+
+        let mut response_variants: Vec<DiscriminatedUnionVariant> = Vec::with_capacity(4);
+
+        parse_utils::skip_while(&mut lines, |s| !s.starts_with("**Response")).ok_or_else(|| {
+            "Failed to find responses section by pattern \"**Response\"".to_owned()
+        })?;
+
+        let mut variant_docline = Vec::new();
+
+        while let Some(docline) = parse_utils::skip_empty(&mut lines) {
+            if docline.starts_with(TYPEKINDS_PAT) {
+                break;
+            } else {
+                variant_docline.push(docline.to_owned());
+            }
+
+            let (mut variant, next) = parse_utils::parse_discriminated_union_variant(&mut lines)?;
+            assert!(next.map(|s| s.is_empty()).unwrap_or(true));
+            variant.doc_comments = std::mem::take(&mut variant_docline);
+            response_variants.push(variant);
+        }
+
+        let response =
+            DiscriminatedUnionType::new(format!("{command_name}Response"), response_variants);
+
+        if let Some(ref outer_docs) = self.current_doc_section {
+            command
+                .doc_comments
+                .push(format!("### {}", outer_docs.header.clone()));
+
+            command.doc_comments.push(String::new());
+
+            command
+                .doc_comments
+                .extend(outer_docs.contents.iter().cloned());
+
+            command.doc_comments.push(String::new());
+            command.doc_comments.push("----".to_owned());
+            command.doc_comments.push(String::new());
+        }
+
+        command.doc_comments.extend(command_docs);
+        Ok(CommandResponse { command, response })
+    }
+}
+
+#[derive(Default, Clone)]
+struct DocSection {
+    header: String,
+    contents: Vec<String>,
+}
+
+impl DocSection {
+    fn new(header: String) -> Self {
+        Self {
+            header,
+            contents: Vec::new(),
+        }
+    }
+}

@@ -1,0 +1,41 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+
+classes: {
+  invisible: {
+    style.opacity: 0
+    label: a
+  }
+}
+
+grid-rows: 3
+grid-columns: 3
+grid-gap: 250
+
+WS_Out.shape: queue
+Client -> WS_Out: Request
+pad13.class: invisible
+
+pad21.class: invisible
+Router.shape: hexagon
+pad23.class: invisible
+
+WS_In.shape: queue
+Dispatcher.shape: diamond
+EventQueue.shape: queue
+
+WS_In -> Dispatcher: Raw events
+Dispatcher -> EventQueue: Event
+
+Router -> Client: {
+  target-arrowhead.label: Response\n(by corrId)
+}
+
+Client -> Router: {
+  target-arrowhead.label: corrId
+}
+
+Dispatcher -> Router: corrId + Response
