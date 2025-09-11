@@ -195,7 +195,7 @@ impl CommandSyntax for ApiSendMessages {
             buf.push_str("live=");
             buf.push_str("on");
         }
-        if let Some(ref ttl) = self.ttl {
+        if let Some(ttl) = &self.ttl {
             buf.push(' ');
             buf.push_str("ttl=");
             buf.push_str(&ttl.to_string());
@@ -281,14 +281,14 @@ impl CommandSyntax for ApiDeleteChatItem {
         buf.push_str("item ");
         buf.push_str(&self.chat_ref.interpret());
         buf.push(' ');
-        buf.push_str(
-            &self
-                .chat_item_ids
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        );
+        let mut iter = self.chat_item_ids.iter();
+        if let Some(el) = iter.next() {
+            buf.push_str(&el.to_string());
+        }
+        for el in iter {
+            buf.push(',');
+            buf.push_str(&el.to_string());
+        }
         buf.push(' ');
         match self.delete_mode {
             CIDeleteMode::Broadcast => {
@@ -336,14 +336,14 @@ impl CommandSyntax for ApiDeleteMemberChatItem {
         buf.push('#');
         buf.push_str(&self.group_id.to_string());
         buf.push(' ');
-        buf.push_str(
-            &self
-                .chat_item_ids
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        );
+        let mut iter = self.chat_item_ids.iter();
+        if let Some(el) = iter.next() {
+            buf.push_str(&el.to_string());
+        }
+        for el in iter {
+            buf.push(',');
+            buf.push_str(&el.to_string());
+        }
         buf
     }
 }
@@ -426,7 +426,7 @@ impl CommandSyntax for ReceiveFile {
             buf.push_str("approved_relays=");
             buf.push_str("on");
         }
-        if let Some(ref store_encrypted) = self.store_encrypted {
+        if let Some(store_encrypted) = &self.store_encrypted {
             buf.push(' ');
             buf.push_str("encrypt=");
             if *store_encrypted {
@@ -435,7 +435,7 @@ impl CommandSyntax for ReceiveFile {
                 buf.push_str("off");
             }
         }
-        if let Some(ref file_inline) = self.file_inline {
+        if let Some(file_inline) = &self.file_inline {
             buf.push(' ');
             buf.push_str("inline=");
             if *file_inline {
@@ -444,7 +444,7 @@ impl CommandSyntax for ReceiveFile {
                 buf.push_str("off");
             }
         }
-        if let Some(ref file_path) = self.file_path {
+        if let Some(file_path) = &self.file_path {
             buf.push(' ');
             buf.push_str(&file_path.to_string());
         }
@@ -657,14 +657,14 @@ impl CommandSyntax for ApiMembersRole {
         buf.push('#');
         buf.push_str(&self.group_id.to_string());
         buf.push(' ');
-        buf.push_str(
-            &self
-                .group_member_ids
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        );
+        let mut iter = self.group_member_ids.iter();
+        if let Some(el) = iter.next() {
+            buf.push_str(&el.to_string());
+        }
+        for el in iter {
+            buf.push(',');
+            buf.push_str(&el.to_string());
+        }
         buf.push(' ');
         match self.member_role {
             GroupMemberRole::Observer => {
@@ -720,14 +720,14 @@ impl CommandSyntax for ApiBlockMembersForAll {
         buf.push('#');
         buf.push_str(&self.group_id.to_string());
         buf.push(' ');
-        buf.push_str(
-            &self
-                .group_member_ids
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        );
+        let mut iter = self.group_member_ids.iter();
+        if let Some(el) = iter.next() {
+            buf.push_str(&el.to_string());
+        }
+        for el in iter {
+            buf.push(',');
+            buf.push_str(&el.to_string());
+        }
         buf.push(' ');
         buf.push_str("blocked=");
         if self.blocked {
@@ -769,14 +769,14 @@ impl CommandSyntax for ApiRemoveMembers {
         buf.push('#');
         buf.push_str(&self.group_id.to_string());
         buf.push(' ');
-        buf.push_str(
-            &self
-                .group_member_ids
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
-        );
+        let mut iter = self.group_member_ids.iter();
+        if let Some(el) = iter.next() {
+            buf.push_str(&el.to_string());
+        }
+        for el in iter {
+            buf.push(',');
+            buf.push_str(&el.to_string());
+        }
         if self.with_messages {
             buf.push(' ');
             buf.push_str("messages=");
@@ -1198,7 +1198,7 @@ impl CommandSyntax for ApiConnect {
         let mut buf = String::with_capacity(256);
         buf.push_str("/_connect ");
         buf.push_str(&self.user_id.to_string());
-        if let Some(ref prepared_link) = self.prepared_link {
+        if let Some(prepared_link) = &self.prepared_link {
             buf.push(' ');
             buf.push_str(&prepared_link.interpret());
         }
@@ -1232,7 +1232,7 @@ impl CommandSyntax for Connect {
     fn interpret(&self) -> String {
         let mut buf = String::with_capacity(64);
         buf.push_str("/connect");
-        if let Some(ref conn_link) = self.conn_link {
+        if let Some(conn_link) = &self.conn_link {
             buf.push(' ');
             buf.push_str(&conn_link.to_string());
         }
@@ -1358,12 +1358,12 @@ impl CommandSyntax for ApiListGroups {
         let mut buf = String::with_capacity(256);
         buf.push_str("/_groups ");
         buf.push_str(&self.user_id.to_string());
-        if let Some(ref contact_id) = self.contact_id {
+        if let Some(contact_id) = &self.contact_id {
             buf.push(' ');
             buf.push('@');
             buf.push_str(&contact_id.to_string());
         }
-        if let Some(ref search) = self.search {
+        if let Some(search) = &self.search {
             buf.push(' ');
             buf.push_str(&search.to_string());
         }
@@ -1425,7 +1425,7 @@ pub struct ShowActiveUser {}
 
 impl CommandSyntax for ShowActiveUser {
     fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+        let mut buf = String::new();
         buf.push_str("/user");
         buf
     }
@@ -1483,7 +1483,7 @@ pub struct ListUsers {}
 
 impl CommandSyntax for ListUsers {
     fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+        let mut buf = String::new();
         buf.push_str("/users");
         buf
     }
@@ -1516,7 +1516,7 @@ impl CommandSyntax for ApiSetActiveUser {
         let mut buf = String::with_capacity(1024);
         buf.push_str("/_user ");
         buf.push_str(&self.user_id.to_string());
-        if let Some(ref view_pwd) = self.view_pwd {
+        if let Some(view_pwd) = &self.view_pwd {
             buf.push(' ');
             buf.push_str(&serde_json::to_string(&view_pwd).unwrap());
         }
@@ -1560,7 +1560,7 @@ impl CommandSyntax for ApiDeleteUser {
         } else {
             buf.push_str("off");
         }
-        if let Some(ref view_pwd) = self.view_pwd {
+        if let Some(view_pwd) = &self.view_pwd {
             buf.push(' ');
             buf.push_str(&serde_json::to_string(&view_pwd).unwrap());
         }

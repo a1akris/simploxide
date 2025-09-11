@@ -1320,7 +1320,7 @@ impl CommandSyntax for ChatRef {
         let mut buf = String::with_capacity(256);
         buf.push_str(&self.chat_type.interpret());
         buf.push_str(&self.chat_id.to_string());
-        if let Some(ref chat_scope) = self.chat_scope {
+        if let Some(chat_scope) = &self.chat_scope {
             buf.push_str(&chat_scope.interpret());
         }
         buf
@@ -2045,7 +2045,7 @@ impl CommandSyntax for CreatedConnLink {
     fn interpret(&self) -> String {
         let mut buf = String::with_capacity(64);
         buf.push_str(&self.conn_full_link.to_string());
-        if let Some(ref conn_short_link) = self.conn_short_link {
+        if let Some(conn_short_link) = &self.conn_short_link {
             buf.push(' ');
             buf.push_str(&conn_short_link.to_string());
         }

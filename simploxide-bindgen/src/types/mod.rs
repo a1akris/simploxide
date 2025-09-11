@@ -1,3 +1,7 @@
+//! This module defines both data types that represent different typekinds in the SimpleX API docs
+//! as well as the parser that turns TYPES.md into an iterator that yields these data types. The
+//! data types' std::fmt::Display impl renders them as the Rust code.
+
 pub mod discriminated_union_type;
 pub mod enum_type;
 pub mod record_type;
@@ -147,52 +151,48 @@ impl Field {
         }
     }
     pub fn is_optional(&self) -> bool {
-        self.typ.starts_with("Option<")
+        is_optional_type(self.typ.as_str())
+    }
+
+    pub fn is_vec(&self) -> bool {
+        is_vec_type(self.typ.as_str())
+    }
+
+    pub fn is_map(&self) -> bool {
+        is_map_type(self.typ.as_str())
     }
 
     pub fn is_numeric(&self) -> bool {
-        self.typ.starts_with("i")
-            || self.typ.starts_with("f")
-            || self.typ.starts_with("u")
-            || self.typ.starts_with("Option<i")
-            || self.typ.starts_with("Option<f")
-            || self.typ.starts_with("Option<u")
+        is_numeric_type(self.typ.as_str())
     }
 
     pub fn is_bool(&self) -> bool {
-        self.typ == "bool"
+        is_bool_type(self.typ.as_str())
+    }
+
+    pub fn is_string(&self) -> bool {
+        is_string_type(self.typ.as_str())
     }
 
     pub fn is_compound(&self) -> bool {
-        !matches!(
-            self.typ.as_str(),
-            "bool" | "i32" | "i64" | "u32" | "f64" | "String" | "UtcTime" | "JsonObject"
-        )
+        is_compound_type(self.typ.as_str())
     }
 
     /// Retrieves the inner type of Option<_> or Vec<_>
     /// Returns None if the field type is not Option or Vec.
     pub fn inner_type(&self) -> Option<&str> {
-        if let Some(opt) = self.typ.strip_prefix("Option<") {
-            let end = opt.rfind('>').unwrap();
-            Some(&opt[..end])
-        } else if let Some(vec) = self.typ.strip_prefix("Vec<") {
-            let end = vec.rfind('>').unwrap();
-            Some(&vec[..end])
-        } else {
-            None
-        }
+        inner_type(self.typ.as_str())
     }
 
-    /// Produces the field with the same name but with the type
-    /// of the [`inner_type`]
-    pub fn to_inner(&self) -> Option<Field> {
-        self.inner_type().map(|t| Field {
-            typ: t.to_owned(),
-            rust_name: self.rust_name.clone(),
-            api_name: self.api_name.clone(),
-        })
-    }
+    // /// Produces the field with the same name but with the type
+    // /// of the [`inner_type`]
+    // pub fn to_inner(&self) -> Option<Field> {
+    //     self.inner_type().map(|t| Field {
+    //         typ: t.to_owned(),
+    //         rust_name: self.rust_name.clone(),
+    //         api_name: self.api_name.clone(),
+    //     })
+    // }
 }
 
 impl FromStr for Field {
@@ -216,6 +216,105 @@ impl FromStr for Field {
     }
 }
 
+pub fn is_optional_type(typ: &str) -> bool {
+    typ.starts_with("Option<")
+}
+
+pub fn is_vec_type(typ: &str) -> bool {
+    typ.starts_with("Vec<")
+}
+
+pub fn is_map_type(typ: &str) -> bool {
+    typ.starts_with("HashMap<")
+}
+
+pub fn is_numeric_type(typ: &str) -> bool {
+    typ.starts_with("i")
+        || typ.starts_with("f")
+        || typ.starts_with("u")
+        || typ.starts_with("Option<i")
+        || typ.starts_with("Option<f")
+        || typ.starts_with("Option<u")
+}
+
+pub fn is_bool_type(typ: &str) -> bool {
+    typ == "bool"
+}
+
+pub fn is_string_type(typ: &str) -> bool {
+    typ == "String" || typ == "UtcTime"
+}
+
+pub fn is_compound_type(typ: &str) -> bool {
+    !is_optional_type(typ)
+        && !is_vec_type(typ)
+        && !is_map_type(typ)
+        && !is_numeric_type(typ)
+        && !is_bool_type(typ)
+        && !is_string_type(typ)
+}
+
+/// Retrieves the inner type of Option<_> or Vec<_>
+/// Returns None if the field type is not Option or Vec.
+pub fn inner_type(typ: &str) -> Option<&str> {
+    if let Some(opt) = typ.strip_prefix("Option<") {
+        let end = opt.rfind('>').unwrap();
+        Some(&opt[..end])
+    } else if let Some(vec) = typ.strip_prefix("Vec<") {
+        let end = vec.rfind('>').unwrap();
+        Some(&vec[..end])
+    } else {
+        None
+    }
+}
+
+fn resolve_type(t: &str) -> Result<String, String> {
+    if let Some(t) = t.strip_suffix('}') {
+        let t = t.strip_prefix('{').unwrap().trim();
+        let (lhs, rhs) = t.split_once(':').unwrap();
+
+        let key = resolve_type(lhs.trim())?;
+        let val = resolve_type(rhs.trim())?;
+
+        return Ok(format!("HashMap<{key}, {val}>"));
+    }
+
+    if let Some(t) = t.strip_suffix(']') {
+        let resolved = resolve_type(t.strip_prefix('[').unwrap())?;
+        return Ok(format!("Vec<{resolved}>"));
+    }
+
+    if let Some(t) = t.strip_suffix('?') {
+        let resolved = resolve_type(t)?;
+        return Ok(format!("Option<{resolved}>"));
+    }
+
+    let resolved = match t {
+        "bool" => "bool".to_owned(),
+        "int" => "i32".to_owned(),
+        "int64" => "i64".to_owned(),
+        "word32" => "u32".to_owned(),
+        "double" => "f64".to_owned(),
+        "string" => "String".to_owned(),
+        // These types map into themselves to preserve semantics.
+        // The generated module MUST have the typedefs like these:
+        //  - type UtcTime = String;
+        //  - type JsonObject = serde_json::Value;
+        "UTCTime" => "UtcTime".to_owned(),
+        "JSONObject" => "JsonObject".to_owned(),
+
+        compound if compound.starts_with('[') => {
+            let end = compound.find(']').unwrap();
+            compound['['.len_utf8()..end].to_owned()
+        }
+
+        _ => return Err(format!("Failed to resolve type: `{t}`")),
+    };
+
+    Ok(resolved)
+}
+
+/// A helper that allows to configure how the field should be rendred.
 pub struct FieldFmt<'a> {
     field: &'a Field,
     offset: usize,
@@ -275,6 +374,7 @@ impl<'a> std::fmt::Display for FieldFmt<'a> {
     }
 }
 
+/// A common impl for outer docs rendering shared by all type kinds.
 pub(crate) trait TopLevelDocs {
     fn doc_lines(&self) -> &Vec<String>;
 
@@ -299,50 +399,4 @@ pub(crate) trait TopLevelDocs {
 
         Ok(())
     }
-}
-
-fn resolve_type(t: &str) -> Result<String, String> {
-    if let Some(t) = t.strip_suffix('}') {
-        let t = t.strip_prefix('{').unwrap().trim();
-        let (lhs, rhs) = t.split_once(':').unwrap();
-
-        let key = resolve_type(lhs.trim())?;
-        let val = resolve_type(rhs.trim())?;
-
-        return Ok(format!("HashMap<{key}, {val}>"));
-    }
-
-    if let Some(t) = t.strip_suffix(']') {
-        let resolved = resolve_type(t.strip_prefix('[').unwrap())?;
-        return Ok(format!("Vec<{resolved}>"));
-    }
-
-    if let Some(t) = t.strip_suffix('?') {
-        let resolved = resolve_type(t)?;
-        return Ok(format!("Option<{resolved}>"));
-    }
-
-    let resolved = match t {
-        "bool" => "bool".to_owned(),
-        "int" => "i32".to_owned(),
-        "int64" => "i64".to_owned(),
-        "word32" => "u32".to_owned(),
-        "double" => "f64".to_owned(),
-        "string" => "String".to_owned(),
-        // These types map into themselves to preserve semantics.
-        // The generated module MUST have the typedefs like these:
-        //  - type UtcTime = String;
-        //  - type JsonObject = serde_json::Value;
-        "UTCTime" => "UtcTime".to_owned(),
-        "JSONObject" => "JsonObject".to_owned(),
-
-        compound if compound.starts_with("[") => {
-            let end = compound.find(']').unwrap();
-            compound['['.len_utf8()..end].to_owned()
-        }
-
-        _ => return Err(format!("Failed to resolve type: `{t}`")),
-    };
-
-    Ok(resolved)
 }

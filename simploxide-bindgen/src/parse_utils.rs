@@ -10,6 +10,9 @@ pub const LIST_ITEM: &str = "- ";
 
 const FIELD_PAT: &str = LIST_ITEM;
 
+/// Skips lines while condition `cond` holds. Returns the first line that broke the condition. The
+/// iterator will point to the line after it. Returns None if the iterator was fully consumed in
+/// the process.
 #[must_use]
 pub fn skip_while<'i, 's, F: Fn(&str) -> bool>(
     lines: &'i mut impl Iterator<Item = &'s str>,
@@ -18,11 +21,17 @@ pub fn skip_while<'i, 's, F: Fn(&str) -> bool>(
     lines.find(|&s| !cond(s))
 }
 
+/// Skips empty lines returning the first non empty line if met or None if all lines were empty.
+/// The iterator will point to the line after the returned non-empty line.
 #[must_use]
 pub fn skip_empty<'i, 's>(lines: &'i mut impl Iterator<Item = &'s str>) -> Option<&'s str> {
     skip_while(lines, str::is_empty)
 }
 
+/// Treats all lines as the doc lines and appends them to the `out_buffer` until the `breaker`
+/// condition triggers. If the `breaker` always returns false the iterator will be consumed
+/// completely. Returns the line that triggered the breaker condition. The iterator will point to
+/// the line after it.
 #[must_use]
 pub fn parse_doc_lines<'a, 'b, B: Fn(&str) -> bool>(
     lines: &'a mut impl Iterator<Item = &'b str>,
@@ -56,6 +65,13 @@ pub fn parse_doc_lines<'a, 'b, B: Fn(&str) -> bool>(
     ret_line
 }
 
+/// Extracts and appends a syntax line from a block like this to the `out_buffer`:
+/// \`\`\`
+/// <syntax_line>
+/// \`\`\`
+///
+/// Returns an error if block doesn't start or doesn't end with triple backticks. Returns a first
+/// line after the block if any. The iterator will point to the line after it.
 pub fn parse_syntax<'a, 'b>(
     lines: &'a mut impl Iterator<Item = &'b str>,
     out_buffer: &mut String,
@@ -86,6 +102,19 @@ pub fn parse_syntax<'a, 'b>(
     Ok(lines.next())
 }
 
+/// Treats all lines as enum variant definitions appending them to the `out_buffer`. The enum
+/// variants have the following format:
+/// ```text
+/// - "variant1"
+/// - "variant2"
+/// - "variant3"
+/// ```
+///
+/// Skips all lines that doesn't start with the FIELD_PAT('- ').
+///
+/// Returns an error if the format doesn't match the expected variant definition format.
+/// Returns a line that triggered the breaker condition or None if the iterator was consumed completely.
+/// The iterator will point to the line after the returned line.
 pub fn parse_enum_variants<'a, 'b, B: Fn(&str) -> bool>(
     lines: &'a mut impl Iterator<Item = &'b str>,
     out_buffer: &mut Vec<EnumVariant>,
@@ -104,6 +133,19 @@ pub fn parse_enum_variants<'a, 'b, B: Fn(&str) -> bool>(
     Ok(None)
 }
 
+/// Treats all lines as record field definitions appending them to the `out_buffer`. The record
+/// field definition has the following format:
+/// ```text
+/// - <name1>: <type1>
+/// - <name2>: <type2>
+/// - <name3>: <type3>
+/// ```
+///
+/// Skips all lines that doesn't start with the FIELD_PAT('- ').
+///
+/// Returns an error if the format doesn't match the expected record field format.
+/// Returns a line that triggered the breaker condition or None if the iterator was consumed completely.
+/// The iterator will point to the line after the returned line.
 pub fn parse_record_fields<'a, 'b, B: Fn(&str) -> bool>(
     lines: &'a mut impl Iterator<Item = &'b str>,
     out_buffer: &mut Vec<Field>,
@@ -122,6 +164,22 @@ pub fn parse_record_fields<'a, 'b, B: Fn(&str) -> bool>(
     Ok(None)
 }
 
+/// Treats next lines as a single discriminated union variant definition. The expected format is:
+///
+/// ```text
+/// - type: "<variant_name>"
+/// - <member1>: <type1>
+/// - <member2>: <type2>
+/// ```
+///
+/// Stops processing as soon as iterator encounters a line that doesn't start with the FIELD_PAT('-
+/// ')
+///
+/// Returns an error if the first line is not a "type:" line or if parsing of any of the variant
+/// components fails.
+///
+/// Returns parsed [`DiscriminatedUnionVariant`] and the first line that doesn't start with the
+/// FIELD_PAT('- '). The iterator will point to the line after it.
 pub fn parse_discriminated_union_variant<'a, 'b>(
     lines: &'a mut impl Iterator<Item = &'b str>,
 ) -> Result<(DiscriminatedUnionVariant, Option<&'b str>), String> {
@@ -163,6 +221,25 @@ pub fn parse_discriminated_union_variant<'a, 'b>(
     Ok((ret, None))
 }
 
+/// Treats all lines as a discriminated union variant definitions appending them to the out_buffer.
+/// The expected format is:
+///
+/// ```text
+/// - type: "<variant_name1>"
+/// - <member1>: <type1>
+/// - <member2>: <type2>
+/// ...
+/// - type: "<variant_name1>"
+/// - <member1>: <type1>
+/// - <member2>: <type2>
+/// ```
+///
+/// Skips all lines that doesn't start with the FIELD_PAT('- ').
+///
+/// Returns an error if parsing of any of the variant components fails.
+///
+/// Returns the first line that met the breaker con FIELD_PAT('- '). The iterator will point to the
+/// line after it.
 pub fn parse_discriminated_union_variants<'a, 'b, B: Fn(&str) -> bool>(
     lines: &'a mut impl Iterator<Item = &'b str>,
     out_buffer: &mut Vec<DiscriminatedUnionVariant>,

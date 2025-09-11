@@ -1,9 +1,12 @@
+//! A module with a simple greedy lexer for the SimpleX api command syntax and a binding submodule
+//! that generates actual interpreters.
+
 pub mod binding;
 
 pub use binding::Interpretable;
 
 #[derive(Debug, Clone, Copy)]
-enum SyntaxElement<'a> {
+pub enum SyntaxElement<'a> {
     /// /_command
     Literal(&'a str),
     /// @|#|*|
@@ -21,7 +24,7 @@ enum SyntaxElement<'a> {
         member_name: &'a str,
         delim: &'a str,
     },
-    /// [ settings=<json(field)>]
+    /// [whatever]
     Optional { unparsed: &'a str },
 }
 
@@ -41,7 +44,7 @@ impl<'a> SyntaxElement<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct EnumSubstitutions<'a>(&'a str);
+pub struct EnumSubstitutions<'a>(&'a str);
 
 impl<'a> EnumSubstitutions<'a> {
     pub fn iter(&self) -> impl Iterator<Item = &'a str> {
@@ -49,18 +52,19 @@ impl<'a> EnumSubstitutions<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum MaybeBool {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MaybeBool {
     On,
     Off,
     Either,
 }
 
-fn lex(s: &str) -> Lexer<'_> {
+pub fn lex(s: &str) -> Lexer<'_> {
     Lexer::new(s)
 }
 
-struct Lexer<'a> {
+/// An iterator over syntax elements
+pub struct Lexer<'a> {
     syntax: &'a str,
 }
 
@@ -70,7 +74,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-// TODO: This impl needs some love
+// TODO: This impl needs some love. Refactor it to remove unwraps and handle errors uniformly
 impl<'a> Iterator for Lexer<'a> {
     type Item = Result<SyntaxElement<'a>, String>;
 

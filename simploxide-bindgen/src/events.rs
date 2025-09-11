@@ -1,3 +1,6 @@
+//! A module that turns EVENTS.md file into na Iterator that yields disjointed discriminated union
+//! types.
+
 use crate::{parse_utils, types::DisjointedDisriminatedUnionVariant};
 
 pub fn parse(

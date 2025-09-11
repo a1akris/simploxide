@@ -19,6 +19,7 @@ impl DiscriminatedUnionType {
         }
     }
 
+    /// See [`DisjointedDiscriminatedUnion`]
     pub fn disjoin(self) -> (DiscriminatedUnionType, Vec<RecordType>) {
         let tmp: DisjointedDiscriminatedUnion =
             self.variants.into_iter().map(|v| v.disjoin()).collect();
@@ -111,6 +112,8 @@ impl DiscriminatedUnionVariant {
 }
 
 impl DiscriminatedUnionVariant {
+    /// Turns `VariantName { f1: T, f2: U }` into a `VariantName(VariantName)` and a `struct
+    /// VariantName { f1: T, f2: U }`
     pub fn disjoin(mut self) -> DisjointedDisriminatedUnionVariant {
         let record_name = self.rust_name.clone();
 
@@ -130,11 +133,16 @@ impl DiscriminatedUnionVariant {
     }
 }
 
+/// An alternative representation of the discriminated union that moves all variant fields into
+/// separate structs. E.g a union of `VariantName(VariantName)` variants where nested VariantName
+/// is a struct holding the variant fields.
 pub struct DisjointedDiscriminatedUnion {
     pub variants: Vec<DisjointedDisriminatedUnionVariant>,
 }
 
 impl DisjointedDiscriminatedUnion {
+    /// Construct the resulting disjointed discriminated union with the name `union_name` and get
+    /// it complementing record types in the vec.
     pub fn into_types(self, union_name: String) -> (DiscriminatedUnionType, Vec<RecordType>) {
         let (variants, records) = self
             .variants
@@ -154,6 +162,25 @@ impl FromIterator<DisjointedDisriminatedUnionVariant> for DisjointedDiscriminate
     }
 }
 
+pub struct DisjointedDisriminatedUnionVariant {
+    pub variant: DiscriminatedUnionVariant,
+    pub record: super::RecordType,
+}
+
+/// This formatter generates a complete impl block for the disjointed DiscriminatedUnionType with
+/// getters that try to extract the concrete variants, E.g.:
+///
+/// ```ignore
+/// fn variant1_name(&self) -> Option<&Variant1Name> {
+///     if let Self::Variant1Name(data) => {
+///         Some(data)
+///     } else {
+///         None
+///     }
+/// }
+/// ```
+///
+/// The method panics if the provided discriminated union is not disjointed
 pub struct DisjointedDiscriminatedUnionGetters<'a>(pub &'a DiscriminatedUnionType);
 
 impl<'a> std::fmt::Display for DisjointedDiscriminatedUnionGetters<'a> {
@@ -194,9 +221,4 @@ impl<'a> std::fmt::Display for DisjointedDiscriminatedUnionGetters<'a> {
 
         Ok(())
     }
-}
-
-pub struct DisjointedDisriminatedUnionVariant {
-    pub variant: DiscriminatedUnionVariant,
-    pub record: super::RecordType,
 }
