@@ -1,3 +1,5 @@
+//! Request registration and response routing task
+
 use crate::transmission;
 
 use super::{Error, RequestId, Response, Result};
@@ -16,9 +18,9 @@ type ResponseSender = mpsc::UnboundedSender<DeliveryCommand>;
 type ResponseReceiver = mpsc::UnboundedReceiver<DeliveryCommand>;
 
 /// Splitting a router into a client part and a dispatcher(ResponseRouter) part is necessarry to
-/// handle graceful shutdown correctly. With a single channel it would be impossible to
-/// block clients from booking new request corrIds after shutdown is initiated because the same
-/// channel is used to receive responses from the dispatcher task.
+/// handle graceful shutdown correctly. With a single channel it would be impossible to block
+/// clients from booking new request `corrIds` after shutdown is initiated because the same channel
+/// is used to receive responses from the dispatcher task.
 ///
 /// The split allows to receive responses but stop receiving new booking requests.
 pub fn init(
@@ -120,6 +122,12 @@ async fn normal_operation(
 ) -> Option<Error> {
     loop {
         tokio::select! {
+            // Biased is required to avoid receiving responses before booking for them succeeds.
+            //
+            // This situation is theoretically possible under a heavy load when select! macro
+            // chooses to poll the `response` branch more frequently than the `cmd` branch.
+            // `biased;` prevents this by guaranteeing that the `cmd` branch is always polled
+            // first.
             biased;
 
             cmd = client_commands.recv() => {
@@ -131,7 +139,8 @@ async fn normal_operation(
                         client_commands.close();
                         break None;
                     }
-                    // All clients were dropped so client_commands must be closed at this point
+                    // All clients were dropped so the client_commands channel must be closed at
+                    // this point
                     None => {
                         assert!(client_commands.is_closed());
                         break None;

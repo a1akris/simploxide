@@ -1,3 +1,5 @@
+//! Event dispatcher task.
+
 use std::{sync::Arc, task::Poll};
 
 use crate::{WsIn, router::ResponseRouter};
@@ -25,11 +27,12 @@ pub struct EventQueue {
 impl EventQueue {
     /// Can return a SimpleX event or a [`tungstenite::Error`] if a connection is dropped due to a
     /// web socket failure. SimpleX events can themselves represent SimpleX errors but recognizing
-    /// them is a task of the upstream code.
+    /// and handling them them is a task of the upstream code.
     pub async fn next_event(&mut self) -> Option<Result<Event>> {
         self.receiver.recv().await
     }
 
+    /// Get the underlying tokio unbounded receiver that enables more complicated use cases.
     pub fn into_receiver(self) -> EventReceiver {
         self.receiver
     }
@@ -93,7 +96,7 @@ fn process_raw_event(router: Option<&ResponseRouter>, event_queue: &mut EventSen
     let mut json: serde_json::Value = match msg {
         Message::Text(txt) => serde_json::from_str(&txt).expect("Server sends a valid JSON"),
         unexpected => {
-            log::warn!("Ignored event in unexpecetd format: {unexpected:#?}");
+            log::warn!("Ignoring event in unexpecetd format: {unexpected:#?}");
             return;
         }
     };
@@ -122,7 +125,8 @@ fn process_raw_event(router: Option<&ResponseRouter>, event_queue: &mut EventSen
     }
 }
 
-/// A helper that returns already buffered items and returns `None` when buffer becomes empty.
+/// A helper that allows to process buffered items. Returns `None` when internal stream buffer
+/// becomes empty.
 struct Closed<S>(S);
 
 impl<S> Stream for Closed<S>
