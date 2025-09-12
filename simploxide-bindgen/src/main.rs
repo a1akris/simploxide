@@ -297,7 +297,7 @@ fn generate_utils() -> Result<(), Box<dyn Error>> {
     writeln!(utils_rs, "pub trait CommandSyntax {{")?;
     writeln!(
         utils_rs,
-        "    // Generate a SimpleX command string from self"
+        "    /// Generate a SimpleX command string from self"
     )?;
     writeln!(utils_rs, "    fn interpret(&self) -> String;")?;
     writeln!(utils_rs, "}}")?;

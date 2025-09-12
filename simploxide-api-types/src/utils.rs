@@ -1,5 +1,5 @@
 pub trait CommandSyntax {
-    // Generate a SimpleX command string from self
+    /// Generate a SimpleX command string from self
     fn interpret(&self) -> String;
 }
 
