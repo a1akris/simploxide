@@ -14,7 +14,7 @@
 //!     .prelude(|intrp, out| {
 //!         bufwriteln!(out, :> 4, "def interpret(self):");
 //!         intrp.offset = 8;
-//!     }
+//!     })
 //!     .generate()?;
 //! ```
 
@@ -116,17 +116,19 @@ impl Interpretable for RecordType {
 
 pub type SyntaxInterpreterResult<'a, T, E> = Result<T, SyntaxInterpreterError<'a, E>>;
 
-/// Implement the required methods and use the provided [`Self::interpret_syntax`] to generate the
+/// Implement `interpret_` methods and use the provided [`Self::interpret_syntax`] to generate the
 /// whole interpreter body from the syntax.
 ///
-/// It's not recommended to use [`Self::interpret_syntax`] though, use [`Generator`] that allows to
+/// It's not recommended to use [`Self::interpret_syntax`] directly though, use [`Generator`] that allows to
 /// generate some code around the interpreter body.
 ///
+/// By default all methods return [`SyntaxInterpreterError::Unexpected`] error.
+///
 /// The SyntaxElement<'_> parameter is included into each method only to make errors more
-/// informative
+/// informative.
 pub trait SyntaxInterpreter {
     /// A data that is passed between optional and non-optional contexts. Effectively acts as a
-    /// stack frame that can be used to decide how to render items in [`SyntexElement::Optional`]
+    /// stack frame that can be used to decide how to render items in [`SyntaxElement::Optional`]
     /// after processing the optional scope. For example, in Rust this can help to decide which
     /// syntax to use for the if statement.
     ///
@@ -235,7 +237,7 @@ pub trait SyntaxInterpreter {
         Ok(())
     }
 
-    /// Generates the full body
+    /// Generates the full body from `syntax`
     fn interpret_syntax<'a>(
         &mut self,
         syntax: &'a str,

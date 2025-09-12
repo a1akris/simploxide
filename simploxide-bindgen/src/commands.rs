@@ -1,4 +1,5 @@
-//! A module that turns COMMANDS.md file into na Iterator of command/response pairs
+//! Turns COMMANDS.md file into na Iterator of [`crate::commands::CommandResponse`].
+
 use convert_case::{Case, Casing as _};
 
 use crate::{
@@ -34,6 +35,9 @@ impl CommandResponse {
 ///     type Error;
 ///
 ///     fn send_raw(&self, command: String) -> impl Future<Output = Result<Arc<{}>, Self::Error>> + Send;
+///
+///     //..
+/// }
 /// ```
 ///
 /// Then the provided methods could be inserted.

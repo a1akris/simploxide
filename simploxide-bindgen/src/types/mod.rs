@@ -1,6 +1,9 @@
-//! This module defines both data types that represent different typekinds in the SimpleX API docs
-//! as well as the parser that turns TYPES.md into an iterator that yields these data types. The
-//! data types' std::fmt::Display impl renders them as the Rust code.
+//! Defines both data types that represent different typekinds in the SimpleX API docs as well as
+//! the parser that turns TYPES.md into an iterator which yields [`crate::types::ApiType`].
+//!
+//! The `std::fmt::Display` implementations render types as the Rust code tailored for
+//! `simploxide-api-types` crate, but you can easily override them with a newtype like
+//! `CustomFmt<'a>(&'a ApiType);`.
 
 pub mod discriminated_union_type;
 pub mod enum_type;
@@ -28,6 +31,7 @@ pub enum ApiType {
 }
 
 impl ApiType {
+    /// True if type represents an error type.
     pub fn is_error(&self) -> bool {
         self.name().contains("Error")
     }
@@ -183,16 +187,6 @@ impl Field {
     pub fn inner_type(&self) -> Option<&str> {
         inner_type(self.typ.as_str())
     }
-
-    // /// Produces the field with the same name but with the type
-    // /// of the [`inner_type`]
-    // pub fn to_inner(&self) -> Option<Field> {
-    //     self.inner_type().map(|t| Field {
-    //         typ: t.to_owned(),
-    //         rust_name: self.rust_name.clone(),
-    //         api_name: self.api_name.clone(),
-    //     })
-    // }
 }
 
 impl FromStr for Field {

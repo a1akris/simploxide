@@ -7,24 +7,24 @@ pub use binding::Interpretable;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SyntaxElement<'a> {
-    /// /_command
+    /// `/_command`
     Literal(&'a str),
-    /// @|#|*|
+    /// `@|#|*|`
     EnumSubstitutions(EnumSubstitutions<'a>),
-    /// on, off, on|off
+    /// `on, off, on|off`
     MaybeBool(MaybeBool),
-    /// <member_name>
+    /// `<member_name>`
     TrivialMemberSubstitution { member_name: &'a str },
-    /// <str(member_name)>
+    /// `<str(member_name)>`
     DelegateMemberSubstitution { member_name: &'a str },
-    /// <json(member_name)>
+    /// `<json(member_name)>`
     JsonMemberSubstitution { member_name: &'a str },
-    /// <member_name[0]>[,<member_name[1]>...]
+    /// `<member_name[0]>[,<member_name[1]>...]`
     VecMemberSubstitution {
         member_name: &'a str,
         delim: &'a str,
     },
-    /// [whatever]
+    /// `[whatever]`
     Optional { unparsed: &'a str },
 }
 
@@ -52,6 +52,7 @@ impl<'a> EnumSubstitutions<'a> {
     }
 }
 
+/// on, off, on|off
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MaybeBool {
     On,
