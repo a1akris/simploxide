@@ -1,6 +1,6 @@
 use std::process::ExitCode;
-use std::{collections::HashMap, error::Error};
-use std::{collections::hash_map::Entry, io::Write as _};
+use std::{collections::BTreeMap, error::Error};
+use std::{collections::btree_map::Entry, io::Write as _};
 
 use simploxide_bindgen::{
     commands::{self, CommandFmt, CommandResponse},
@@ -146,7 +146,7 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
         .map(|result| {
             result.map(|mut part| {
                 if part.record.is_error() {
-                    // !Use errors from `errors` module for nested error types
+                    // Use errors from `errors` module for nested error types
                     //
                     // FIXME: The markdown type links should be properly parsed and resolved
                     // someday in the future.
@@ -213,7 +213,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     )?;
     writeln!(client_api_rs)?;
 
-    let mut unique_response_shapes: HashMap<String, RecordType> = HashMap::new();
+    let mut unique_response_shapes: BTreeMap<String, RecordType> = BTreeMap::new();
 
     let chat_cmd_error = DiscriminatedUnionVariant::from_api_name(
         "chatCmdError".to_owned(),
@@ -295,6 +295,10 @@ fn generate_utils() -> Result<(), Box<dyn Error>> {
     let mut utils_rs = std::fs::File::create(UTILS_RS)?;
 
     writeln!(utils_rs, "pub trait CommandSyntax {{")?;
+    writeln!(
+        utils_rs,
+        "    // Generate a SimpleX command string from self"
+    )?;
     writeln!(utils_rs, "    fn interpret(&self) -> String;")?;
     writeln!(utils_rs, "}}")?;
     writeln!(

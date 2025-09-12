@@ -1793,12 +1793,12 @@ impl ApiSetContactPrefsResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct GroupsListResponse {
+pub struct AcceptingContactRequestResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(rename = "groups")]
-    pub groups: Vec<GroupInfoSummary>,
+    #[serde(rename = "contact")]
+    pub contact: Contact,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1808,15 +1808,21 @@ pub struct GroupsListResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ConnectionPlanResponse {
+pub struct ActiveUserResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(rename = "connLink")]
-    pub conn_link: CreatedConnLink,
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
 
-    #[serde(rename = "connectionPlan")]
-    pub connection_plan: ConnectionPlan,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ChatCmdErrorResponse {
+    #[serde(rename = "chatError")]
+    pub chat_error: ChatError,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1832,27 +1838,6 @@ pub struct ChatItemNotChangedResponse {
 
     #[serde(rename = "chatItem")]
     pub chat_item: AChatItem,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct UserProfileUpdatedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "fromProfile")]
-    pub from_profile: Profile,
-
-    #[serde(rename = "toProfile")]
-    pub to_profile: Profile,
-
-    #[serde(rename = "updateSummary")]
-    pub update_summary: UserProfileUpdateSummary,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1880,141 +1865,12 @@ pub struct ChatItemReactionResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct UserDeletedMembersResponse {
+pub struct ChatItemUpdatedResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
-
-    #[serde(rename = "members")]
-    pub members: Vec<GroupMember>,
-
-    #[serde(rename = "withMessages")]
-    pub with_messages: bool,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct SentInvitationResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "connection")]
-    pub connection: PendingContactConnection,
-
-    #[serde(rename = "customUserProfile", skip_serializing_if = "Option::is_none")]
-    pub custom_user_profile: Option<Profile>,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct CmdOkResponse {
-    #[serde(rename = "user_", skip_serializing_if = "Option::is_none")]
-    pub user: Option<User>,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ChatCmdErrorResponse {
-    #[serde(rename = "chatError")]
-    pub chat_error: ChatError,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct GroupDeletedUserResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct UserContactLinkCreatedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "connLinkContact")]
-    pub conn_link_contact: CreatedConnLink,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct RcvFileCancelledResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "chatItem_", skip_serializing_if = "Option::is_none")]
-    pub chat_item: Option<AChatItem>,
-
-    #[serde(rename = "rcvFileTransfer")]
-    pub rcv_file_transfer: RcvFileTransfer,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct SentGroupInvitationResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
-
-    #[serde(rename = "contact")]
-    pub contact: Contact,
-
-    #[serde(rename = "member")]
-    pub member: GroupMember,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ActiveUserResponse {
-    #[serde(rename = "user")]
-    pub user: User,
+    #[serde(rename = "chatItem")]
+    pub chat_item: AChatItem,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -2045,12 +1901,9 @@ pub struct ChatItemsDeletedResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ContactDeletedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "contact")]
-    pub contact: Contact,
+pub struct CmdOkResponse {
+    #[serde(rename = "user_", skip_serializing_if = "Option::is_none")]
+    pub user: Option<User>,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -2060,9 +1913,15 @@ pub struct ContactDeletedResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct UserProfileNoChangeResponse {
+pub struct ConnectionPlanResponse {
     #[serde(rename = "user")]
     pub user: User,
+
+    #[serde(rename = "connLink")]
+    pub conn_link: CreatedConnLink,
+
+    #[serde(rename = "connectionPlan")]
+    pub connection_plan: ConnectionPlan,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -2087,12 +1946,228 @@ pub struct ContactAlreadyExistsResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct AcceptingContactRequestResponse {
+pub struct ContactConnectionDeletedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "connection")]
+    pub connection: PendingContactConnection,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ContactDeletedResponse {
     #[serde(rename = "user")]
     pub user: User,
 
     #[serde(rename = "contact")]
     pub contact: Contact,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ContactPrefsUpdatedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "fromContact")]
+    pub from_contact: Contact,
+
+    #[serde(rename = "toContact")]
+    pub to_contact: Contact,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ContactRequestRejectedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "contactRequest")]
+    pub contact_request: UserContactRequest,
+
+    #[serde(rename = "contact_", skip_serializing_if = "Option::is_none")]
+    pub contact: Option<Contact>,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ContactsListResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "contacts")]
+    pub contacts: Vec<Contact>,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupCreatedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupDeletedUserResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupLinkCreatedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(rename = "groupLink")]
+    pub group_link: GroupLink,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupLinkDeletedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupLinkResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(rename = "groupLink")]
+    pub group_link: GroupLink,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupMembersResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "group")]
+    pub group: Group,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupUpdatedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "fromGroup")]
+    pub from_group: GroupInfo,
+
+    #[serde(rename = "toGroup")]
+    pub to_group: GroupInfo,
+
+    #[serde(rename = "member_", skip_serializing_if = "Option::is_none")]
+    pub member: Option<GroupMember>,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupsListResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groups")]
+    pub groups: Vec<GroupInfoSummary>,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct InvitationResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "connLinkInvitation")]
+    pub conn_link_invitation: CreatedConnLink,
+
+    #[serde(rename = "connection")]
+    pub connection: PendingContactConnection,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -2135,117 +2210,18 @@ pub struct MemberAcceptedResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct SndFileCancelledResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "chatItem_", skip_serializing_if = "Option::is_none")]
-    pub chat_item: Option<AChatItem>,
-
-    #[serde(rename = "fileTransferMeta")]
-    pub file_transfer_meta: FileTransferMeta,
-
-    #[serde(rename = "sndFileTransfers")]
-    pub snd_file_transfers: Vec<SndFileTransfer>,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct GroupUpdatedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "fromGroup")]
-    pub from_group: GroupInfo,
-
-    #[serde(rename = "toGroup")]
-    pub to_group: GroupInfo,
-
-    #[serde(rename = "member_", skip_serializing_if = "Option::is_none")]
-    pub member: Option<GroupMember>,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct UserAcceptedGroupSentResponse {
+pub struct MembersBlockedForAllUserResponse {
     #[serde(rename = "user")]
     pub user: User,
 
     #[serde(rename = "groupInfo")]
     pub group_info: GroupInfo,
 
-    #[serde(rename = "hostContact", skip_serializing_if = "Option::is_none")]
-    pub host_contact: Option<Contact>,
+    #[serde(rename = "members")]
+    pub members: Vec<GroupMember>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct UserContactLinkDeletedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ChatItemUpdatedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "chatItem")]
-    pub chat_item: AChatItem,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct GroupLinkCreatedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
-
-    #[serde(rename = "groupLink")]
-    pub group_link: GroupLink,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct UserContactLinkResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "contactLink")]
-    pub contact_link: UserContactLink,
+    #[serde(rename = "blocked")]
+    pub blocked: bool,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -2276,120 +2252,12 @@ pub struct MembersRoleUserResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct InvitationResponse {
+pub struct NewChatItemsResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(rename = "connLinkInvitation")]
-    pub conn_link_invitation: CreatedConnLink,
-
-    #[serde(rename = "connection")]
-    pub connection: PendingContactConnection,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct UserContactLinkUpdatedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "contactLink")]
-    pub contact_link: UserContactLink,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct GroupCreatedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ContactRequestRejectedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "contactRequest")]
-    pub contact_request: UserContactRequest,
-
-    #[serde(rename = "contact_", skip_serializing_if = "Option::is_none")]
-    pub contact: Option<Contact>,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ContactPrefsUpdatedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "fromContact")]
-    pub from_contact: Contact,
-
-    #[serde(rename = "toContact")]
-    pub to_contact: Contact,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct GroupLinkResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
-
-    #[serde(rename = "groupLink")]
-    pub group_link: GroupLink,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct MembersBlockedForAllUserResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
-
-    #[serde(rename = "members")]
-    pub members: Vec<GroupMember>,
-
-    #[serde(rename = "blocked")]
-    pub blocked: bool,
+    #[serde(rename = "chatItems")]
+    pub chat_items: Vec<AChatItem>,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -2414,39 +2282,27 @@ pub struct RcvFileAcceptedResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct GroupLinkDeletedResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct GroupMembersResponse {
-    #[serde(rename = "user")]
-    pub user: User,
-
-    #[serde(rename = "group")]
-    pub group: Group,
-
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct RcvFileAcceptedSndCancelledResponse {
     #[serde(rename = "user")]
     pub user: User,
+
+    #[serde(rename = "rcvFileTransfer")]
+    pub rcv_file_transfer: RcvFileTransfer,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct RcvFileCancelledResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "chatItem_", skip_serializing_if = "Option::is_none")]
+    pub chat_item: Option<AChatItem>,
 
     #[serde(rename = "rcvFileTransfer")]
     pub rcv_file_transfer: RcvFileTransfer,
@@ -2477,12 +2333,18 @@ pub struct SentConfirmationResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ContactsListResponse {
+pub struct SentGroupInvitationResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(rename = "contacts")]
-    pub contacts: Vec<Contact>,
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(rename = "contact")]
+    pub contact: Contact,
+
+    #[serde(rename = "member")]
+    pub member: GroupMember,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -2492,13 +2354,16 @@ pub struct ContactsListResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ContactConnectionDeletedResponse {
+pub struct SentInvitationResponse {
     #[serde(rename = "user")]
     pub user: User,
 
     #[serde(rename = "connection")]
     pub connection: PendingContactConnection,
 
+    #[serde(rename = "customUserProfile", skip_serializing_if = "Option::is_none")]
+    pub custom_user_profile: Option<Profile>,
+
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: HashMap<String, JsonObject>,
@@ -2507,12 +2372,147 @@ pub struct ContactConnectionDeletedResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct NewChatItemsResponse {
+pub struct SndFileCancelledResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(rename = "chatItems")]
-    pub chat_items: Vec<AChatItem>,
+    #[serde(rename = "chatItem_", skip_serializing_if = "Option::is_none")]
+    pub chat_item: Option<AChatItem>,
+
+    #[serde(rename = "fileTransferMeta")]
+    pub file_transfer_meta: FileTransferMeta,
+
+    #[serde(rename = "sndFileTransfers")]
+    pub snd_file_transfers: Vec<SndFileTransfer>,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct UserAcceptedGroupSentResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(rename = "hostContact", skip_serializing_if = "Option::is_none")]
+    pub host_contact: Option<Contact>,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct UserContactLinkCreatedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "connLinkContact")]
+    pub conn_link_contact: CreatedConnLink,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct UserContactLinkDeletedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct UserContactLinkResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "contactLink")]
+    pub contact_link: UserContactLink,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct UserContactLinkUpdatedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "contactLink")]
+    pub contact_link: UserContactLink,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct UserDeletedMembersResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(rename = "members")]
+    pub members: Vec<GroupMember>,
+
+    #[serde(rename = "withMessages")]
+    pub with_messages: bool,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct UserProfileNoChangeResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: HashMap<String, JsonObject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct UserProfileUpdatedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "fromProfile")]
+    pub from_profile: Profile,
+
+    #[serde(rename = "toProfile")]
+    pub to_profile: Profile,
+
+    #[serde(rename = "updateSummary")]
+    pub update_summary: UserProfileUpdateSummary,
 
     #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
