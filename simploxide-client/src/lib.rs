@@ -14,7 +14,7 @@ pub mod prelude;
 
 pub async fn connect<S: AsRef<str>>(
     uri: S,
-) -> Result<(Client, impl Stream<Item = Result<Event, CoreError>>), WsError> {
+) -> Result<(Client, impl Stream<Item = Result<Event, CoreError>> + Unpin), WsError> {
     let (inner, raw_queue) = simploxide_core::connect(uri.as_ref()).await?;
     let stream = UnboundedReceiverStream::new(raw_queue.into_receiver());
 

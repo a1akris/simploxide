@@ -4,7 +4,7 @@
 //! To compile this example pass the --all-features flag like this:
 //! `cargo run --example squaring_bot --all-features`
 
-use futures::{TryFutureExt as _, TryStreamExt as _};
+use futures::TryStreamExt as _;
 use simploxide_client::{
     CoreError,
     prelude::*,
@@ -16,7 +16,7 @@ use std::{error::Error, sync::Arc};
 async fn main() -> Result<(), Box<dyn Error>> {
     let (client, mut events) = simploxide_client::connect("ws://127.0.0.1:5225").await?;
 
-    // Use destructuring to match the expected responses
+    // Use destructuring to extract data from the expected response
     let ShowActiveUserResponse::ActiveUser(ActiveUserResponse { ref user, .. }) =
         *client.show_active_user().await?
     else {
@@ -24,41 +24,41 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     println!(
-        "Bot profile: {} | ({})",
+        "Bot profile: {} ({})",
         user.profile.display_name, user.profile.full_name
     );
 
-    let (address_long, address_short) = client
+    // Alternatively, use response getters
+    let (address_long, address_short) = match client
         .api_show_my_address(user.user_id)
-        .map_ok(async |resp| {
-            resp.user_contact_link()
-                .map(|resp| {
-                    (
-                        resp.contact_link.conn_link_contact.conn_full_link.clone(),
-                        resp.contact_link.conn_link_contact.conn_short_link.clone(),
-                    )
-                })
-                .ok_or(())
-        })
         .await?
-        .or_else(async |_| {
-            match client
+        .user_contact_link()
+    {
+        Some(resp) => (
+            resp.contact_link.conn_link_contact.conn_full_link.clone(),
+            resp.contact_link.conn_link_contact.conn_short_link.clone(),
+        ),
+        None => {
+            if let Some(resp) = client
                 .api_create_my_address(user.user_id)
                 .await?
                 .user_contact_link_created()
             {
-                Some(resp) => Ok::<_, Box<dyn Error>>((
+                (
                     resp.conn_link_contact.conn_full_link.clone(),
                     resp.conn_link_contact.conn_short_link.clone(),
-                )),
-                None => Err("Failed to create bot address".into()),
+                )
+            } else {
+                return Err("Failed to create bot address".into());
             }
-        })
-        .await?;
+        }
+    };
 
     println!("Bot long address: {address_long}");
     println!("Bot short address: {address_short:?}");
 
+    // The client API is low level, so defining helper functions is often required to deal with
+    // common bot actions.
     let send_reply =
         async |dest: i64, reply: String| -> Result<Arc<ApiSendMessagesResponse>, CoreError> {
             // Use bon builders to deal with complicated request structures. Availaible behind
@@ -87,19 +87,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .await
         };
 
+    // Implement reactor
     'outer: while let Some(ev) = events.try_next().await? {
         match ev {
+            // A new user connected
             Event::ContactConnected(connected) => {
                 println!("{} connected", connected.contact.profile.display_name);
+
                 send_reply(
                     connected.contact.contact_id,
                     "Hello! I am a simple squaring bot - if you send me a number, I will calculate its square".to_owned()
                 ).await?;
             }
+            // Got the message -> square the number
             Event::NewChatItems(new_msgs) => {
                 for (contact, text) in new_msgs.chat_items.iter().filter_map(|msg| {
                     // Figuring out where the data you're interested in is actually located may
-                    // take hours
+                    // take hours))
                     if let ChatInfo::Direct { ref contact, .. } = msg.chat_info {
                         let text = if let CIContent::RcvMsgContent {
                             msg_content: MsgContent::Text { ref text, .. },
@@ -135,6 +139,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     }
                 }
             }
+            // Accept a request from a new user
             Event::ReceivedContactRequest(req) => {
                 client
                     .api_accept_contact(req.contact_request.contact_request_id)
@@ -145,6 +150,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     req.contact_request.profile.display_name, req.contact_request.profile.full_name
                 );
             }
+            // Ignore all other events
             _ => (),
         }
     }

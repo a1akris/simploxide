@@ -1,4 +1,4 @@
-// Re-exports everything that is needed to send commands and match events and responses
+//! Re-exports everything that is needed to send commands and match events and responses
 
 pub use crate::types::{
     AddressSettings, CIDeleteMode, ChatDeleteMode, ChatRef, ComposedMessage, CreatedConnLink,

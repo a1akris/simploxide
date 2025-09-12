@@ -20,12 +20,14 @@ pub fn init(ws_in: WsIn, router: ResponseRouter, token: CancellationToken) -> Ev
     EventQueue { receiver }
 }
 
+/// An event queue buffers events if you're not actively processing them so it's recommended to
+/// drop it as soon as it no longer needed.
 pub struct EventQueue {
     receiver: EventReceiver,
 }
 
 impl EventQueue {
-    /// Can return a SimpleX event or a [`tungstenite::Error`] if a connection is dropped due to a
+    /// Can return a SimpleX event or a [`tokio_tungstenite::tungstenite::Error`] if a connection is dropped due to a
     /// web socket failure. SimpleX events can themselves represent SimpleX errors but recognizing
     /// and handling them them is a task of the upstream code.
     pub async fn next_event(&mut self) -> Option<Result<Event>> {

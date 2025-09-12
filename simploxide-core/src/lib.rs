@@ -1,6 +1,6 @@
 //! A fully asynchronous raw SimpleX client which provides:
 //!
-//! 1. Requests batching under the heavy load
+//! 1. Requests batching under a heavy load.
 //!
 //! 2. Complete asynchonisity: futures created by the same instance of a client are fully
 //!    independent from each other. The event queue receives events independently from client
@@ -9,7 +9,7 @@
 //! 3. Graceful shutdown with strong guarantees:
 //!     - All futures scheduled before the `.disconnect` call are guaranteed to receive their
 //!     responses. All futures scheduled after the `.disconnect` call are guaranteed to receive the
-//!     [`tungstenite::AlreadyClosed`] error.
+//!     [`tungstenite::Error::AlreadyClosed`] error.
 //!
 //!     - If the web socket connection drops due to an error all already received(buffered)
 //!     responses are guaranteed to be delivered to corresponding futures. All other pending
@@ -117,7 +117,7 @@ pub struct RawClient {
 }
 
 impl RawClient {
-    /// Send a raw SimpleX request which is a SimpleX CLI command.
+    /// Send a raw SimpleX request that is a SimpleX CLI command.
     ///
     /// The actual request sending part always resolves immediately so the `send(..).await` call
     /// directly awaits the response.

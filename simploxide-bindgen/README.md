@@ -11,3 +11,7 @@ to generate bindings for other languages. The default impls are hardcoded for
 `simploxide-api-types` but they're easily overridable with a new type pattern.
 
 Check out the docs for further guidance: [`simploxide-bindgen`](#link)
+
+### LICENSE
+
+_TBD_
