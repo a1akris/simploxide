@@ -65,8 +65,8 @@ FAILURE BY SIMPLOXIDE USERS TO COMPLY WITH THE AGPL-3.0.
 
 ---
 
-Licensed under either of [Apache License, Version 2.0](../LICENSE-APACHE) or [MIT
-license](../LICENSE-MIT) at your option.
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT
+license](LICENSE-MIT) at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
