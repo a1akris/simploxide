@@ -1,4 +1,4 @@
-//! A fully asynchronous raw SimpleX client which provides:
+//! A fully asynchronous raw SimpleX client that provides:
 //!
 //! 1. Requests batching under a heavy load.
 //!
@@ -13,13 +13,14 @@
 //!
 //!     - If the web socket connection drops due to an error all already received(buffered)
 //!     responses are guaranteed to be delivered to corresponding futures. All other pending
-//!     futures are guaranteed to be resolved with this web socket error.
+//!     futures are guaranteed to be resolved with the web socket error.
 //!
 //!     - You will receive events for as long as there are futures awaiting responses. After all
 //!     futures are resolved you will receive all buffered events and then the event queue will be
 //!     closed.
 //!
-//! See [the Github link](#link) for diagrams demonstrating how all this works under the hood.
+//! See [README on GitHub](https://github.com/a1akris/simploxide/tree/main/simploxide-core) for diagrams
+//! demonstrating how all this works under the hood.
 //!
 //! -----
 //!
@@ -135,8 +136,12 @@ impl RawClient {
             .expect("Registered responders always deliver")
     }
 
-    /// Drops the current client and initiates a graceful shutdown for all its copies and the
-    /// events dispatcher task.
+    /// Drops the current client and initiates a graceful shutdown for the underlying web socket
+    /// connection.
+    ///
+    /// If there are multiple instances of the client all futures scheduled before this call will
+    /// still receive their responses but all new [`Self::send`] futures will immediately resolve
+    /// with [`tungstenite::Error::AlreadyClosed`].
     pub fn disconnect(self) {
         self.router.shutdown();
     }

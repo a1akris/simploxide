@@ -1,38 +1,11 @@
-# simploxide-core
+#simploxide
 
-Provides a fully asynchronous client capable of sending raw SimpleX
-requests(commands) and receiving raw responses(JSON objects).
+A bot SDK made on top of the [simploxide-client](../simploxide-client)
 
-![overview](./docs/overview.svg)
-
-See [docs](#link)
-
-### Features
-
-##### Complete asynchronisity:
-
-Futures created by the same instance of a client are completely independent
-from each other. The event queue receives events independently from client
-actions.
-
-![normalOperation](./docs/normal_operation.svg)
-
-##### Graceful shutdown:
-
-All futures scheduled before the `.disconnect` call are guaranteed to receive
-their responses. All futures scheduled after the `.disconnect` call are
-guaranteed to receive the [`tungstenite::Error::AlreadyClosed`](#) error.
-
-![gracefulShutdown](./docs/graceful_shutdown.svg)
-
-##### Graceful error handling:
-
-If a web socket connection drops due to an error all already received(buffered)
-responses are guaranteed to be delivered to corresponding futures. All other
-pending futures are guaranteed to be resolved with the web socket error.
-
-![errorPath](./docs/ws_error.svg)
-
+The SDK does not currently exist. The crate is empty and reserved for future
+use. Please, use the [simploxide-client](../simploxide-client) directly
+instead; it allows implementing anything, with the only downside that it
+provides no convenience methods.
 
 ### LICENSE
 
