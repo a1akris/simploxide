@@ -883,6 +883,7 @@ mod tests {
                     }
                     buf.push(' ');
                     buf.push_str("World!");
+                    buf
                 }
             }
         "#]]

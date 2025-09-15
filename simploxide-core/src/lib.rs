@@ -8,16 +8,16 @@
 //!
 //! 3. Graceful shutdown with strong guarantees:
 //!     - All futures scheduled before the `.disconnect` call are guaranteed to receive their
-//!     responses. All futures scheduled after the `.disconnect` call are guaranteed to receive the
-//!     [`tungstenite::Error::AlreadyClosed`] error.
+//!       responses. All futures scheduled after the `.disconnect` call are guaranteed to receive the
+//!       [`tungstenite::Error::AlreadyClosed`] error.
 //!
 //!     - If the web socket connection drops due to an error all already received(buffered)
-//!     responses are guaranteed to be delivered to corresponding futures. All other pending
-//!     futures are guaranteed to be resolved with the web socket error.
+//!       responses are guaranteed to be delivered to corresponding futures. All other pending
+//!       futures are guaranteed to be resolved with the web socket error.
 //!
 //!     - You will receive events for as long as there are futures awaiting responses. After all
-//!     futures are resolved you will receive all buffered events and then the event queue will be
-//!     closed.
+//!       futures are resolved you will receive all buffered events and then the event queue will be
+//!       closed.
 //!
 //! See [README on GitHub](https://github.com/a1akris/simploxide/tree/main/simploxide-core) for diagrams
 //! demonstrating how all this works under the hood.
