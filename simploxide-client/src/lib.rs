@@ -126,6 +126,9 @@
 //!     handle.await
 //! ```
 //!
+//! You can find complete examples that apply these concepts on
+//! [GitHub](https://github.com/a1akris/simploxide/tree/main/simploxide-client)
+//!
 //! # How to work with this documentation?
 //!
 //! The [`Client`] page should become your main page. From there you can reach the deepest corners
@@ -138,6 +141,7 @@
 use futures::{Stream, TryStreamExt as _};
 use simploxide_api_types::{JsonObject, events::Event};
 use simploxide_core::RawClient;
+use std::sync::Arc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 pub use simploxide_api_types::{
@@ -165,13 +169,19 @@ pub mod prelude;
 /// ```
 pub async fn connect<S: AsRef<str>>(
     uri: S,
-) -> Result<(Client, impl Stream<Item = Result<Event, CoreError>> + Unpin), WsError> {
+) -> Result<
+    (
+        Client,
+        impl Stream<Item = Result<Arc<Event>, CoreError>> + Unpin,
+    ),
+    WsError,
+> {
     let (inner, raw_queue) = simploxide_core::connect(uri.as_ref()).await?;
     let stream = UnboundedReceiverStream::new(raw_queue.into_receiver());
 
     Ok((
         Client { inner },
-        stream.map_ok(|ev| serde_json::from_value::<Event>(ev).unwrap()),
+        stream.map_ok(|ev| serde_json::from_value::<Arc<Event>>(ev).unwrap()),
     ))
 }
 
