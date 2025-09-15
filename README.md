@@ -14,7 +14,7 @@ are:
 
 - [simploxide-client](./simploxide-client): A crate that merges
   `simploxide-core` with `simploxide-api-types` providing a higher level client
-  API. Supports all requests described [in SimpleX docs](#link). The API is
+  API. Supports all requests described [in SimpleX docs](https://github.com/simplex-chat/simplex-chat/tree/stable/bots). The API is
   still cumbersome to work with, mainly because of the deeply nested API types,
   but it's possible to implement everything with it. Right now **this is the
   main(root) crate you should use**, it re-exports everything else.
@@ -30,8 +30,8 @@ are:
 
 ### Where to look next?
 
-Start with [simploxide-client](#ReferenceHere) crate docs. If you need to
-know how async querying is implemented under the hood check the
+Start with [simploxide-client](https://docs.rs/simploxide-client) crate docs.
+If you need to know how async querying is implemented under the hood check the
 [simploxide-core/README.md](./simploxide-core)
 
 
