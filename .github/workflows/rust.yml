@@ -1,0 +1,46 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: rustup
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: rustfmt, clippy
+
+    - name: fmt-bindgen
+      working-directory: ./simploxide-bindgen
+      run: cargo fmt --check --verbose
+    
+    - name: lint-bindgen
+      working-directory: ./simploxide-bindgen
+      run: cargo clippy --workspace --all-features --all-targets --verbose -- -D warnings
+
+    - name: test-bindgen
+      working-directory: ./simploxide-bindgen
+      run: cargo test --workspace --all-features --all-targets --verbose
+      
+    - name: fmt-workspace
+      run: cargo fmt --check --verbose
+    - name: lint-workspace
+      run: cargo clippy --workspace --all-features --all-targets --verbose -- -D warnings
+    - name: test-workspace
+      run: cargo test --workspace --all-features --all-targets --verbose
+
+      
