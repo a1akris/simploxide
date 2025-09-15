@@ -1,3 +1,5 @@
+![Build](https://github.com/a1akris/simploxide/actions/workflows/rust.yml/badge.svg)
+
 # SimplOxide
 
 A fast and robust SimpleX-Chat bot SDK that doesn't exist yet. Meanwhile there
@@ -6,13 +8,9 @@ are:
 - [simploxide-core](./simploxide-core): A fully asynchronous raw SimpleX Chat
   client with strong graceful shutdown guarantees.
 
-- [simploxide-api-types](./simploxide-api-types): All API types from SimpleX bot API docs with
-  serialization, command syntax interpretation, and even some syntax sugar
-  support.
-
-- [simploxide-bindgen](./simploxide-bindgen): A crate that produces
-  `simploxide-api-types` files and keeps them up to date by parsing the
-  upstream documentation and generating the code from it.
+- [simploxide-api-types](./simploxide-api-types): All API types from SimpleX
+  bot API docs with serialization, command syntax interpretation, and even some
+  syntax sugar support.
 
 - [simploxide-client](./simploxide-client): A crate that merges
   `simploxide-core` with `simploxide-api-types` providing a higher level client
@@ -24,6 +22,11 @@ are:
 - [simploxide](./simploxide): An empty crate reserved for the future bot SDK
   that will provide a lot of utilities on top of the `simploxide-client` to
   cover common bot development tasks.
+
+- [simploxide-bindgen](./simploxide-bindgen): A crate that produces
+  `simploxide-api-types` files and keeps them up to date by parsing the
+  upstream documentation and generating the code from it.
+
 
 ### Where to look next?
 
