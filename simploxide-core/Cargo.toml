@@ -1,7 +1,17 @@
 [package]
 name = "simploxide-core"
 version = "0.1.0"
+authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
+license = "MIT OR Apache-2.0"
+
+description = "SimpleX-Chat raw websocket client"
+readme = "README.md"
+repository = "https://github.com/a1akris/simploxide"
+documentation = "https://docs.rs/simploxide-core"
+categories = ["network-programming", "asynchronous", "web-programming::websocket"]
+keywords = ["simplex", "chat", "websocket", "client"]
+
 
 [dependencies]
 futures.workspace = true

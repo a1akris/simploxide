@@ -5,8 +5,8 @@ doesn't do much besides merging [simpoxide-core](../simploxide-core) with
 [simploxide-api-types](../simploxide-api-types) providing the higher level API
 with automatic request encoding and response/event decoding.
 
-See [docs](#link) and the [example](./examples/squaring_bot.rs) for further
-guidance.
+See [docs](https://docs.rs/simploxide-bindgen) and the
+[example](./examples/squaring_bot.rs) for further guidance.
 
 ### LICENSE
 

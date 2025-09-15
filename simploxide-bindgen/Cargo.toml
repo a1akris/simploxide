@@ -1,7 +1,17 @@
 [package]
 name = "simploxide-bindgen"
 version = "0.1.0"
+authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
+license = "MIT OR Apache-2.0"
+exclude = ["generated", "simplex-chat"]
+
+description = "SimpleX-Chat API types and client generator"
+readme = "README.md"
+repository = "https://github.com/a1akris/simploxide"
+documentation = "https://docs.rs/simploxide-bindgen"
+categories = ["api-bindings", "codegen", "bindgen", "data-structures"]
+keywords = ["simplex", "chat", "bindings", "types", "codegen"]
 
 [dependencies]
 convert_case = "0.8.0"

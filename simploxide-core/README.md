@@ -5,7 +5,7 @@ requests(commands) and receiving raw responses(JSON objects).
 
 ![overview](./docs/overview.svg)
 
-See [docs](#link)
+See [docs](https://docs.rs/simploxide-core)
 
 ### Features
 

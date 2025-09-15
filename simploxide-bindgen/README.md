@@ -10,7 +10,7 @@ It wasn't planned initially, but this crate also comes as a library that allows
 to generate bindings for other languages. The default impls are hardcoded for
 `simploxide-api-types` but they're easily overridable with a new type pattern.
 
-Check out the docs for further guidance: [`simploxide-bindgen`](#link)
+Check out the docs for further guidance: [`simploxide-bindgen`](https://docs.rs/simploxide-bindgen)
 
 ### LICENSE
 
