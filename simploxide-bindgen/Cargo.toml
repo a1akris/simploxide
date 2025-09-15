@@ -10,8 +10,8 @@ description = "SimpleX-Chat API types and client generator"
 readme = "README.md"
 repository = "https://github.com/a1akris/simploxide"
 documentation = "https://docs.rs/simploxide-bindgen"
-categories = ["api-bindings", "codegen", "bindgen", "data-structures"]
-keywords = ["simplex", "chat", "bindings", "types", "codegen"]
+categories = ["development-tools", "api-bindings", "data-structures"]
+keywords = ["simplex", "chat", "bindgen", "types", "codegen"]
 
 [dependencies]
 convert_case = "0.8.0"
