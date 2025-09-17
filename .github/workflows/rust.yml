@@ -24,23 +24,5 @@ jobs:
         override: true
         components: rustfmt, clippy
 
-    - name: fmt-bindgen
-      working-directory: ./simploxide-bindgen
-      run: cargo fmt --check --verbose
-    
-    - name: lint-bindgen
-      working-directory: ./simploxide-bindgen
-      run: cargo clippy --workspace --all-features --all-targets --verbose -- -D warnings
-
-    - name: test-bindgen
-      working-directory: ./simploxide-bindgen
-      run: cargo test --workspace --all-features --all-targets --verbose
-      
-    - name: fmt-workspace
-      run: cargo fmt --check --verbose
-    - name: lint-workspace
-      run: cargo clippy --workspace --all-features --all-targets --verbose -- -D warnings
-    - name: test-workspace
-      run: cargo test --workspace --all-features --all-targets --verbose
-
-      
+    - name: lint
+      run: ./lint.sh
