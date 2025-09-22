@@ -75,7 +75,7 @@ if api_changed; then
     prepend_readme_row $new_simploxide_ver $next_ver $next_ver
     git add .
     git commit -m "Autoupdate: $this_ver -> $next_ver (BREAKING CHANGE)"
-    git tag -a $new_simploxide_ver
+    git tag -a v$new_simploxide_ver -m "v$new_simploxide_ver"
     publish="true"
 else
     sed -i "s/$this_ver/$next_ver/" ./README.md
