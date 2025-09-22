@@ -62,16 +62,21 @@ fi
 echo "Updating $this_ver -> $next_ver..."
 ./autobinder.sh
 
+git config user.email "automaintainer@noreply.org"
+git config user.name "Maintainer Agent"
+
+# TODO: This is a temporary var for debugging(publish crates only after all
+# other commands succeeded). The publish could be done before git push once the
+# job stabilizes
+publish="false"
 if api_changed; then
     new_simploxide_ver=$(bump_crate_versions)
     ./lint.sh
     prepend_readme_row $new_simploxide_ver $next_ver $next_ver
     git add .
     git commit -m "Autoupdate: $this_ver -> $next_ver (BREAKING CHANGE)"
-
-    cargo_publish ./simploxide-api-types
-    cargo_publish ./simploxide-client
-    cargo_publish ./simploxide
+    git tag -a $new_simploxide_ver
+    publish="true"
 else
     sed -i "s/$this_ver/$next_ver/" ./README.md
     git add .
@@ -79,3 +84,10 @@ else
 fi
 
 git push
+git push --tags
+
+if [ "$publish" = "true" ]; then
+    cargo_publish ./simploxide-api-types
+    cargo_publish ./simploxide-client
+    cargo_publish ./simploxide
+fi
