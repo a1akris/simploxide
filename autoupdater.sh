@@ -54,9 +54,6 @@ cargo_publish() {
 this_ver=$(local_simplex_version)
 next_ver=$(upstream_simplex_version)
 
-echo "$next_ver"
-exit 1
-
 if [ "$this_ver" = "$next_ver" ]; then
     echo "Stable versions match($this_ver)... Nothing to do"
     exit 0
