@@ -172,7 +172,13 @@ pub enum BrokerErrorType {
         undocumented: HashMap<String, JsonObject>,
     },
     #[serde(rename = "NETWORK")]
-    Network,
+    Network {
+        #[serde(rename = "networkError")]
+        network_error: NetworkError,
+
+        #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+        undocumented: HashMap<String, JsonObject>,
+    },
     #[serde(rename = "HOST")]
     Host,
     #[serde(rename = "NO_SERVICE")]
@@ -980,6 +986,44 @@ pub enum MsgErrorType {
     MsgBadHash,
     #[serde(rename = "msgDuplicate")]
     MsgDuplicate,
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
+pub enum NetworkError {
+    #[serde(rename = "connectError")]
+    ConnectError {
+        #[serde(rename = "connectError")]
+        connect_error: String,
+
+        #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+        undocumented: HashMap<String, JsonObject>,
+    },
+    #[serde(rename = "tLSError")]
+    TLsError {
+        #[serde(rename = "tlsError")]
+        tls_error: String,
+
+        #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+        undocumented: HashMap<String, JsonObject>,
+    },
+    #[serde(rename = "unknownCAError")]
+    UnknownCaError,
+    #[serde(rename = "failedError")]
+    FailedError,
+    #[serde(rename = "timeoutError")]
+    TimeoutError,
+    #[serde(rename = "subscribeError")]
+    SubscribeError {
+        #[serde(rename = "subscribeError")]
+        subscribe_error: String,
+
+        #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+        undocumented: HashMap<String, JsonObject>,
+    },
     #[serde(untagged)]
     Undocumented(JsonObject),
 }
@@ -1949,6 +1993,7 @@ impl_error!(
     HandshakeError,
     MsgDecryptError,
     MsgErrorType,
+    NetworkError,
     ProxyClientError,
     ProxyError,
     RCErrorType,
