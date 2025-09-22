@@ -39,7 +39,7 @@ If you need to know how async querying is implemented under the hood check the
 
 | SimplOxide Version | Simplex Chat Min Version | Simplex Chat Max Version |
 | ------------------ | ------------------------ | ------------------------ |
-| 0.3.0              | Submodule                  | path                  |
+| 0.3.0              | 6.4.5.1                  | 6.4.5.1                  |
 | 0.2.0              | 6.4.4.0                  | 6.4.4.2                  |
 
 

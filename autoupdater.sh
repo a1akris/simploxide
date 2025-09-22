@@ -7,8 +7,8 @@ local_simplex_version() {
 }
 
 upstream_simplex_version() {
-    git submodule init
-    git submodule update --remote
+    git submodule init &>/dev/null
+    git submodule update --remote &>/dev/null
 
     grep "^version:" ./simploxide-bindgen/simplex-chat/simplex-chat.cabal | awk '{ print $2 }' | tr -d ' '
 }
@@ -53,6 +53,9 @@ cargo_publish() {
 
 this_ver=$(local_simplex_version)
 next_ver=$(upstream_simplex_version)
+
+echo "$next_ver"
+exit 1
 
 if [ "$this_ver" = "$next_ver" ]; then
     echo "Stable versions match($this_ver)... Nothing to do"
