@@ -1,9 +1,10 @@
 [package]
 name = "simploxide-core"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
+exclude = ["docs"]
 
 description = "SimpleX-Chat raw websocket client"
 readme = "README.md"
