@@ -34,9 +34,9 @@ SimpleX-Chat WebSocket client
 
 ----
 
-Explore [examples/](./examples) sources or read [crate
-docs](https://docs.rs/simploxide-client/latest/simploxide_client/) to learn
-how to write your own bots.
+Explore [bot sources](./examples) or read [crate
+docs](https://docs.rs/simploxide-client/latest/simploxide_client/) to learn how
+to write your own bots.
 
 ### LICENSE
 
