@@ -20,7 +20,7 @@ SimpleX-Chat WebSocket client
    simplex-chat -p 5225
    ```
 1. Run the squaring bot:
-   ```
+   ```bash
    cargo run --example squaring_bot --all-features
    ```
    You can run any bot from [examples/](./examples) directory by changing the
@@ -29,6 +29,7 @@ SimpleX-Chat WebSocket client
        to connect to your bot in SimpleX app(always prefer the shorter one):
        ![Addresses Screenshot](./screenshots/addresses.png)
     1. Interact with the bot:
+
        ![Interactions Screenshot](./screenshots/interactions.png)
 
 ----
