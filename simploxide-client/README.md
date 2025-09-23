@@ -1,20 +1,35 @@
 # simploxide-client
 
-### Try out SimplOxide bots right now!
+SimpleX-Chat WebSocket client
+
+## 🤖Try out SimplOxide bots right now!
 
 1. [Install Rust](https://www.rust-lang.org/learn/get-started) if you haven't already.
 1. [Get SimpleX chat CLI](https://github.com/simplex-chat/simplex-chat/blob/stable/docs/CLI.md#%F0%9F%9A%80-installation)
-1. Run SimpleX Chat CLI with the following flags to prepare the bot account: `simplex-chat --create-bot-display-name 'SimplOxide Examples' --create-bot-allow-files`
-    1. Alternatively, you can run this command from the SimpleX CLI itself: `/create bot files=on 'SimplOxide Examples'`
+1. Run SimpleX Chat CLI with the following flags to prepare the bot account:
+   ```bash
+   simplex-chat --create-bot-display-name 'SimplOxide Examples' --create-bot-allow-files
+   ```
+    1. Alternatively, you can run this command from the SimpleX CLI itself:
+       ```bash
+       /create bot files=on 'SimplOxide Examples'
+       ```
 1. Run SimpleX Chat CLI as an API server listening on port 5225(all example
-   bots are connecting to this port by default): `simplex-chat -p 5225`
-1. `cargo run --example squaring_bot --all-features` to run the squaring bot.
+   bots are connecting to this port by default):
+   ```bash
+   simplex-chat -p 5225
+   ```
+1. Run the squaring bot:
+   ```
+   cargo run --example squaring_bot --all-features
+   ```
    You can run any bot from [examples/](./examples) directory by changing the
    `--example` argument.
     1. All example bots output their address when they start. Use this address
        to connect to your bot in SimpleX app(always prefer the shorter one):
        ![Addresses Screenshot](./screenshots/addresses.png)
-    1. Interact with the bot: ![Interactions Screenshot](./screenshots/interactions.png)
+    1. Interact with the bot:
+       ![Interactions Screenshot](./screenshots/interactions.png)
 
 ----
 
