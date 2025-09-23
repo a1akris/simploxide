@@ -1,3 +1,7 @@
+//! For first-time users it's recommended to get hands-on experience by running some example bots
+//! on [GitHub](https://github.com/a1akris/simploxide/tree/main/simploxide-client) before writing
+//! their own.
+//!
 //! # How to write a SimpleX bot?
 //!
 //! First of all, you **must** use a tokio runtime. The current `simploxide` implementation heavily
@@ -125,9 +129,6 @@
 //!
 //!     handle.await
 //! ```
-//!
-//! You can find complete examples that apply these concepts on
-//! [GitHub](https://github.com/a1akris/simploxide/tree/main/simploxide-client)
 //!
 //! # How to work with this documentation?
 //!
