@@ -3,13 +3,13 @@
 //!
 //! To compile this example pass the --all-features flag like this:
 //! `cargo run --example squaring_bot --all-features`
+//!
+//! ----
+//!
+//! A bot that receives a number and sends back its square.
 
 use futures::TryStreamExt as _;
-use simploxide_client::{
-    CoreError,
-    prelude::*,
-    types::{CIContent, ChatInfo, ChatType, ComposedMessage, MsgContent},
-};
+use simploxide_client::{CoreResult, prelude::*, types::CIContent};
 use std::{error::Error, sync::Arc};
 
 #[tokio::main]
@@ -59,36 +59,35 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // The client API is low level, so defining helper functions is often required to deal with
     // common bot actions.
-    let send_reply =
-        async |dest: i64, reply: String| -> Result<Arc<ApiSendMessagesResponse>, CoreError> {
-            // Use bon builders to deal with complicated request structures. Availaible behind
-            // the "bon" feature flag.
-            client
-                .api_send_messages(
-                    ApiSendMessages::builder()
-                        .send_ref(
-                            ChatRef::builder()
-                                .chat_type(ChatType::Direct)
-                                .chat_id(dest)
-                                .build(),
-                        )
-                        .live_message(false)
-                        .composed_messages(vec![
-                            ComposedMessage::builder()
-                                .msg_content(MsgContent::Text {
-                                    text: reply,
-                                    undocumented: Default::default(),
-                                })
-                                .mentions(Default::default())
-                                .build(),
-                        ])
-                        .build(),
-                )
-                .await
-        };
+    let send_reply = async |dest: i64, reply: String| -> CoreResult<Arc<ApiSendMessagesResponse>> {
+        // Use bon builders to deal with complicated request structures. Availaible behind
+        // the "bon" feature flag.
+        client
+            .api_send_messages(
+                ApiSendMessages::builder()
+                    .send_ref(
+                        ChatRef::builder()
+                            .chat_type(ChatType::Direct)
+                            .chat_id(dest)
+                            .build(),
+                    )
+                    .live_message(false)
+                    .composed_messages(vec![
+                        ComposedMessage::builder()
+                            .msg_content(MsgContent::Text {
+                                text: reply,
+                                undocumented: Default::default(),
+                            })
+                            .mentions(Default::default())
+                            .build(),
+                    ])
+                    .build(),
+            )
+            .await
+    };
 
     // Implement reactor
-    'outer: while let Some(ev) = events.try_next().await? {
+    'reactor: while let Some(ev) = events.try_next().await? {
         match ev.as_ref() {
             // A new user connected
             Event::ContactConnected(connected) => {
@@ -119,9 +118,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         None
                     }
                 }) {
-                    if text.trim().starts_with("/die") {
-                        println!("DIED");
-                        break 'outer;
+                    if text.trim() == "/die" {
+                        break 'reactor;
                     }
 
                     if let Ok(num) = text.trim().parse::<i64>() {
