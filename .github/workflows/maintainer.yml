@@ -2,7 +2,7 @@ name: AutoMaintainer
 
 on:
   schedule:
-    - cron: '30 8 * * 2,5'
+    - cron: '30 7 * * 2,6'
 
 env:
   CARGO_TERM_COLOR: always
