@@ -9,9 +9,8 @@
 //!
 //! Secondly, it's recommended to use `simploxide_client::prelude::*` if you don't want your import
 //! section to explode. The prelude reexports all top-level types required for sending requests,
-//! destructuring responses and matching events, you'll still need to manually import intermediary
-//! types and there are a lot of them, the prelude just greately reduces the amount of the same
-//! imports per file.
+//! destructuring responses and matching events, but you'll still need to manually import
+//! intermediary types and there are a lot of them.
 //!
 //! ##### Now to the bot
 //!
@@ -133,12 +132,11 @@
 //! # How to work with this documentation?
 //!
 //! The [`Client`] page should become your main page. From there you can reach the deepest corners
-//! of the docs in a structured manner. Looking at other modules is not very helpful unless you're
-//! looking for something specific.
+//! of the docs in a structured manner. The [`events`] page should become your secondary page. You
+//! can see all events that your bots can react to there.
 //!
 //! If you need to understand how async is being implemented in the client check out the [`core`]
 //! docs.
-//!
 use futures::{Stream, TryStreamExt as _};
 use simploxide_api_types::{JsonObject, events::Event};
 use simploxide_core::RawClient;
@@ -188,6 +186,7 @@ pub async fn connect<S: AsRef<str>>(
 
 /// A high level simplex client that implements [`ClientApi`] which provides typed client
 /// methods with automatic command serialization/response deserialization.
+#[derive(Clone)]
 pub struct Client {
     inner: RawClient,
 }
