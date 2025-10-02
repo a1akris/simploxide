@@ -38,20 +38,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             resp.contact_link.conn_link_contact.conn_full_link.clone(),
             resp.contact_link.conn_link_contact.conn_short_link.clone(),
         ),
-        None => {
-            if let Some(resp) = client
-                .api_create_my_address(user.user_id)
-                .await?
-                .user_contact_link_created()
-            {
+        None => client
+            .api_create_my_address(user.user_id)
+            .await?
+            .user_contact_link_created()
+            .map(|resp| {
                 (
                     resp.conn_link_contact.conn_full_link.clone(),
                     resp.conn_link_contact.conn_short_link.clone(),
                 )
-            } else {
-                return Err("Failed to create bot address".into());
-            }
-        }
+            })
+            .ok_or("Failed to create bot address")?,
     };
 
     println!("Bot long address: {address_long}");
