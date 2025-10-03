@@ -137,11 +137,10 @@
 //!
 //! If you need to understand how async is being implemented in the client check out the [`core`]
 //! docs.
-use futures::{Stream, TryStreamExt as _};
+use futures::Stream;
 use simploxide_api_types::{JsonObject, events::Event};
-use simploxide_core::RawClient;
-use std::sync::Arc;
-use tokio_stream::wrappers::UnboundedReceiverStream;
+use simploxide_core::{EventQueue, EventReceiver, RawClient};
+use std::{sync::Arc, task};
 
 pub use simploxide_api_types::{
     self as types, client_api::ClientApi, commands, events, responses, utils::CommandSyntax,
@@ -166,29 +165,44 @@ pub mod prelude;
 ///     // Process events...
 /// }
 /// ```
-pub async fn connect<S: AsRef<str>>(
-    uri: S,
-) -> Result<
-    (
-        Client,
-        impl Stream<Item = Result<Arc<Event>, CoreError>> + Unpin,
-    ),
-    WsError,
-> {
-    let (inner, raw_queue) = simploxide_core::connect(uri.as_ref()).await?;
-    let stream = UnboundedReceiverStream::new(raw_queue.into_receiver());
+pub async fn connect<S: AsRef<str>>(uri: S) -> Result<(Client, EventStream), WsError> {
+    let (raw_client, raw_event_queue) = simploxide_core::connect(uri.as_ref()).await?;
 
-    Ok((
-        Client { inner },
-        stream.map_ok(|ev| serde_json::from_value::<Arc<Event>>(ev).unwrap()),
-    ))
+    Ok((Client::from(raw_client), EventStream::from(raw_event_queue)))
 }
 
-/// A high level simplex client that implements [`ClientApi`] which provides typed client
-/// methods with automatic command serialization/response deserialization.
+pub struct EventStream(EventReceiver);
+
+impl From<EventQueue> for EventStream {
+    fn from(value: EventQueue) -> Self {
+        Self(value.into_receiver())
+    }
+}
+
+impl Stream for EventStream {
+    type Item = CoreResult<Arc<Event>>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut task::Context<'_>,
+    ) -> task::Poll<Option<Self::Item>> {
+        self.0.poll_recv(cx).map(|opt| {
+            opt.map(|res| res.map(|ev| serde_json::from_value::<Arc<Event>>(ev).unwrap()))
+        })
+    }
+}
+
+/// A high level SimpleX-Chat client which provides typed API methods with automatic command
+/// serialization/response deserialization.
 #[derive(Clone)]
 pub struct Client {
     inner: RawClient,
+}
+
+impl From<RawClient> for Client {
+    fn from(inner: RawClient) -> Self {
+        Self { inner }
+    }
 }
 
 impl Client {

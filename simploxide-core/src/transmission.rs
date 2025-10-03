@@ -3,10 +3,10 @@
 use std::sync::Arc;
 
 use crate::{Error, RequestId, Result, WsOut};
-use futures::SinkExt as _;
+use futures::{SinkExt as _, StreamExt as _};
 use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
-use tokio_stream::{StreamExt as _, wrappers::UnboundedReceiverStream};
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_tungstenite::tungstenite::{self, Message};
 
 type InternalRequest = (RequestId, String);

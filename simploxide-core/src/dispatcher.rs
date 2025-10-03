@@ -11,7 +11,7 @@ use tokio_util::sync::CancellationToken;
 use super::{Event, RequestId, Result};
 
 type EventSender = mpsc::UnboundedSender<Result<Event>>;
-type EventReceiver = mpsc::UnboundedReceiver<Result<Event>>;
+pub type EventReceiver = mpsc::UnboundedReceiver<Result<Event>>;
 
 pub fn init(ws_in: WsIn, router: ResponseRouter, token: CancellationToken) -> EventQueue {
     let (events_tx, receiver) = mpsc::unbounded_channel::<Result<Event>>();

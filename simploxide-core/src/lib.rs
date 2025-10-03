@@ -45,7 +45,7 @@ use tokio_util::sync::CancellationToken;
 
 use {router::ClientRouter, transmission::Transmitter};
 
-pub use dispatcher::EventQueue;
+pub use dispatcher::{EventQueue, EventReceiver};
 pub use tokio_tungstenite::{self, tungstenite};
 
 pub type Event = serde_json::Value;

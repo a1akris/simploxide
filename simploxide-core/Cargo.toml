@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-core"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
@@ -22,5 +22,5 @@ serde.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
 
 tokio-tungstenite = "0.27"
-tokio-stream = "0.1"
 tokio-util = "0.7"
+tokio-stream = "0.1"
