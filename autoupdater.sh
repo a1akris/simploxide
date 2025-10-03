@@ -1,8 +1,12 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
-local_simplex_version() {
+min_supported_simplex_version() {
+    grep "^| 0\." ./README.md | head -1 | awk -F '|' '{ print $3 }' | tr -d ' '
+}
+
+max_supported_simplex_version() {
     grep "^| 0\." ./README.md | head -1 | awk -F '|' '{ print $4 }' | tr -d ' '
 }
 
@@ -14,11 +18,7 @@ upstream_simplex_version() {
 }
 
 api_changed() {
-    if [ -n "$(git status ./simploxide-api-types | grep 'Changes not staged for commit')" ]; then
-        return 0
-    else
-        return 1
-    fi
+    git status ./simploxide-api-types | grep -q -s 'Changes not staged for commit'
 }
 
 format_readme_row() {
@@ -26,23 +26,34 @@ format_readme_row() {
 }
 
 prepend_readme_row() {
-    sed -i "/^| -----.*/a $(format_readme_row $1 $2 $3)" ./README.md
+    local row
+    row=$(format_readme_row "$1" "$2" "$3")
+    sed -i "/^| -----.*/a ${row}" ./README.md
+}
+
+get_crate_version() {
+    grep "^version =" "$1/Cargo.toml" | awk -F '=' '{ print $2 }' | tr -d ' "'
+}
+
+bump_crate() {
+    local current_ver next_ver major minor
+    current_ver=$(get_crate_version "$1")
+
+    IFS='.' read -r major minor <<<"${current_ver}"
+    next_ver="${major}.$((minor + 1)).0"
+
+    sed -i 's/^version = .*/version = "'"${next_ver}"'"/' "$1/Cargo.toml"
+    echo "${next_ver}"
 }
 
 bump_crate_versions() {
-    local current_ver=`grep "^version =" ./simploxide-api-types/Cargo.toml | awk -F '=' '{ print $2 }' | tr -d ' "'`
-    local major minor patch
+    new_api_types_ver=$(bump_crate simploxide-api-types)
+    new_client_ver=$(bump_crate simploxide-client)
+    # TODO: bump simploxide version separetely after it gets implemented
+    sed -i 's/^version = .*/version = "'"${new_client_ver}"'"/' ./simploxide/Cargo.toml
+    sed -i -E "s/(^simploxide-api-types.*version = \")[^\"]+/\1${new_api_types_ver}/" simploxide-client/Cargo.toml
 
-    IFS='.' read -r major minor patch <<<"$current_ver"
-    local next_ver="$major.$((minor + 1)).0"
-
-    sed -i 's/^version = .*/version = "'"$next_ver"'"/' ./simploxide-api-types/Cargo.toml
-    sed -i 's/^version = .*/version = "'"$next_ver"'"/' ./simploxide-client/Cargo.toml
-    sed -i 's/^version = .*/version = "'"$next_ver"'"/' ./simploxide/Cargo.toml
-
-    sed -i -E "s/(^simploxide-api-types.*version = \")[^\"]+/\1${next_ver}/" simploxide-client/Cargo.toml
-
-    echo "$next_ver"
+    echo "${new_client_ver}"
 }
 
 cargo_publish() {
@@ -51,15 +62,15 @@ cargo_publish() {
     cd ../
 }
 
-this_ver=$(local_simplex_version)
+this_ver=$(max_supported_simplex_version)
 next_ver=$(upstream_simplex_version)
 
-if [ "$this_ver" = "$next_ver" ]; then
-    echo "Stable versions match($this_ver)... Nothing to do"
+if [[ "${this_ver}" == "${next_ver}" ]]; then
+    echo "Stable versions match(${this_ver})... Nothing to do"
     exit 0
 fi
 
-echo "Updating $this_ver -> $next_ver..."
+echo "Updating ${this_ver} -> ${next_ver}..."
 ./autobinder.sh
 
 git config user.email "automaintainer@noreply.org"
@@ -72,21 +83,28 @@ publish="false"
 if api_changed; then
     new_simploxide_ver=$(bump_crate_versions)
     ./lint.sh
-    prepend_readme_row $new_simploxide_ver $next_ver $next_ver
+    prepend_readme_row "${new_simploxide_ver}" "${next_ver}" "${next_ver}"
     git add .
-    git commit -m "Autoupdate: $this_ver -> $next_ver (BREAKING CHANGE)"
-    git tag -a v$new_simploxide_ver -m "v$new_simploxide_ver"
+    git commit -m "Autoupdate: ${this_ver} -> ${next_ver} (BREAKING CHANGE)"
+    git tag -a "v${new_simploxide_ver}" -m "v${new_simploxide_ver}"
     publish="true"
 else
-    sed -i "s/$this_ver/$next_ver/" ./README.md
+    min_supported_ver=$(min_supported_simplex_version)
+    sed_modifier=""
+
+    if [[ "${min_supported_ver}" == "${this_ver}" ]]; then
+        sed_modifier="2"
+    fi
+
+    sed -i "s/${this_ver}/${next_ver}/${sed_modifier}" ./README.md
     git add .
-    git commit -m "Autoupdate: $this_ver -> $next_ver"
+    git commit -m "Autoupdate: ${this_ver} -> ${next_ver}"
 fi
 
 git push
 git push --tags
 
-if [ "$publish" = "true" ]; then
+if [[ "${publish}" == "true" ]]; then
     cargo_publish ./simploxide-api-types
     cargo_publish ./simploxide-client
     cargo_publish ./simploxide
