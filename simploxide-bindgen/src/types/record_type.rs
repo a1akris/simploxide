@@ -66,10 +66,10 @@ impl std::fmt::Display for RecordType {
         // Capture undocumented fields
         writeln!(
             f,
-            "    #[serde(flatten, skip_serializing_if = \"HashMap::is_empty\")]"
+            "    #[serde(flatten, skip_serializing_if = \"BTreeMap::is_empty\")]"
         )?;
         writeln!(f, "    #[cfg_attr(feature = \"bon\", builder(default))]")?;
-        writeln!(f, "    pub undocumented: HashMap<String, JsonObject>")?;
+        writeln!(f, "    pub undocumented: BTreeMap<String, JsonObject>")?;
 
         writeln!(f, "}}")
     }

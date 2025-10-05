@@ -77,15 +77,15 @@ impl std::fmt::Display for DiscriminatedUnionType {
             // Capture undocumented fields
             writeln!(
                 f,
-                "        #[serde(flatten, skip_serializing_if = \"HashMap::is_empty\")]"
+                "        #[serde(flatten, skip_serializing_if = \"BTreeMap::is_empty\")]"
             )?;
-            writeln!(f, "        undocumented: HashMap<String, JsonObject>")?;
+            writeln!(f, "        undocumented: BTreeMap<String, JsonObject>")?;
 
             writeln!(f, "    }},")?;
         }
 
         writeln!(f, "    #[serde(untagged)]")?;
-        writeln!(f, "    Undocumented(JsonObject)")?;
+        writeln!(f, "    Undocumented(BTreeMap<String, JsonObject>)")?;
 
         writeln!(f, "}}")
     }
@@ -210,7 +210,7 @@ impl<'a> std::fmt::Display for DisjointedDiscriminatedUnionGetters<'a> {
         writeln!(
             f,
             r#"
-        pub fn undocumented(&self) -> Option<&JsonObject> {{
+        pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {{
             if let Self::Undocumented(ret) = self {{
                 Some(ret)
             }} else {{ None }}

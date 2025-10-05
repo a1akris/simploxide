@@ -75,7 +75,10 @@ fn generate_types(types_md: &str) -> Result<(), Box<dyn Error>> {
         lib_rs,
         "use serde_aux::field_attributes::{{deserialize_number_from_string, deserialize_option_number_from_string}};"
     )?;
-    writeln!(lib_rs, "use std::{{collections::HashMap, sync::Arc}};")?;
+    writeln!(
+        lib_rs,
+        "use std::{{collections::{{HashMap, BTreeMap}}, sync::Arc}};"
+    )?;
     writeln!(lib_rs, "use errors::*;")?;
     writeln!(lib_rs, "use utils::CommandSyntax;")?;
     writeln!(lib_rs)?;
