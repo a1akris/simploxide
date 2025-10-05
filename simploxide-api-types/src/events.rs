@@ -140,7 +140,7 @@ pub enum Event {
     #[serde(rename = "chatErrors")]
     ChatErrors(ChatErrors),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 /// ### Contact connection events
@@ -170,9 +170,9 @@ pub struct ContactConnected {
     #[serde(rename = "userCustomProfile", skip_serializing_if = "Option::is_none")]
     pub user_custom_profile: Option<Profile>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Contact connection events
@@ -202,9 +202,9 @@ pub struct ContactUpdated {
     #[serde(rename = "toContact")]
     pub to_contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Contact connection events
@@ -231,9 +231,9 @@ pub struct ContactDeletedByContact {
     #[serde(rename = "contact")]
     pub contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Contact connection events
@@ -267,9 +267,9 @@ pub struct ReceivedContactRequest {
     #[serde(rename = "chat_", skip_serializing_if = "Option::is_none")]
     pub chat: Option<AChat>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Contact connection events
@@ -304,9 +304,9 @@ pub struct NewMemberContactReceivedInv {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Contact connection events
@@ -335,9 +335,9 @@ pub struct ContactSndReady {
     #[serde(rename = "contact")]
     pub contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Message events
@@ -357,9 +357,9 @@ pub struct NewChatItems {
     #[serde(rename = "chatItems")]
     pub chat_items: Vec<AChatItem>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Message events
@@ -382,9 +382,9 @@ pub struct ChatItemReaction {
     #[serde(rename = "reaction")]
     pub reaction: ACIReaction,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Message events
@@ -410,9 +410,9 @@ pub struct ChatItemsDeleted {
     #[serde(rename = "timed")]
     pub timed: bool,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Message events
@@ -432,9 +432,9 @@ pub struct ChatItemUpdated {
     #[serde(rename = "chatItem")]
     pub chat_item: AChatItem,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Message events
@@ -463,9 +463,9 @@ pub struct GroupChatItemsDeleted {
     #[serde(rename = "member_", skip_serializing_if = "Option::is_none")]
     pub member: Option<GroupMember>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Message events
@@ -485,9 +485,9 @@ pub struct ChatItemsStatusesUpdated {
     #[serde(rename = "chatItems")]
     pub chat_items: Vec<AChatItem>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -518,9 +518,9 @@ pub struct ReceivedGroupInvitation {
     #[serde(rename = "memberRole")]
     pub member_role: GroupMemberRole,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -545,9 +545,9 @@ pub struct UserJoinedGroup {
     #[serde(rename = "hostMember")]
     pub host_member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -575,9 +575,9 @@ pub struct GroupUpdated {
     #[serde(rename = "member_", skip_serializing_if = "Option::is_none")]
     pub member: Option<GroupMember>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -602,9 +602,9 @@ pub struct JoinedGroupMember {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -638,9 +638,9 @@ pub struct MemberRole {
     #[serde(rename = "toRole")]
     pub to_role: GroupMemberRole,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -671,9 +671,9 @@ pub struct DeletedMember {
     #[serde(rename = "withMessages")]
     pub with_messages: bool,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -698,9 +698,9 @@ pub struct LeftMember {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -728,9 +728,9 @@ pub struct DeletedMemberUser {
     #[serde(rename = "withMessages")]
     pub with_messages: bool,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -755,9 +755,9 @@ pub struct GroupDeleted {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -785,9 +785,9 @@ pub struct ConnectedToGroupMember {
     #[serde(rename = "memberContact", skip_serializing_if = "Option::is_none")]
     pub member_contact: Option<Contact>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -815,9 +815,9 @@ pub struct MemberAcceptedByOther {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -848,9 +848,9 @@ pub struct MemberBlockedForAll {
     #[serde(rename = "blocked")]
     pub blocked: bool,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Group events
@@ -878,9 +878,9 @@ pub struct GroupMemberUpdated {
     #[serde(rename = "toMember")]
     pub to_member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -914,9 +914,9 @@ pub struct RcvFileDescrReady {
     #[serde(rename = "rcvFileDescr")]
     pub rcv_file_descr: RcvFileDescr,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -940,9 +940,9 @@ pub struct RcvFileComplete {
     #[serde(rename = "chatItem")]
     pub chat_item: AChatItem,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -969,9 +969,9 @@ pub struct SndFileCompleteXftp {
     #[serde(rename = "fileTransferMeta")]
     pub file_transfer_meta: FileTransferMeta,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -995,9 +995,9 @@ pub struct RcvFileStart {
     #[serde(rename = "chatItem")]
     pub chat_item: AChatItem,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -1024,9 +1024,9 @@ pub struct RcvFileSndCancelled {
     #[serde(rename = "rcvFileTransfer")]
     pub rcv_file_transfer: RcvFileTransfer,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -1050,9 +1050,9 @@ pub struct RcvFileAccepted {
     #[serde(rename = "chatItem")]
     pub chat_item: AChatItem,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -1082,9 +1082,9 @@ pub struct RcvFileError {
     #[serde(rename = "rcvFileTransfer")]
     pub rcv_file_transfer: RcvFileTransfer,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -1114,9 +1114,9 @@ pub struct RcvFileWarning {
     #[serde(rename = "rcvFileTransfer")]
     pub rcv_file_transfer: RcvFileTransfer,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -1146,9 +1146,9 @@ pub struct SndFileError {
     #[serde(rename = "errorMessage")]
     pub error_message: String,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### File events
@@ -1178,9 +1178,9 @@ pub struct SndFileWarning {
     #[serde(rename = "errorMessage")]
     pub error_message: String,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Connection progress events
@@ -1200,9 +1200,9 @@ pub struct AcceptingContactRequest {
     #[serde(rename = "contact")]
     pub contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Connection progress events
@@ -1222,9 +1222,9 @@ pub struct AcceptingBusinessRequest {
     #[serde(rename = "groupInfo")]
     pub group_info: GroupInfo,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Connection progress events
@@ -1246,9 +1246,9 @@ pub struct ContactConnecting {
     #[serde(rename = "contact")]
     pub contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Connection progress events
@@ -1276,9 +1276,9 @@ pub struct BusinessLinkConnecting {
     #[serde(rename = "fromContact")]
     pub from_contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Connection progress events
@@ -1304,9 +1304,9 @@ pub struct JoinedGroupMemberConnecting {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Connection progress events
@@ -1332,9 +1332,9 @@ pub struct SentGroupInvitation {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Connection progress events
@@ -1357,9 +1357,9 @@ pub struct GroupLinkConnecting {
     #[serde(rename = "hostMember")]
     pub host_member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Error events
@@ -1382,9 +1382,9 @@ pub struct MessageError {
     #[serde(rename = "errorMessage")]
     pub error_message: String,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Error events
@@ -1401,9 +1401,9 @@ pub struct ChatError {
     #[serde(rename = "chatError")]
     pub chat_error: errors::ChatError,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 /// ### Error events
@@ -1420,7 +1420,7 @@ pub struct ChatErrors {
     #[serde(rename = "chatErrors")]
     pub chat_errors: Vec<errors::ChatError>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }

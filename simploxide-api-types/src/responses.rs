@@ -11,7 +11,7 @@ pub enum ApiCreateMyAddressResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiCreateMyAddressResponse {
@@ -31,7 +31,7 @@ impl ApiCreateMyAddressResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -51,7 +51,7 @@ pub enum ApiDeleteMyAddressResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiDeleteMyAddressResponse {
@@ -71,7 +71,7 @@ impl ApiDeleteMyAddressResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -91,7 +91,7 @@ pub enum ApiShowMyAddressResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiShowMyAddressResponse {
@@ -111,7 +111,7 @@ impl ApiShowMyAddressResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -131,7 +131,7 @@ pub enum ApiSetProfileAddressResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiSetProfileAddressResponse {
@@ -151,7 +151,7 @@ impl ApiSetProfileAddressResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -171,7 +171,7 @@ pub enum ApiSetAddressSettingsResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiSetAddressSettingsResponse {
@@ -191,7 +191,7 @@ impl ApiSetAddressSettingsResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -211,7 +211,7 @@ pub enum ApiSendMessagesResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiSendMessagesResponse {
@@ -231,7 +231,7 @@ impl ApiSendMessagesResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -254,7 +254,7 @@ pub enum ApiUpdateChatItemResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiUpdateChatItemResponse {
@@ -282,7 +282,7 @@ impl ApiUpdateChatItemResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -302,7 +302,7 @@ pub enum ApiDeleteChatItemResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiDeleteChatItemResponse {
@@ -322,7 +322,7 @@ impl ApiDeleteChatItemResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -342,7 +342,7 @@ pub enum ApiDeleteMemberChatItemResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiDeleteMemberChatItemResponse {
@@ -362,7 +362,7 @@ impl ApiDeleteMemberChatItemResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -382,7 +382,7 @@ pub enum ApiChatItemReactionResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiChatItemReactionResponse {
@@ -402,7 +402,7 @@ impl ApiChatItemReactionResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -425,7 +425,7 @@ pub enum ReceiveFileResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ReceiveFileResponse {
@@ -453,7 +453,7 @@ impl ReceiveFileResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -476,7 +476,7 @@ pub enum CancelFileResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl CancelFileResponse {
@@ -504,7 +504,7 @@ impl CancelFileResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -524,7 +524,7 @@ pub enum ApiAddMemberResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiAddMemberResponse {
@@ -544,7 +544,7 @@ impl ApiAddMemberResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -564,7 +564,7 @@ pub enum ApiJoinGroupResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiJoinGroupResponse {
@@ -584,7 +584,7 @@ impl ApiJoinGroupResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -604,7 +604,7 @@ pub enum ApiAcceptMemberResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiAcceptMemberResponse {
@@ -624,7 +624,7 @@ impl ApiAcceptMemberResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -644,7 +644,7 @@ pub enum ApiMembersRoleResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiMembersRoleResponse {
@@ -664,7 +664,7 @@ impl ApiMembersRoleResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -684,7 +684,7 @@ pub enum ApiBlockMembersForAllResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiBlockMembersForAllResponse {
@@ -704,7 +704,7 @@ impl ApiBlockMembersForAllResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -724,7 +724,7 @@ pub enum ApiRemoveMembersResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiRemoveMembersResponse {
@@ -744,7 +744,7 @@ impl ApiRemoveMembersResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -764,7 +764,7 @@ pub enum ApiLeaveGroupResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiLeaveGroupResponse {
@@ -784,7 +784,7 @@ impl ApiLeaveGroupResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -804,7 +804,7 @@ pub enum ApiListMembersResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiListMembersResponse {
@@ -824,7 +824,7 @@ impl ApiListMembersResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -844,7 +844,7 @@ pub enum ApiNewGroupResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiNewGroupResponse {
@@ -864,7 +864,7 @@ impl ApiNewGroupResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -884,7 +884,7 @@ pub enum ApiUpdateGroupProfileResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiUpdateGroupProfileResponse {
@@ -904,7 +904,7 @@ impl ApiUpdateGroupProfileResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -924,7 +924,7 @@ pub enum ApiCreateGroupLinkResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiCreateGroupLinkResponse {
@@ -944,7 +944,7 @@ impl ApiCreateGroupLinkResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -964,7 +964,7 @@ pub enum ApiGroupLinkMemberRoleResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiGroupLinkMemberRoleResponse {
@@ -984,7 +984,7 @@ impl ApiGroupLinkMemberRoleResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1004,7 +1004,7 @@ pub enum ApiDeleteGroupLinkResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiDeleteGroupLinkResponse {
@@ -1024,7 +1024,7 @@ impl ApiDeleteGroupLinkResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1044,7 +1044,7 @@ pub enum ApiGetGroupLinkResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiGetGroupLinkResponse {
@@ -1064,7 +1064,7 @@ impl ApiGetGroupLinkResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1084,7 +1084,7 @@ pub enum ApiAddContactResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiAddContactResponse {
@@ -1104,7 +1104,7 @@ impl ApiAddContactResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1124,7 +1124,7 @@ pub enum ApiConnectPlanResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiConnectPlanResponse {
@@ -1144,7 +1144,7 @@ impl ApiConnectPlanResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1170,7 +1170,7 @@ pub enum ApiConnectResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiConnectResponse {
@@ -1206,7 +1206,7 @@ impl ApiConnectResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1232,7 +1232,7 @@ pub enum ConnectResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ConnectResponse {
@@ -1268,7 +1268,7 @@ impl ConnectResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1288,7 +1288,7 @@ pub enum ApiAcceptContactResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiAcceptContactResponse {
@@ -1308,7 +1308,7 @@ impl ApiAcceptContactResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1328,7 +1328,7 @@ pub enum ApiRejectContactResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiRejectContactResponse {
@@ -1348,7 +1348,7 @@ impl ApiRejectContactResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1368,7 +1368,7 @@ pub enum ApiListContactsResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiListContactsResponse {
@@ -1388,7 +1388,7 @@ impl ApiListContactsResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1408,7 +1408,7 @@ pub enum ApiListGroupsResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiListGroupsResponse {
@@ -1428,7 +1428,7 @@ impl ApiListGroupsResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1454,7 +1454,7 @@ pub enum ApiDeleteChatResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiDeleteChatResponse {
@@ -1490,7 +1490,7 @@ impl ApiDeleteChatResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1510,7 +1510,7 @@ pub enum ShowActiveUserResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ShowActiveUserResponse {
@@ -1530,7 +1530,7 @@ impl ShowActiveUserResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1550,7 +1550,7 @@ pub enum CreateActiveUserResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl CreateActiveUserResponse {
@@ -1570,7 +1570,7 @@ impl CreateActiveUserResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1590,7 +1590,7 @@ pub enum ListUsersResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ListUsersResponse {
@@ -1610,7 +1610,7 @@ impl ListUsersResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1630,7 +1630,7 @@ pub enum ApiSetActiveUserResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiSetActiveUserResponse {
@@ -1650,7 +1650,7 @@ impl ApiSetActiveUserResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1670,7 +1670,7 @@ pub enum ApiDeleteUserResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiDeleteUserResponse {
@@ -1690,7 +1690,7 @@ impl ApiDeleteUserResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1713,7 +1713,7 @@ pub enum ApiUpdateProfileResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiUpdateProfileResponse {
@@ -1741,7 +1741,7 @@ impl ApiUpdateProfileResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1761,7 +1761,7 @@ pub enum ApiSetContactPrefsResponse {
     #[serde(rename = "chatCmdError")]
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
-    Undocumented(JsonObject),
+    Undocumented(BTreeMap<String, JsonObject>),
 }
 
 impl ApiSetContactPrefsResponse {
@@ -1781,7 +1781,7 @@ impl ApiSetContactPrefsResponse {
         }
     }
 
-    pub fn undocumented(&self) -> Option<&JsonObject> {
+    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
         if let Self::Undocumented(ret) = self {
             Some(ret)
         } else {
@@ -1800,9 +1800,9 @@ pub struct AcceptingContactRequestResponse {
     #[serde(rename = "contact")]
     pub contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1812,9 +1812,9 @@ pub struct ActiveUserResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1824,9 +1824,9 @@ pub struct ChatCmdErrorResponse {
     #[serde(rename = "chatError")]
     pub chat_error: ChatError,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1839,9 +1839,9 @@ pub struct ChatItemNotChangedResponse {
     #[serde(rename = "chatItem")]
     pub chat_item: AChatItem,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1857,9 +1857,9 @@ pub struct ChatItemReactionResponse {
     #[serde(rename = "reaction")]
     pub reaction: ACIReaction,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1872,9 +1872,9 @@ pub struct ChatItemUpdatedResponse {
     #[serde(rename = "chatItem")]
     pub chat_item: AChatItem,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1893,9 +1893,9 @@ pub struct ChatItemsDeletedResponse {
     #[serde(rename = "timed")]
     pub timed: bool,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1905,9 +1905,9 @@ pub struct CmdOkResponse {
     #[serde(rename = "user_", skip_serializing_if = "Option::is_none")]
     pub user: Option<User>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1923,9 +1923,9 @@ pub struct ConnectionPlanResponse {
     #[serde(rename = "connectionPlan")]
     pub connection_plan: ConnectionPlan,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1938,9 +1938,9 @@ pub struct ContactAlreadyExistsResponse {
     #[serde(rename = "contact")]
     pub contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1953,9 +1953,9 @@ pub struct ContactConnectionDeletedResponse {
     #[serde(rename = "connection")]
     pub connection: PendingContactConnection,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1968,9 +1968,9 @@ pub struct ContactDeletedResponse {
     #[serde(rename = "contact")]
     pub contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1986,9 +1986,9 @@ pub struct ContactPrefsUpdatedResponse {
     #[serde(rename = "toContact")]
     pub to_contact: Contact,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2004,9 +2004,9 @@ pub struct ContactRequestRejectedResponse {
     #[serde(rename = "contact_", skip_serializing_if = "Option::is_none")]
     pub contact: Option<Contact>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2019,9 +2019,9 @@ pub struct ContactsListResponse {
     #[serde(rename = "contacts")]
     pub contacts: Vec<Contact>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2034,9 +2034,9 @@ pub struct GroupCreatedResponse {
     #[serde(rename = "groupInfo")]
     pub group_info: GroupInfo,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2049,9 +2049,9 @@ pub struct GroupDeletedUserResponse {
     #[serde(rename = "groupInfo")]
     pub group_info: GroupInfo,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2067,9 +2067,9 @@ pub struct GroupLinkCreatedResponse {
     #[serde(rename = "groupLink")]
     pub group_link: GroupLink,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2082,9 +2082,9 @@ pub struct GroupLinkDeletedResponse {
     #[serde(rename = "groupInfo")]
     pub group_info: GroupInfo,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2100,9 +2100,9 @@ pub struct GroupLinkResponse {
     #[serde(rename = "groupLink")]
     pub group_link: GroupLink,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2115,9 +2115,9 @@ pub struct GroupMembersResponse {
     #[serde(rename = "group")]
     pub group: Group,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2136,9 +2136,9 @@ pub struct GroupUpdatedResponse {
     #[serde(rename = "member_", skip_serializing_if = "Option::is_none")]
     pub member: Option<GroupMember>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2151,9 +2151,9 @@ pub struct GroupsListResponse {
     #[serde(rename = "groups")]
     pub groups: Vec<GroupInfoSummary>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2169,9 +2169,9 @@ pub struct InvitationResponse {
     #[serde(rename = "connection")]
     pub connection: PendingContactConnection,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2184,9 +2184,9 @@ pub struct LeftMemberUserResponse {
     #[serde(rename = "groupInfo")]
     pub group_info: GroupInfo,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2202,9 +2202,9 @@ pub struct MemberAcceptedResponse {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2223,9 +2223,9 @@ pub struct MembersBlockedForAllUserResponse {
     #[serde(rename = "blocked")]
     pub blocked: bool,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2244,9 +2244,9 @@ pub struct MembersRoleUserResponse {
     #[serde(rename = "toRole")]
     pub to_role: GroupMemberRole,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2259,9 +2259,9 @@ pub struct NewChatItemsResponse {
     #[serde(rename = "chatItems")]
     pub chat_items: Vec<AChatItem>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2274,9 +2274,9 @@ pub struct RcvFileAcceptedResponse {
     #[serde(rename = "chatItem")]
     pub chat_item: AChatItem,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2289,9 +2289,9 @@ pub struct RcvFileAcceptedSndCancelledResponse {
     #[serde(rename = "rcvFileTransfer")]
     pub rcv_file_transfer: RcvFileTransfer,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2307,9 +2307,9 @@ pub struct RcvFileCancelledResponse {
     #[serde(rename = "rcvFileTransfer")]
     pub rcv_file_transfer: RcvFileTransfer,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2325,9 +2325,9 @@ pub struct SentConfirmationResponse {
     #[serde(rename = "customUserProfile", skip_serializing_if = "Option::is_none")]
     pub custom_user_profile: Option<Profile>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2346,9 +2346,9 @@ pub struct SentGroupInvitationResponse {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2364,9 +2364,9 @@ pub struct SentInvitationResponse {
     #[serde(rename = "customUserProfile", skip_serializing_if = "Option::is_none")]
     pub custom_user_profile: Option<Profile>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2385,9 +2385,9 @@ pub struct SndFileCancelledResponse {
     #[serde(rename = "sndFileTransfers")]
     pub snd_file_transfers: Vec<SndFileTransfer>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2403,9 +2403,9 @@ pub struct UserAcceptedGroupSentResponse {
     #[serde(rename = "hostContact", skip_serializing_if = "Option::is_none")]
     pub host_contact: Option<Contact>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2418,9 +2418,9 @@ pub struct UserContactLinkCreatedResponse {
     #[serde(rename = "connLinkContact")]
     pub conn_link_contact: CreatedConnLink,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2430,9 +2430,9 @@ pub struct UserContactLinkDeletedResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2445,9 +2445,9 @@ pub struct UserContactLinkResponse {
     #[serde(rename = "contactLink")]
     pub contact_link: UserContactLink,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2460,9 +2460,9 @@ pub struct UserContactLinkUpdatedResponse {
     #[serde(rename = "contactLink")]
     pub contact_link: UserContactLink,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2481,9 +2481,9 @@ pub struct UserDeletedMembersResponse {
     #[serde(rename = "withMessages")]
     pub with_messages: bool,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2493,9 +2493,9 @@ pub struct UserProfileNoChangeResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2514,9 +2514,9 @@ pub struct UserProfileUpdatedResponse {
     #[serde(rename = "updateSummary")]
     pub update_summary: UserProfileUpdateSummary,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2526,7 +2526,7 @@ pub struct UsersListResponse {
     #[serde(rename = "users")]
     pub users: Vec<UserInfo>,
 
-    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: HashMap<String, JsonObject>,
+    pub undocumented: BTreeMap<String, JsonObject>,
 }
