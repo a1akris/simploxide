@@ -61,6 +61,7 @@ fn generate_types(types_md: &str) -> Result<(), Box<dyn Error>> {
 
     writeln!(lib_rs, "//! This crate is auto-generated\n")?;
     writeln!(lib_rs, "#![allow(clippy::large_enum_variant)]")?;
+    writeln!(lib_rs, "#![allow(clippy::should_implement_trait)]")?;
     writeln!(lib_rs, "#![allow(clippy::unnecessary_to_owned)]")?;
     writeln!(lib_rs)?;
     writeln!(lib_rs, "pub mod errors;")?;

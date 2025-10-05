@@ -1,6 +1,7 @@
 //! This crate is auto-generated
 
 #![allow(clippy::large_enum_variant)]
+#![allow(clippy::should_implement_trait)]
 #![allow(clippy::unnecessary_to_owned)]
 
 pub mod client_api;
