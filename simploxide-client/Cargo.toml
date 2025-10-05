@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-client"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
@@ -23,4 +23,4 @@ serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 simploxide-core = { version = "0.2.2", path = "../simploxide-core"}
-simploxide-api-types = { version = "0.3.0", path = "../simploxide-api-types" }
+simploxide-api-types = { version = "0.4.0", path = "../simploxide-api-types" }
