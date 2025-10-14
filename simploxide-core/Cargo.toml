@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-core"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"

@@ -212,6 +212,8 @@ async fn error_handler(
 ) {
     receiver.close();
 
+    log::error!("Terminating the router task due to an error: {error}");
+
     while let Some(cmd) = client_commands.recv().await {
         match cmd {
             ClientCommand::Book { responder, .. } => {
