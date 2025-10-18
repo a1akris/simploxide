@@ -5,4 +5,4 @@ pub use crate::types::{
     ComposedMessage, CreatedConnLink, GroupMemberRole, GroupProfile, MsgContent, MsgReaction,
     NewUser, Preferences, Profile, UpdatedMessage,
 };
-pub use crate::{ClientApi as _, ClientError, ClientResult, commands::*, events::*, responses::*};
+pub use crate::{ClientError, ClientResult, client_api::*, commands::*, events::*, responses::*};
