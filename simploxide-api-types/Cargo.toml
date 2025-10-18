@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-api-types"
-version = "0.4.1"
+version = "0.5.0"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
