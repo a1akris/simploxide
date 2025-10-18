@@ -7,15 +7,20 @@
 //! First of all, you **must** use a tokio runtime. The current `simploxide` implementation heavily
 //! depends on it.
 //!
-//! Secondly, it's recommended to use `simploxide_client::prelude::*` if you don't want your import
-//! section to explode. The prelude reexports all top-level types required for sending requests,
-//! destructuring responses and matching events, but you'll still need to manually import
-//! intermediary types and there are a lot of them.
+//! It's also recommended to use `simploxide_client::prelude::*` everywhere to not pollute the
+//! import section.
 //!
 //! ##### Now to the bot
 //!
 //! The most common bot structure will look like this:
 //!
+//! 1. Initialize a web socket connection with the simplex-chat daemon(you can run simplex-chat as
+//!    a daemon using the `simplex-chat -p <port>` command)
+//! 1. Prequery some info and do some validations required for your bot to work: this typically
+//!    includes creating the bot address, switching to the right bot user, etc
+//! 1. Start an event reactor loop and process the events.
+//!
+//! Example:
 //!
 //! ```ignore
 //! use simploxide_client::prelude::*;
@@ -53,18 +58,12 @@
 //! }
 //! ```
 //!
-//! 1. Initialize a web socket connection with the simplex-chat daemon. You can run simplex-chat as
-//!    a daemon with `simplex-chat -p <port>` command.
-//! 1. Prequery some info and do some validations required for your bot to work: this typically
-//!    includes getting or creating the bot address, switching to the right bot user, etc
-//! 1. Start an event reactor loop and process the events.
-//!
-//! Everything looks simple and trivial but the reactor part in the example above is terribly
-//! inefficient. It reacts on events sequentially waiting for client to respond to the first event
-//! before processing the second. This can be fine if your bot doesn't need to operate under a
-//! heavy-load, such reactor would also be useful during the development because it is trivial to
-//! debug however, for production it's advisable to enable full asynchronous multi-threaded
-//! processing that can be achieved by simply moving the event handlers into tokio tasks:
+//! Note that the reactor part in the example above is very inefficient because it reacts on events
+//! sequentially - not processing any events until the client responds to the current event. This
+//! can be OK if your bot doesn't need to operate under a heavy-load, such reactor could also be
+//! useful during the development because it is trivial to debug, but for deployment it is
+//! advisable to enable full asynchronous multi-threaded event processing which can be simply
+//! achieved by moving event handlers into tokio tasks:
 //!
 //!
 //!```ignore
@@ -88,20 +87,15 @@
 //!     }
 //!```
 //!
-//! Note, that we can't terminate the event loop with a `break` statetement because the event is
-//! being processed asynchronously in its own task. You can call `client.disconnect()` in this case
-//! to initiate a graceful shutdown which will eventually end the event stream, but even with
-//! strong guarantees the graceful shutdown provides it cannot guarantee that events, which
-//! occurred before the shutdown, will be processed to completion as tasks may need to send several
-//! requests to complete successfully, so if this is important for you application to process
-//! events atomically you should use primitives like tokio channels and notifies to break the loop
-//! without dropping the web socket connection.
+//! Now the event loop can't be terimnated with a `break` statetement because events are
+//! processed asynchronously in their own tasks. You can call `client.disconnect()` in this case to
+//! initiate a graceful shutdown which will eventually end the event stream, or you can use a
+//! cancellation token + tokio::select! and break the loop when the token is triggered.
 //!
+//! ##### Trivial use-cases
 //!
-//! ##### A simpler use case
-//!
-//! Some applications may not need to react on events, they can act like scripts, or like remote
-//! controllers for a SimpleX chat instance. In this case, drop the event stream immediately to
+//! Some applications may not need to react to events, they can act like scripts or like remote
+//! controllers for the SimpleX chat instance. In this case, drop the event stream immediately to
 //! prevent events from buffering and leaking memory:
 //!
 //!
@@ -112,11 +106,11 @@
 //! ```
 //!
 //!
-//! ##### More complicated use case
+//! ##### More complicated use-cases
 //!
 //! Some applications may have several event loops, so the reactor could be moved into a separate
 //! async task. In this case it's recommended to save the handle of the tokio task and await it
-//! before the program exits to prevent data losses(e.g. to ensure that client.disconnect() is called).
+//! before the program exits to prevent data losses.
 //!
 //! ```ignore
 //!     // Init websocket connection with SimpleX daemon
@@ -129,16 +123,43 @@
 //!     handle.await
 //! ```
 //!
+//!
+//! ##### Graceful shutdown guarantees
+//!
+//! When calling `client.disconnect()` it's guaranteed that all futures created before this call
+//! will still receive their responses and that all futures created after this call will resolve
+//! with `tungstenite::Error::AlreadyClosed`.
+//!
+//! Note however, that if your task sends multiple requests and you're calling
+//! `client.disconnect()` from another task then it's not guaranteed that your task will get all
+//! responses. In fact any future can resolve with an error:
+//!
+//! ```ignore
+//! async fn my_handler(client: simploxide_client::Client) -> HandlerResult {
+//!     let res1 = client.req1().await?;
+//!     // <--------------------------------- Disconnect triggers at this point
+//!     let res2 = client.req2(res1).await?; // This future will throw an error
+//!     Ok(res2)
+//! }
+//! ```
+//!
+//! You will need to implement additional synchronization mechanisms if you want to ensure that all
+//! handlers run to completion when client disconnects.
+//!
+//! To understand more about the client implementation read the [`core`] docs.
+//!
 //! # How to work with this documentation?
 //!
-//! The [`Client`] page should become your main page. From there you can reach the deepest corners
-//! of the docs in a structured manner. The [`events`] page should become your secondary page. You
-//! can see all events that your bots can react to there.
+//! The [`Client`] page should become your main page and the [`events`] page should become your
+//! secondary page. From these 2 pages you can reach all corners of the docs in a structured
+//! manner.
 //!
-//! If you need to understand how async is being implemented in the client check out the [`core`]
-//! docs.
 use futures::Stream;
-use simploxide_api_types::{JsonObject, events::Event};
+use simploxide_api_types::{
+    JsonObject,
+    client_api::{BadResponseError, ClientApiError},
+    events::Event,
+};
 use simploxide_core::{EventQueue, EventReceiver, RawClient};
 use std::{sync::Arc, task};
 
@@ -151,9 +172,10 @@ pub use simploxide_core::{
 
 pub mod prelude;
 
+pub type ClientResult<T = ()> = std::result::Result<T, ClientError>;
+
 /// A wrapper over [`simploxide_core::connect`] that turns [`simploxide_core::RawClient`] into
-/// [`Client`] and the event queue into the event stream with automatic event
-/// deserialization.
+/// [`Client`] and raw event queue into the [`EventStream`] with automatic event deserialization.
 ///
 /// ```ignore
 /// let (client, mut events) = simploxide_client::connect("ws://127.0.0.1:5225").await?;
@@ -167,7 +189,6 @@ pub mod prelude;
 /// ```
 pub async fn connect<S: AsRef<str>>(uri: S) -> Result<(Client, EventStream), WsError> {
     let (raw_client, raw_event_queue) = simploxide_core::connect(uri.as_ref()).await?;
-
     Ok((Client::from(raw_client), EventStream::from(raw_event_queue)))
 }
 
@@ -193,7 +214,7 @@ impl Stream for EventStream {
 }
 
 /// A high level SimpleX-Chat client which provides typed API methods with automatic command
-/// serialization/response deserialization.
+/// serialization and response deserialization.
 #[derive(Clone)]
 pub struct Client {
     inner: RawClient,
@@ -214,9 +235,54 @@ impl Client {
 }
 
 impl ClientApi for Client {
-    type Error = CoreError;
+    type Error = ClientError;
 
     async fn send_raw(&self, command: String) -> Result<JsonObject, Self::Error> {
-        self.inner.send(command).await
+        self.inner
+            .send(command)
+            .await
+            .map_err(ClientError::WebSocketFailure)
+    }
+}
+
+/// See [`core::client_api::AllowUndocumentedResponses`] if you don't want to trigger an error when
+/// you receive undocumeted responses(you usually receive undocumented responses when your
+/// simplex-chat server version is not compatible with the simploxide-client version. Keep an eye
+/// on the
+/// [Version compatability table](https://github.com/a1akris/simploxide?tab=readme-ov-file#version-compatability-table)
+/// )
+#[derive(Debug)]
+pub enum ClientError {
+    /// Critical error signalling that the web socket connection is dropped for some reason. You
+    /// will have to reconnect to the SimpleX server to recover from this one.
+    WebSocketFailure(CoreError),
+    /// SimpleX command error or unexpected(undocumented) response.
+    BadResponse(BadResponseError),
+}
+
+impl std::error::Error for ClientError {}
+
+impl std::fmt::Display for ClientError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ClientError::WebSocketFailure(err) => writeln!(f, "Web socket failure: {err}"),
+            ClientError::BadResponse(err) => err.fmt(f),
+        }
+    }
+}
+
+impl From<BadResponseError> for ClientError {
+    fn from(err: BadResponseError) -> Self {
+        Self::BadResponse(err)
+    }
+}
+
+impl ClientApiError for ClientError {
+    fn bad_response_mut(&mut self) -> Option<&mut BadResponseError> {
+        if let Self::BadResponse(resp) = self {
+            Some(resp)
+        } else {
+            None
+        }
     }
 }

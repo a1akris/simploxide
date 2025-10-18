@@ -24,3 +24,6 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 simploxide-core = { version = "0.2.2", path = "../simploxide-core"}
 simploxide-api-types = { version = "0.4.0", path = "../simploxide-api-types" }
+
+[dev-dependencies]
+async-trait = "0.1.89"

@@ -14,53 +14,43 @@
 //! then it may take your SimpleX Client several minutes after launching this bot to recognize this
 //! preference and show you the file upload icon.
 
+use futures::{TryFutureExt as _, TryStreamExt as _};
 use simploxide_client::{
-    Client,
     prelude::*,
     types::{CryptoFile, FeatureAllowed, SimplePreference},
 };
-
-use futures::TryStreamExt as _;
 use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let (client, mut events) = simploxide_client::connect("ws://127.0.0.1:5225").await?;
 
-    // Use destructuring to extract data from the expected response
-    let ShowActiveUserResponse::ActiveUser(ActiveUserResponse { ref user, .. }) =
-        *client.show_active_user().await?
-    else {
-        return Err("No active user profile".into());
-    };
+    // Use destructuring to extract data from responses
+    let ActiveUserResponse { ref user, .. } = *client.show_active_user().await?;
 
     println!(
         "Bot profile: {} ({})",
         user.profile.display_name, user.profile.full_name
     );
 
-    // Alternatively, use response getters
-    let (address_long, address_short) = match client
+    // Get or create the bot address
+    let (address_long, address_short) = client
         .api_show_my_address(user.user_id)
-        .await?
-        .user_contact_link()
-    {
-        Some(resp) => (
-            resp.contact_link.conn_link_contact.conn_full_link.clone(),
-            resp.contact_link.conn_link_contact.conn_short_link.clone(),
-        ),
-        None => client
-            .api_create_my_address(user.user_id)
-            .await?
-            .user_contact_link_created()
-            .map(|resp| {
+        .map_ok(|resp| {
+            (
+                resp.contact_link.conn_link_contact.conn_full_link.clone(),
+                resp.contact_link.conn_link_contact.conn_short_link.clone(),
+            )
+        })
+        .or_else(|_| {
+            client.api_create_my_address(user.user_id).map_ok(|resp| {
                 (
                     resp.conn_link_contact.conn_full_link.clone(),
                     resp.conn_link_contact.conn_short_link.clone(),
                 )
             })
-            .ok_or("Failed to create bot address")?,
-    };
+        })
+        .await?;
 
     println!("Bot long address: {address_long}");
     println!("Bot short address: {address_short:?}");
@@ -106,7 +96,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 // You can call receive/cancel directly here without waiting for the
                 // RcvFileDescrReady event but you will get `RcvFileAcceptedSndCancelled` response
                 // if the user cancels the transmission at this stage while receiving a file after
-                // `RcvFileDescrReady` normally succeeds.
+                // the `RcvFileDescrReady` event normally succeeds.
                 println!(
                     "New chat items:\n{:#?}",
                     new_msgs
@@ -163,7 +153,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     client.send_text(
                         contact.contact_id,
                         format!(
-                            "Failed to receive the {} due to a horrible error {:?}",
+                            "Failed to receive the {} due to this horrible error {:#?}",
                             e.rcv_file_transfer.file_invitation.file_name, e.agent_error
                         ),
                     );
@@ -207,7 +197,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     .clone();
 
                 // Spawns a background file upload. The crypto_file struct has a crypto_args
-                // parameter. Set it to `None` to send file without decrypting it.
+                // parameter. Set it to `None` to send a file without decrypting it.
                 file_client.send_file(contact_id, msg_id, "Take it back!", crypto_file)
             }
             Event::SndFileCompleteXftp(descr) => {
@@ -244,7 +234,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     client.send_text(
                         contact.contact_id,
                         format!(
-                            "Failed to send back the {} due to horrible error {:?}",
+                            "Failed to send back the {} due to this horrible error {:#?}",
                             e.file_transfer_meta.file_name, e.error_message
                         ),
                     )
@@ -278,7 +268,7 @@ trait BotExtensions {
     fn recv_file(&self, file_id: i64);
 }
 
-impl BotExtensions for Client {
+impl BotExtensions for simploxide_client::Client {
     fn send_text(&self, chat_id: i64, txt: impl Into<String>) {
         let client = self.clone();
         let text = txt.into();

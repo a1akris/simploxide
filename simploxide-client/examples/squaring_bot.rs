@@ -8,57 +8,49 @@
 //!
 //! A bot that receives a number and sends back its square.
 
-use futures::TryStreamExt as _;
-use simploxide_client::{CoreResult, prelude::*, types::CIContent};
+use futures::{TryFutureExt as _, TryStreamExt as _};
+use simploxide_client::prelude::*;
 use std::{error::Error, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let (client, mut events) = simploxide_client::connect("ws://127.0.0.1:5225").await?;
 
-    // Use destructuring to extract data from the expected response
-    let ShowActiveUserResponse::ActiveUser(ActiveUserResponse { ref user, .. }) =
-        *client.show_active_user().await?
-    else {
-        return Err("No active user profile".into());
-    };
+    // Use destructuring to extract data from responses
+    let ActiveUserResponse { ref user, .. } = *client.show_active_user().await?;
 
     println!(
         "Bot profile: {} ({})",
         user.profile.display_name, user.profile.full_name
     );
 
-    // Alternatively, use response getters
-    let (address_long, address_short) = match client
+    // Get or create the bot address
+    let (address_long, address_short) = client
         .api_show_my_address(user.user_id)
-        .await?
-        .user_contact_link()
-    {
-        Some(resp) => (
-            resp.contact_link.conn_link_contact.conn_full_link.clone(),
-            resp.contact_link.conn_link_contact.conn_short_link.clone(),
-        ),
-        None => client
-            .api_create_my_address(user.user_id)
-            .await?
-            .user_contact_link_created()
-            .map(|resp| {
+        .map_ok(|resp| {
+            (
+                resp.contact_link.conn_link_contact.conn_full_link.clone(),
+                resp.contact_link.conn_link_contact.conn_short_link.clone(),
+            )
+        })
+        .or_else(|_| {
+            client.api_create_my_address(user.user_id).map_ok(|resp| {
                 (
                     resp.conn_link_contact.conn_full_link.clone(),
                     resp.conn_link_contact.conn_short_link.clone(),
                 )
             })
-            .ok_or("Failed to create bot address")?,
-    };
+        })
+        .await?;
 
     println!("Bot long address: {address_long}");
     println!("Bot short address: {address_short:?}");
 
-    // The client API is low level, so defining helper functions is often required to deal with
-    // common bot actions.
-    let send_reply = async |dest: i64, reply: String| -> CoreResult<Arc<ApiSendMessagesResponse>> {
-        // Use bon builders to deal with complicated request structures. Availaible behind
-        // the "bon" feature flag.
+    // The client API is quite low level so defining helper functions is often required to deal
+    // with common bot actions.
+    let send_reply = async |dest: i64, reply: String| -> ClientResult<Arc<NewChatItemsResponse>> {
+        // Use bon builders to build complicated requests. Availaible behind the "bon" feature
+        // flag.
         client
             .api_send_messages(
                 ApiSendMessages::builder()
@@ -97,23 +89,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             // Got the message -> square the number
             Event::NewChatItems(new_msgs) => {
+                // SimpleX sends a lot of utility messages like enabled preferences and chat
+                // features. These fake messages must be filtered out, we're interested only in
+                // regular text messages
                 for (contact, text) in new_msgs.chat_items.iter().filter_map(|msg| {
-                    // Figuring out where the data you're interested in is actually located may
-                    // take hours))
-                    if let ChatInfo::Direct { ref contact, .. } = msg.chat_info {
-                        let text = if let CIContent::RcvMsgContent {
-                            msg_content: MsgContent::Text { ref text, .. },
-                            ..
-                        } = msg.chat_item.content
-                        {
-                            text.as_str()
-                        } else {
-                            ""
-                        };
-                        Some((contact, text))
-                    } else {
-                        None
-                    }
+                    let ChatInfo::Direct { ref contact, .. } = msg.chat_info else {
+                        return None;
+                    };
+
+                    let CIContent::RcvMsgContent {
+                        msg_content: MsgContent::Text { ref text, .. },
+                        ..
+                    } = msg.chat_item.content
+                    else {
+                        return None;
+                    };
+
+                    Some((contact, text))
                 }) {
                     if text.trim() == "/die" {
                         break 'reactor;
