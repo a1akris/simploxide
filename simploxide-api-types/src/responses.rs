@@ -14,32 +14,6 @@ pub enum ApiCreateMyAddressResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiCreateMyAddressResponse {
-    pub fn user_contact_link_created(&self) -> Option<&UserContactLinkCreatedResponse> {
-        if let Self::UserContactLinkCreated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -52,32 +26,6 @@ pub enum ApiDeleteMyAddressResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiDeleteMyAddressResponse {
-    pub fn user_contact_link_deleted(&self) -> Option<&UserContactLinkDeletedResponse> {
-        if let Self::UserContactLinkDeleted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -94,32 +42,6 @@ pub enum ApiShowMyAddressResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiShowMyAddressResponse {
-    pub fn user_contact_link(&self) -> Option<&UserContactLinkResponse> {
-        if let Self::UserContactLink(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -132,32 +54,6 @@ pub enum ApiSetProfileAddressResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiSetProfileAddressResponse {
-    pub fn user_profile_updated(&self) -> Option<&UserProfileUpdatedResponse> {
-        if let Self::UserProfileUpdated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -174,32 +70,6 @@ pub enum ApiSetAddressSettingsResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiSetAddressSettingsResponse {
-    pub fn user_contact_link_updated(&self) -> Option<&UserContactLinkUpdatedResponse> {
-        if let Self::UserContactLinkUpdated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -212,32 +82,6 @@ pub enum ApiSendMessagesResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiSendMessagesResponse {
-    pub fn new_chat_items(&self) -> Option<&NewChatItemsResponse> {
-        if let Self::NewChatItems(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -257,40 +101,6 @@ pub enum ApiUpdateChatItemResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiUpdateChatItemResponse {
-    pub fn chat_item_updated(&self) -> Option<&ChatItemUpdatedResponse> {
-        if let Self::ChatItemUpdated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_item_not_changed(&self) -> Option<&ChatItemNotChangedResponse> {
-        if let Self::ChatItemNotChanged(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -303,32 +113,6 @@ pub enum ApiDeleteChatItemResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiDeleteChatItemResponse {
-    pub fn chat_items_deleted(&self) -> Option<&ChatItemsDeletedResponse> {
-        if let Self::ChatItemsDeleted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -345,32 +129,6 @@ pub enum ApiDeleteMemberChatItemResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiDeleteMemberChatItemResponse {
-    pub fn chat_items_deleted(&self) -> Option<&ChatItemsDeletedResponse> {
-        if let Self::ChatItemsDeleted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -383,32 +141,6 @@ pub enum ApiChatItemReactionResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiChatItemReactionResponse {
-    pub fn chat_item_reaction(&self) -> Option<&ChatItemReactionResponse> {
-        if let Self::ChatItemReaction(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -428,40 +160,6 @@ pub enum ReceiveFileResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ReceiveFileResponse {
-    pub fn rcv_file_accepted(&self) -> Option<&RcvFileAcceptedResponse> {
-        if let Self::RcvFileAccepted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn rcv_file_accepted_snd_cancelled(&self) -> Option<&RcvFileAcceptedSndCancelledResponse> {
-        if let Self::RcvFileAcceptedSndCancelled(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -479,40 +177,6 @@ pub enum CancelFileResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl CancelFileResponse {
-    pub fn snd_file_cancelled(&self) -> Option<&SndFileCancelledResponse> {
-        if let Self::SndFileCancelled(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn rcv_file_cancelled(&self) -> Option<&RcvFileCancelledResponse> {
-        if let Self::RcvFileCancelled(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -525,32 +189,6 @@ pub enum ApiAddMemberResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiAddMemberResponse {
-    pub fn sent_group_invitation(&self) -> Option<&SentGroupInvitationResponse> {
-        if let Self::SentGroupInvitation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -567,32 +205,6 @@ pub enum ApiJoinGroupResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiJoinGroupResponse {
-    pub fn user_accepted_group_sent(&self) -> Option<&UserAcceptedGroupSentResponse> {
-        if let Self::UserAcceptedGroupSent(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -605,32 +217,6 @@ pub enum ApiAcceptMemberResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiAcceptMemberResponse {
-    pub fn member_accepted(&self) -> Option<&MemberAcceptedResponse> {
-        if let Self::MemberAccepted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -647,32 +233,6 @@ pub enum ApiMembersRoleResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiMembersRoleResponse {
-    pub fn members_role_user(&self) -> Option<&MembersRoleUserResponse> {
-        if let Self::MembersRoleUser(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -685,32 +245,6 @@ pub enum ApiBlockMembersForAllResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiBlockMembersForAllResponse {
-    pub fn members_blocked_for_all_user(&self) -> Option<&MembersBlockedForAllUserResponse> {
-        if let Self::MembersBlockedForAllUser(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -727,32 +261,6 @@ pub enum ApiRemoveMembersResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiRemoveMembersResponse {
-    pub fn user_deleted_members(&self) -> Option<&UserDeletedMembersResponse> {
-        if let Self::UserDeletedMembers(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -765,32 +273,6 @@ pub enum ApiLeaveGroupResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiLeaveGroupResponse {
-    pub fn left_member_user(&self) -> Option<&LeftMemberUserResponse> {
-        if let Self::LeftMemberUser(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -807,32 +289,6 @@ pub enum ApiListMembersResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiListMembersResponse {
-    pub fn group_members(&self) -> Option<&GroupMembersResponse> {
-        if let Self::GroupMembers(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -845,32 +301,6 @@ pub enum ApiNewGroupResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiNewGroupResponse {
-    pub fn group_created(&self) -> Option<&GroupCreatedResponse> {
-        if let Self::GroupCreated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -887,32 +317,6 @@ pub enum ApiUpdateGroupProfileResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiUpdateGroupProfileResponse {
-    pub fn group_updated(&self) -> Option<&GroupUpdatedResponse> {
-        if let Self::GroupUpdated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -925,32 +329,6 @@ pub enum ApiCreateGroupLinkResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiCreateGroupLinkResponse {
-    pub fn group_link_created(&self) -> Option<&GroupLinkCreatedResponse> {
-        if let Self::GroupLinkCreated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -967,32 +345,6 @@ pub enum ApiGroupLinkMemberRoleResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiGroupLinkMemberRoleResponse {
-    pub fn group_link(&self) -> Option<&GroupLinkResponse> {
-        if let Self::GroupLink(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1005,32 +357,6 @@ pub enum ApiDeleteGroupLinkResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiDeleteGroupLinkResponse {
-    pub fn group_link_deleted(&self) -> Option<&GroupLinkDeletedResponse> {
-        if let Self::GroupLinkDeleted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1047,32 +373,6 @@ pub enum ApiGetGroupLinkResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiGetGroupLinkResponse {
-    pub fn group_link(&self) -> Option<&GroupLinkResponse> {
-        if let Self::GroupLink(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1087,32 +387,6 @@ pub enum ApiAddContactResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiAddContactResponse {
-    pub fn invitation(&self) -> Option<&InvitationResponse> {
-        if let Self::Invitation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1125,32 +399,6 @@ pub enum ApiConnectPlanResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiConnectPlanResponse {
-    pub fn connection_plan(&self) -> Option<&ConnectionPlanResponse> {
-        if let Self::ConnectionPlan(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1173,48 +421,6 @@ pub enum ApiConnectResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiConnectResponse {
-    pub fn sent_confirmation(&self) -> Option<&SentConfirmationResponse> {
-        if let Self::SentConfirmation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn contact_already_exists(&self) -> Option<&ContactAlreadyExistsResponse> {
-        if let Self::ContactAlreadyExists(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn sent_invitation(&self) -> Option<&SentInvitationResponse> {
-        if let Self::SentInvitation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1235,48 +441,6 @@ pub enum ConnectResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ConnectResponse {
-    pub fn sent_confirmation(&self) -> Option<&SentConfirmationResponse> {
-        if let Self::SentConfirmation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn contact_already_exists(&self) -> Option<&ContactAlreadyExistsResponse> {
-        if let Self::ContactAlreadyExists(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn sent_invitation(&self) -> Option<&SentInvitationResponse> {
-        if let Self::SentInvitation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1289,32 +453,6 @@ pub enum ApiAcceptContactResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiAcceptContactResponse {
-    pub fn accepting_contact_request(&self) -> Option<&AcceptingContactRequestResponse> {
-        if let Self::AcceptingContactRequest(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1331,32 +469,6 @@ pub enum ApiRejectContactResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiRejectContactResponse {
-    pub fn contact_request_rejected(&self) -> Option<&ContactRequestRejectedResponse> {
-        if let Self::ContactRequestRejected(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1371,32 +483,6 @@ pub enum ApiListContactsResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiListContactsResponse {
-    pub fn contacts_list(&self) -> Option<&ContactsListResponse> {
-        if let Self::ContactsList(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1409,32 +495,6 @@ pub enum ApiListGroupsResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiListGroupsResponse {
-    pub fn groups_list(&self) -> Option<&GroupsListResponse> {
-        if let Self::GroupsList(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1457,48 +517,6 @@ pub enum ApiDeleteChatResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiDeleteChatResponse {
-    pub fn contact_deleted(&self) -> Option<&ContactDeletedResponse> {
-        if let Self::ContactDeleted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn contact_connection_deleted(&self) -> Option<&ContactConnectionDeletedResponse> {
-        if let Self::ContactConnectionDeleted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn group_deleted_user(&self) -> Option<&GroupDeletedUserResponse> {
-        if let Self::GroupDeletedUser(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1511,32 +529,6 @@ pub enum ShowActiveUserResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ShowActiveUserResponse {
-    pub fn active_user(&self) -> Option<&ActiveUserResponse> {
-        if let Self::ActiveUser(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1553,32 +545,6 @@ pub enum CreateActiveUserResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl CreateActiveUserResponse {
-    pub fn active_user(&self) -> Option<&ActiveUserResponse> {
-        if let Self::ActiveUser(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1591,32 +557,6 @@ pub enum ListUsersResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ListUsersResponse {
-    pub fn users_list(&self) -> Option<&UsersListResponse> {
-        if let Self::UsersList(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1633,32 +573,6 @@ pub enum ApiSetActiveUserResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiSetActiveUserResponse {
-    pub fn active_user(&self) -> Option<&ActiveUserResponse> {
-        if let Self::ActiveUser(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1671,32 +585,6 @@ pub enum ApiDeleteUserResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiDeleteUserResponse {
-    pub fn cmd_ok(&self) -> Option<&CmdOkResponse> {
-        if let Self::CmdOk(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1716,40 +604,6 @@ pub enum ApiUpdateProfileResponse {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-impl ApiUpdateProfileResponse {
-    pub fn user_profile_updated(&self) -> Option<&UserProfileUpdatedResponse> {
-        if let Self::UserProfileUpdated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn user_profile_no_change(&self) -> Option<&UserProfileNoChangeResponse> {
-        if let Self::UserProfileNoChange(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -1762,32 +616,6 @@ pub enum ApiSetContactPrefsResponse {
     ChatCmdError(ChatCmdErrorResponse),
     #[serde(untagged)]
     Undocumented(BTreeMap<String, JsonObject>),
-}
-
-impl ApiSetContactPrefsResponse {
-    pub fn contact_prefs_updated(&self) -> Option<&ContactPrefsUpdatedResponse> {
-        if let Self::ContactPrefsUpdated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn chat_cmd_error(&self) -> Option<&ChatCmdErrorResponse> {
-        if let Self::ChatCmdError(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn undocumented(&self) -> Option<&BTreeMap<String, JsonObject>> {
-        if let Self::Undocumented(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
