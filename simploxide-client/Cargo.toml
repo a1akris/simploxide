@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-client"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"

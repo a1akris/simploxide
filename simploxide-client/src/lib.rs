@@ -157,7 +157,6 @@
 use futures::Stream;
 use simploxide_api_types::{
     JsonObject,
-    client_api::ClientApi,
     client_api::{BadResponseError, ClientApiError},
     events::Event,
 };
@@ -165,7 +164,10 @@ use simploxide_core::{EventQueue, EventReceiver, RawClient};
 use std::{sync::Arc, task};
 
 pub use simploxide_api_types::{
-    self as types, client_api, commands, events, responses, utils::CommandSyntax,
+    self as types,
+    client_api::{self, ClientApi},
+    commands, events, responses,
+    utils::CommandSyntax,
 };
 pub use simploxide_core::{
     self as core, Error as CoreError, Result as CoreResult, tungstenite::Error as WsError,
