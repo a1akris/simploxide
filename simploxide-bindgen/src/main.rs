@@ -3,14 +3,12 @@ use std::{collections::BTreeMap, error::Error};
 use std::{collections::btree_map::Entry, io::Write as _};
 
 use simploxide_bindgen::{
-    commands::{self, CommandFmt, CommandResponse},
+    commands::{self, CommandFmt, CommandResponse, CommandResponseTraitMethod, ResponseWrapperFmt},
     events,
     syntax::Interpretable,
     types::{
         self, ApiType, DiscriminatedUnionType, DisjointedDiscriminatedUnion, Field, RecordType,
-        discriminated_union_type::{
-            DiscriminatedUnionVariant, DisjointedDiscriminatedUnionGetters,
-        },
+        discriminated_union_type::DiscriminatedUnionVariant,
     },
 };
 
@@ -207,9 +205,10 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     writeln!(client_api_rs, "use std::future::Future;")?;
     writeln!(client_api_rs, "use std::sync::Arc;")?;
     writeln!(client_api_rs)?;
+    writeln!(client_api_rs, "{}\n", CLIENT_API_ERROR_TRAIT)?;
 
     writeln!(client_api_rs, "pub trait ClientApi: Sync {{")?;
-    writeln!(client_api_rs, "    type Error;")?;
+    writeln!(client_api_rs, "    type Error: ClientApiError;")?;
     writeln!(client_api_rs)?;
     writeln!(
         client_api_rs,
@@ -218,6 +217,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     writeln!(client_api_rs)?;
 
     let mut unique_response_shapes: BTreeMap<String, RecordType> = BTreeMap::new();
+    let mut helper_api_wrappers: Vec<ResponseWrapperFmt> = Vec::with_capacity(40);
 
     let chat_cmd_error = DiscriminatedUnionVariant::from_api_name(
         "chatCmdError".to_owned(),
@@ -228,14 +228,11 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     );
 
     for command_response in commands::parse(commands_md) {
-        // Process command
-        let command_response = command_response?;
-        writeln!(client_api_rs, "{}", command_response.as_trait_method())?;
-
+        // ========== Process command ==============
         let CommandResponse {
             command,
             mut response,
-        } = command_response;
+        } = command_response?;
 
         writeln!(commands_rs, "{}\n", CommandFmt(&command))?;
 
@@ -245,7 +242,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
 
         writeln!(commands_rs, "{syntax_interpreter}\n")?;
 
-        // Process response
+        // ========== Process response ==============
         if !response
             .variants
             .iter()
@@ -279,47 +276,36 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
         }
 
         writeln!(responses_rs, "{response}\n")?;
-        writeln!(
-            responses_rs,
-            "{}",
-            DisjointedDiscriminatedUnionGetters(&response)
-        )?;
+
+        // ========== Process trait method ==============
+        let method = CommandResponseTraitMethod::new(&command, &response);
+        writeln!(client_api_rs, "{method}\n")?;
+
+        if let Some(wrapper) = method.response_wrapper() {
+            helper_api_wrappers.push(wrapper);
+        }
     }
 
+    // ========== Process response structs ==============
     for record in unique_response_shapes.into_values() {
         writeln!(responses_rs, "{record}")?;
     }
 
-    writeln!(client_api_rs, "}}")?;
+    // ========== Process helper API types ==============
+    writeln!(client_api_rs, "}}\n")?;
+
+    for wrapper in helper_api_wrappers {
+        writeln!(client_api_rs, "{wrapper}")?;
+    }
+
+    writeln!(client_api_rs, "{}", BAD_RESPONSE_SHENINGANS)?;
 
     Ok(())
 }
 
 fn generate_utils() -> Result<(), Box<dyn Error>> {
     let mut utils_rs = std::fs::File::create(UTILS_RS)?;
-
-    writeln!(utils_rs, "pub trait CommandSyntax {{")?;
-    writeln!(
-        utils_rs,
-        "    /// Generate a SimpleX command string from self"
-    )?;
-    writeln!(utils_rs, "    fn interpret(&self) -> String;")?;
-    writeln!(utils_rs, "}}")?;
-    writeln!(
-        utils_rs,
-        r#"
-// TODO: This is a workaround for some syntaxes that don't use optional values in square brackets.
-impl<T: CommandSyntax> CommandSyntax for Option<T> {{
-    fn interpret(&self) -> String {{
-        match self {{
-            Some(c) => c.interpret(),
-            None => String::new(),
-        }}
-    }}
-}}
-"#
-    )?;
-
+    writeln!(utils_rs, "{}", COMMAND_SYNTAX_TRAIT)?;
     Ok(())
 }
 
@@ -392,3 +378,102 @@ impl CommandSyntax for ChatDeleteMode {
         None
     }
 }
+
+const COMMAND_SYNTAX_TRAIT: &str = r#"
+pub trait CommandSyntax {
+    /// Generate a SimpleX command string from self
+    fn interpret(&self) -> String;
+}
+
+// TODO: This is a workaround for some syntaxes that don't use optional values in square brackets.
+impl<T: CommandSyntax> CommandSyntax for Option<T> {
+    fn interpret(&self) -> String {
+        match self {
+            Some(c) => c.interpret(),
+            None => String::new(),
+        }
+    }
+}
+"#;
+
+const BAD_RESPONSE_SHENINGANS: &str = r#"
+#[derive(Debug)]
+pub enum BadResponseError {
+    ChatCmdError(Arc<ChatCmdErrorResponse>),
+    Undocumented(BTreeMap<String, JsonObject>),
+}
+
+impl std::error::Error for BadResponseError {}
+
+impl std::fmt::Display for BadResponseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ChatCmdError(resp) => writeln!(
+                f,
+                "Bad server response:\n{}",
+                serde_json::to_string_pretty(resp).unwrap()
+            ),
+            Self::Undocumented(resp) => writeln!(
+                f,
+                "Unexpected server response:\n{}",
+                serde_json::to_string_pretty(resp).unwrap()
+            ),
+        }
+    }
+}
+
+pub enum UndocumentedResponse<T> {
+    Documented(T),
+    Undocumented(BTreeMap<String, JsonObject>),
+}
+
+/// If you want to ~~suffer~~ handle undocumented responses you can use this extension trait
+/// on client API return values which moves Undocumented from `Err` to `Ok` variant.
+///
+/// Example:
+///
+/// ```ignore
+///     match client
+///         .api_create_my_address(1)
+///         .await
+///         .allow_undocumented()?
+///     {
+///         UndocumentedResponse::Documented(resp) => {
+///              // Process expected response...
+///         }
+///         UndocumentedResponse::Undocumented(resp) => {
+///             // Do something with the unexpected response...
+///         }
+///     }
+/// }
+/// ```
+pub trait AllowUndocumentedResponses<T, E> {
+    fn allow_undocumented(self) -> Result<UndocumentedResponse<T>, E>;
+}
+
+impl<T, E> AllowUndocumentedResponses<T, E> for Result<T, E>
+where
+    E: ClientApiError,
+{
+    fn allow_undocumented(self) -> Result<UndocumentedResponse<T>, E> {
+        match self {
+            Ok(resp) => Ok(UndocumentedResponse::Documented(resp)),
+            Err(mut e) => match e.bad_response_mut() {
+                Some(BadResponseError::Undocumented(btree_map)) => Ok(
+                    UndocumentedResponse::Undocumented(std::mem::take(btree_map)),
+                ),
+                _ => Err(e),
+            },
+        }
+    }
+}
+"#;
+
+const CLIENT_API_ERROR_TRAIT: &str = r#"
+pub trait ClientApiError: From<BadResponseError> + std::error::Error {
+    /// If current error is a bad response error return a mut reference to it!
+    ///
+    /// Required for [`AllowUndocumentedResponses`] impl.
+    fn bad_response_mut(&mut self) -> Option<&mut BadResponseError>;
+}
+"#;

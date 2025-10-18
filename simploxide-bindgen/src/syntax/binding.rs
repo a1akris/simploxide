@@ -305,6 +305,24 @@ pub type DeferredGeneration<'s, SI> = Box<
         ) -> SyntaxInterpreterResult<'s, (), <SI as SyntaxInterpreter>::Error>,
 >;
 
+/// A helper type that consumes the interpreter and generates the whole code block with it. The
+/// block itself is generated with `prelude` and `postlude` callbacks. E.g. for Python this snippet
+/// can be used to generate the interpret method:
+///
+/// ```ignore
+/// record_type
+///     .syntax
+///     .bind(PythonRecordInterpreter::new(&record_type))
+///     .prelude(|intrp, out| {
+///         bufwriteln!(out, :>4, "def interpret(self):");
+///         intrp.offset = 8;
+///     })
+///     // There is no need to use the .postlude(|intrp, out|) callback because
+///     // in Python functions and methods don't have closing brackets or keywords
+///     .generate()?;
+/// ```
+///
+/// To construct the generator witt a bind method import [`BindExt`] trait.
 pub struct Generator<'s, SI: SyntaxInterpreter> {
     syntax: &'s str,
     interpreter: SI,
@@ -312,20 +330,6 @@ pub struct Generator<'s, SI: SyntaxInterpreter> {
     make_postlude: Option<DeferredGeneration<'s, SI>>,
 }
 
-/// A helper type that consumes the interpreter and generates the whole code block with it. The
-/// block itself is generated with `prelude` and `postlude` callbacks. E.g. for Python
-/// this snippet can be used to generate the interpret method:
-///
-/// ```ignore
-/// record_type
-///     .syntax
-///     .bind(PythonInterpreter::new(&record_type))
-///     .prelude(|intrp, out| {
-///         bufwriteln!(out, :>4, "def interpret(self):");
-///         intrp.offset = 8;
-///     })
-///     .generate()?;
-/// ```
 impl<'s, SI: SyntaxInterpreter> Generator<'s, SI> {
     pub fn new(syntax: &'s str, interpreter: SI) -> Self {
         Self {
@@ -560,10 +564,9 @@ impl<'this> SyntaxInterpreter for RecordInterpreter<'this> {
         ctx: Option<&mut Self::ContextData>,
         out: &mut String,
     ) -> SyntaxInterpreterResult<'a, (), Self::Error> {
-        if let Some(frame) = ctx {
-            interpret_literal(lit, self.offset, &mut frame.buffer);
-        } else {
-            interpret_literal(lit, self.offset, out);
+        match ctx {
+            Some(frame) => interpret_literal(lit, self.offset, &mut frame.buffer),
+            None => interpret_literal(lit, self.offset, out),
         }
 
         Ok(())
