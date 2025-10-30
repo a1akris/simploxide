@@ -49,11 +49,12 @@ The other crates are:
 
 ### Version compatability table
 
-_This table, similar to some crates in this repository, is being updated
-automatically by [autoupdater.sh](./autoupdater.sh) on scheduled CI runs_
+_This table, similar to some crates in this repository, is updated
+automatically by [autoupdater.sh](./autoupdater.sh) during scheduled CI runs_
 
 | SimplOxide Version | Simplex Chat Min Version | Simplex Chat Max Version |
 | ------------------ | ------------------------ | ------------------------ |
+| 0.7.0              | 6.4.5.1                  | 6.4.6.0                  |
 | 0.6.0              | 6.4.5.1                  | 6.4.6.0                  |
 | 0.5.0              | 6.4.5.1                  | 6.4.6.0                  |
 | 0.4.0              | 6.4.5.1                  | 6.4.6.0                  |
