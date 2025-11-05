@@ -36,10 +36,10 @@ get_crate_version() {
 }
 
 bump_crate() {
-    local current_ver next_ver major minor
+    local current_ver next_ver major minor patch
     current_ver=$(get_crate_version "$1")
 
-    IFS='.' read -r major minor <<<"${current_ver}"
+    IFS='.' read -r major minor patch <<<"${current_ver}"
     next_ver="${major}.$((minor + 1)).0"
 
     sed -i 's/^version = .*/version = "'"${next_ver}"'"/' "$1/Cargo.toml"
@@ -50,7 +50,7 @@ bump_crate_versions() {
     new_api_types_ver=$(bump_crate simploxide-api-types)
     new_client_ver=$(bump_crate simploxide-client)
     # TODO: bump simploxide version separetely after it gets implemented
-    sed -i 's/^version = .*/version = "'"${new_client_ver}"'"/' ./simploxide/Cargo.toml
+    # sed -i 's/^version = .*/version = "'"${new_client_ver}"'"/' ./simploxide/Cargo.toml
     sed -i -E "s/(^simploxide-api-types.*version = \")[^\"]+/\1${new_api_types_ver}/" simploxide-client/Cargo.toml
 
     echo "${new_client_ver}"
