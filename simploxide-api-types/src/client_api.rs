@@ -1875,8 +1875,8 @@ pub enum UndocumentedResponse<T> {
     Undocumented(BTreeMap<String, JsonObject>),
 }
 
-/// If you want to ~~suffer~~ handle undocumented responses you can use this extension trait on
-/// client API return values to move `Undocumented` from `Err` to `Ok` variant.
+/// If you want to ~~suffer~~ handle undocumented responses you can use this extension trait
+/// on client API return values which moves Undocumented from `Err` to `Ok` variant.
 ///
 /// Example:
 ///
