@@ -5,7 +5,7 @@ use convert_case::{Case, Casing as _};
 use crate::{
     parse_utils,
     types::{
-        DiscriminatedUnionType, RecordType, TopLevelDocs,
+        DiscriminatedUnionType, Field, RecordType, TopLevelDocs,
         discriminated_union_type::DiscriminatedUnionVariant,
     },
 };
@@ -50,11 +50,20 @@ pub struct CommandResponse {
 pub struct CommandResponseTraitMethod<'a> {
     pub command: &'a RecordType,
     pub response: &'a DiscriminatedUnionType,
+    pub shapes: &'a [RecordType],
 }
 
 impl<'a> CommandResponseTraitMethod<'a> {
-    pub fn new(command: &'a RecordType, response: &'a DiscriminatedUnionType) -> Self {
-        Self { command, response }
+    pub fn new(
+        command: &'a RecordType,
+        response: &'a DiscriminatedUnionType,
+        shapes: &'a [RecordType],
+    ) -> Self {
+        Self {
+            command,
+            response,
+            shapes,
+        }
     }
 }
 
@@ -65,13 +74,27 @@ impl<'a> CommandResponseTraitMethod<'a> {
     /// If only one possible valid response is possible it can get inlined without extra helper
     /// types and for this case this method returns `None`.
     pub fn response_wrapper(&self) -> Option<ResponseWrapperFmt> {
-        if self.can_inline_response() {
+        if self.can_inline_response().is_some() {
             return None;
         }
 
         Some(ResponseWrapperFmt(DiscriminatedUnionType::new(
             self.response_wrapper_name(),
-            self.valid_responses().cloned().collect(),
+            self.valid_responses()
+                .cloned()
+                .zip(self.valid_response_shapes())
+                .map(|(mut resp, shape)| {
+                    if shape.fields.len() == 1 {
+                        resp.fields[0] = Field {
+                            api_name: String::new(),
+                            rust_name: String::new(),
+                            typ: shape.fields[0].typ.clone(),
+                        }
+                    }
+
+                    resp
+                })
+                .collect(),
         )))
     }
 
@@ -99,10 +122,30 @@ impl<'a> CommandResponseTraitMethod<'a> {
             .any(|f| f.is_optional() || f.is_bool())
     }
 
-    /// If a response consists only of a single valid variant this variant's inner struct can be
+    /// If response consists only of a single valid variant this variant's inner struct can be
     /// used directly as a return value of the API method.
-    fn can_inline_response(&self) -> bool {
-        self.valid_responses().count() == 1
+    fn can_inline_response(&self) -> Option<&DiscriminatedUnionVariant> {
+        if self.valid_responses().count() == 1 {
+            self.valid_responses().next()
+        } else {
+            None
+        }
+    }
+
+    /// If underlying struct of the response contains only a single documented field this field can be directly
+    /// returned instead of returning the whole response struct.
+    fn can_inline_response_shape(&self) -> Option<&Field> {
+        if self.valid_response_shapes().count() != 1 {
+            return None;
+        }
+
+        let shape = self.valid_response_shapes().next().unwrap();
+
+        if shape.fields.len() == 1 {
+            Some(&shape.fields[0])
+        } else {
+            None
+        }
     }
 
     fn valid_responses(&self) -> impl Iterator<Item = &'_ DiscriminatedUnionVariant> {
@@ -110,6 +153,10 @@ impl<'a> CommandResponseTraitMethod<'a> {
             .variants
             .iter()
             .filter(|x| x.rust_name != "ChatCmdError")
+    }
+
+    fn valid_response_shapes(&self) -> impl Iterator<Item = &'_ RecordType> {
+        self.shapes.iter().filter(|x| x.name != "ChatCmdError")
     }
 
     fn response_wrapper_name(&self) -> String {
@@ -122,13 +169,19 @@ impl<'a> std::fmt::Display for CommandResponseTraitMethod<'a> {
         self.command.write_docs_fmt(f)?;
         write!(f, "    fn {}(&self", self.command.name.to_case(Case::Snake))?;
 
-        let (ret_type, unwrapped_response_name) = if self.can_inline_response() {
-            let name = self.response.variants[0].fields[0].typ.clone();
-            (format!("Arc<{name}>"), name)
-        } else {
-            let name = self.response_wrapper_name();
-            (name.clone(), name)
-        };
+        let (ret_type, unwrapped_response_typename) =
+            if let Some(inlined_variant) = self.can_inline_response() {
+                let typename = if let Some(field) = self.can_inline_response_shape() {
+                    field.typ.clone()
+                } else {
+                    inlined_variant.fields[0].typ.clone()
+                };
+
+                (format!("Arc<{typename}>"), typename)
+            } else {
+                let typename = self.response_wrapper_name();
+                (typename.clone(), typename)
+            };
 
         if self.can_inline_args() {
             for field in self.command.fields.iter() {
@@ -171,28 +224,46 @@ impl<'a> std::fmt::Display for CommandResponseTraitMethod<'a> {
         )?;
         writeln!(f, "        match response {{")?;
 
-        if self.can_inline_response() {
-            let first = self.valid_responses().next().unwrap();
-            writeln!(
-                f,
-                "            {}::{}(resp) => Ok(Arc::new(resp)),",
-                self.response.name, first.rust_name
-            )?;
-        } else {
-            for variant in self.valid_responses() {
+        if let Some(variant) = self.can_inline_response() {
+            if let Some(field) = self.can_inline_response_shape() {
                 writeln!(
                     f,
-                    "            {}::{var_name}(resp) => Ok({}::{var_name}(Arc::new(resp))),",
-                    self.response.name,
-                    unwrapped_response_name,
-                    var_name = variant.rust_name,
+                    "            {}::{}(resp) => Ok(Arc::new(resp.{})),",
+                    self.response.name, variant.rust_name, field.rust_name,
                 )?;
+            } else {
+                writeln!(
+                    f,
+                    "            {}::{}(resp) => Ok(Arc::new(resp)),",
+                    self.response.name, variant.rust_name
+                )?;
+            }
+        } else {
+            for (variant, shape) in self.valid_responses().zip(self.valid_response_shapes()) {
+                if shape.fields.len() == 1 {
+                    writeln!(
+                        f,
+                        "            {resp_name}::{var_name}(resp) => Ok({typename}::{var_name}(Arc::new(resp.{field}))),",
+                        resp_name = self.response.name,
+                        typename = unwrapped_response_typename,
+                        var_name = variant.rust_name,
+                        field = shape.fields[0].rust_name,
+                    )?;
+                } else {
+                    writeln!(
+                        f,
+                        "            {}::{var_name}(resp) => Ok({}::{var_name}(Arc::new(resp))),",
+                        self.response.name,
+                        unwrapped_response_typename,
+                        var_name = variant.rust_name,
+                    )?;
+                }
             }
         }
 
         writeln!(
             f,
-            "            {}::ChatCmdError(resp) => Err(BadResponseError::ChatCmdError(Arc::new(resp)).into()),",
+            "            {}::ChatCmdError(resp) => Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into()),",
             self.response.name,
         )?;
         writeln!(

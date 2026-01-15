@@ -44,7 +44,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiCreateMyAddressResponse::UserContactLinkCreated(resp) => Ok(Arc::new(resp)),
                 ApiCreateMyAddressResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiCreateMyAddressResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -71,16 +71,16 @@ pub trait ClientApi: Sync {
     fn api_delete_my_address(
         &self,
         user_id: i64,
-    ) -> impl Future<Output = Result<Arc<UserContactLinkDeletedResponse>, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
         async move {
             let command = ApiDeleteMyAddress { user_id };
             let json = self.send_raw(command.interpret()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
-                ApiDeleteMyAddressResponse::UserContactLinkDeleted(resp) => Ok(Arc::new(resp)),
+                ApiDeleteMyAddressResponse::UserContactLinkDeleted(resp) => Ok(Arc::new(resp.user)),
                 ApiDeleteMyAddressResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiDeleteMyAddressResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -116,7 +116,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiShowMyAddressResponse::UserContactLink(resp) => Ok(Arc::new(resp)),
                 ApiShowMyAddressResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiShowMyAddressResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -151,7 +151,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiSetProfileAddressResponse::UserProfileUpdated(resp) => Ok(Arc::new(resp)),
                 ApiSetProfileAddressResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiSetProfileAddressResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -188,7 +188,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiSetAddressSettingsResponse::UserContactLinkUpdated(resp) => Ok(Arc::new(resp)),
                 ApiSetAddressSettingsResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiSetAddressSettingsResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -223,7 +223,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiSendMessagesResponse::NewChatItems(resp) => Ok(Arc::new(resp)),
                 ApiSendMessagesResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiSendMessagesResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -263,7 +263,7 @@ pub trait ClientApi: Sync {
                     ApiUpdateChatItemResponses::ChatItemNotChanged(Arc::new(resp)),
                 ),
                 ApiUpdateChatItemResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiUpdateChatItemResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -305,7 +305,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiDeleteChatItemResponse::ChatItemsDeleted(resp) => Ok(Arc::new(resp)),
                 ApiDeleteChatItemResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiDeleteChatItemResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -345,7 +345,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiDeleteMemberChatItemResponse::ChatItemsDeleted(resp) => Ok(Arc::new(resp)),
                 ApiDeleteMemberChatItemResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiDeleteMemberChatItemResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -380,7 +380,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiChatItemReactionResponse::ChatItemReaction(resp) => Ok(Arc::new(resp)),
                 ApiChatItemReactionResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiChatItemReactionResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -420,7 +420,7 @@ pub trait ClientApi: Sync {
                     ReceiveFileResponses::RcvFileAcceptedSndCancelled(Arc::new(resp)),
                 ),
                 ReceiveFileResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ReceiveFileResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -461,7 +461,7 @@ pub trait ClientApi: Sync {
                     Ok(CancelFileResponses::RcvFileCancelled(Arc::new(resp)))
                 }
                 CancelFileResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 CancelFileResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -503,7 +503,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiAddMemberResponse::SentGroupInvitation(resp) => Ok(Arc::new(resp)),
                 ApiAddMemberResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiAddMemberResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -539,7 +539,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiJoinGroupResponse::UserAcceptedGroupSent(resp) => Ok(Arc::new(resp)),
                 ApiJoinGroupResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiJoinGroupResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -581,7 +581,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiAcceptMemberResponse::MemberAccepted(resp) => Ok(Arc::new(resp)),
                 ApiAcceptMemberResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiAcceptMemberResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -623,7 +623,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiMembersRoleResponse::MembersRoleUser(resp) => Ok(Arc::new(resp)),
                 ApiMembersRoleResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiMembersRoleResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -659,7 +659,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiBlockMembersForAllResponse::MembersBlockedForAllUser(resp) => Ok(Arc::new(resp)),
                 ApiBlockMembersForAllResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiBlockMembersForAllResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -694,7 +694,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiRemoveMembersResponse::UserDeletedMembers(resp) => Ok(Arc::new(resp)),
                 ApiRemoveMembersResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiRemoveMembersResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -730,7 +730,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiLeaveGroupResponse::LeftMemberUser(resp) => Ok(Arc::new(resp)),
                 ApiLeaveGroupResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiLeaveGroupResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -766,7 +766,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiListMembersResponse::GroupMembers(resp) => Ok(Arc::new(resp)),
                 ApiListMembersResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiListMembersResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -801,7 +801,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiNewGroupResponse::GroupCreated(resp) => Ok(Arc::new(resp)),
                 ApiNewGroupResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiNewGroupResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -841,7 +841,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiUpdateGroupProfileResponse::GroupUpdated(resp) => Ok(Arc::new(resp)),
                 ApiUpdateGroupProfileResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiUpdateGroupProfileResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -881,7 +881,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiCreateGroupLinkResponse::GroupLinkCreated(resp) => Ok(Arc::new(resp)),
                 ApiCreateGroupLinkResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiCreateGroupLinkResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -921,7 +921,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiGroupLinkMemberRoleResponse::GroupLink(resp) => Ok(Arc::new(resp)),
                 ApiGroupLinkMemberRoleResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiGroupLinkMemberRoleResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -957,7 +957,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiDeleteGroupLinkResponse::GroupLinkDeleted(resp) => Ok(Arc::new(resp)),
                 ApiDeleteGroupLinkResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiDeleteGroupLinkResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -993,7 +993,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiGetGroupLinkResponse::GroupLink(resp) => Ok(Arc::new(resp)),
                 ApiGetGroupLinkResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiGetGroupLinkResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1028,7 +1028,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiAddContactResponse::Invitation(resp) => Ok(Arc::new(resp)),
                 ApiAddContactResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiAddContactResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1063,7 +1063,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiConnectPlanResponse::ConnectionPlan(resp) => Ok(Arc::new(resp)),
                 ApiConnectPlanResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiConnectPlanResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1106,7 +1106,7 @@ pub trait ClientApi: Sync {
                     Ok(ApiConnectResponses::SentInvitation(Arc::new(resp)))
                 }
                 ApiConnectResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiConnectResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1149,7 +1149,7 @@ pub trait ClientApi: Sync {
                     Ok(ConnectResponses::SentInvitation(Arc::new(resp)))
                 }
                 ConnectResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ConnectResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1186,7 +1186,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiAcceptContactResponse::AcceptingContactRequest(resp) => Ok(Arc::new(resp)),
                 ApiAcceptContactResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiAcceptContactResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1222,7 +1222,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiRejectContactResponse::ContactRequestRejected(resp) => Ok(Arc::new(resp)),
                 ApiRejectContactResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiRejectContactResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1258,7 +1258,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiListContactsResponse::ContactsList(resp) => Ok(Arc::new(resp)),
                 ApiListContactsResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiListContactsResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1293,7 +1293,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiListGroupsResponse::GroupsList(resp) => Ok(Arc::new(resp)),
                 ApiListGroupsResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiListGroupsResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1341,7 +1341,7 @@ pub trait ClientApi: Sync {
                     Ok(ApiDeleteChatResponses::GroupDeletedUser(Arc::new(resp)))
                 }
                 ApiDeleteChatResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiDeleteChatResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1365,18 +1365,16 @@ pub trait ClientApi: Sync {
     /// ```
     /// /user
     /// ```
-    fn show_active_user(
-        &self,
-    ) -> impl Future<Output = Result<Arc<ActiveUserResponse>, Self::Error>> + Send {
+    fn show_active_user(&self) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
         async move {
             let command = ShowActiveUser {};
             let json = self.send_raw(command.interpret()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
-                ShowActiveUserResponse::ActiveUser(resp) => Ok(Arc::new(resp)),
+                ShowActiveUserResponse::ActiveUser(resp) => Ok(Arc::new(resp.user)),
                 ShowActiveUserResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ShowActiveUserResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1403,16 +1401,16 @@ pub trait ClientApi: Sync {
     fn create_active_user(
         &self,
         new_user: NewUser,
-    ) -> impl Future<Output = Result<Arc<ActiveUserResponse>, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
         async move {
             let command = CreateActiveUser { new_user };
             let json = self.send_raw(command.interpret()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
-                CreateActiveUserResponse::ActiveUser(resp) => Ok(Arc::new(resp)),
+                CreateActiveUserResponse::ActiveUser(resp) => Ok(Arc::new(resp.user)),
                 CreateActiveUserResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 CreateActiveUserResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1436,18 +1434,16 @@ pub trait ClientApi: Sync {
     /// ```
     /// /users
     /// ```
-    fn list_users(
-        &self,
-    ) -> impl Future<Output = Result<Arc<UsersListResponse>, Self::Error>> + Send {
+    fn list_users(&self) -> impl Future<Output = Result<Arc<Vec<UserInfo>>, Self::Error>> + Send {
         async move {
             let command = ListUsers {};
             let json = self.send_raw(command.interpret()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
-                ListUsersResponse::UsersList(resp) => Ok(Arc::new(resp)),
+                ListUsersResponse::UsersList(resp) => Ok(Arc::new(resp.users)),
                 ListUsersResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ListUsersResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1474,15 +1470,15 @@ pub trait ClientApi: Sync {
     fn api_set_active_user(
         &self,
         command: ApiSetActiveUser,
-    ) -> impl Future<Output = Result<Arc<ActiveUserResponse>, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
         async move {
             let json = self.send_raw(command.interpret()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
-                ApiSetActiveUserResponse::ActiveUser(resp) => Ok(Arc::new(resp)),
+                ApiSetActiveUserResponse::ActiveUser(resp) => Ok(Arc::new(resp.user)),
                 ApiSetActiveUserResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiSetActiveUserResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1509,15 +1505,15 @@ pub trait ClientApi: Sync {
     fn api_delete_user(
         &self,
         command: ApiDeleteUser,
-    ) -> impl Future<Output = Result<Arc<CmdOkResponse>, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<Arc<Option<User>>, Self::Error>> + Send {
         async move {
             let json = self.send_raw(command.interpret()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
-                ApiDeleteUserResponse::CmdOk(resp) => Ok(Arc::new(resp)),
+                ApiDeleteUserResponse::CmdOk(resp) => Ok(Arc::new(resp.user)),
                 ApiDeleteUserResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiDeleteUserResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1556,10 +1552,10 @@ pub trait ClientApi: Sync {
                     ApiUpdateProfileResponses::UserProfileUpdated(Arc::new(resp)),
                 ),
                 ApiUpdateProfileResponse::UserProfileNoChange(resp) => Ok(
-                    ApiUpdateProfileResponses::UserProfileNoChange(Arc::new(resp)),
+                    ApiUpdateProfileResponses::UserProfileNoChange(Arc::new(resp.user)),
                 ),
                 ApiUpdateProfileResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiUpdateProfileResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1599,7 +1595,7 @@ pub trait ClientApi: Sync {
             match response {
                 ApiSetContactPrefsResponse::ContactPrefsUpdated(resp) => Ok(Arc::new(resp)),
                 ApiSetContactPrefsResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp)).into())
+                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
                 }
                 ApiSetContactPrefsResponse::Undocumented(resp) => {
                     Err(BadResponseError::Undocumented(resp).into())
@@ -1824,7 +1820,7 @@ pub enum ApiUpdateProfileResponses {
     UserProfileUpdated(Arc<UserProfileUpdatedResponse>),
     /// UserProfileNoChange: User profile was not changed.
     #[serde(rename = "userProfileNoChange")]
-    UserProfileNoChange(Arc<UserProfileNoChangeResponse>),
+    UserProfileNoChange(Arc<User>),
 }
 
 impl ApiUpdateProfileResponses {
@@ -1836,7 +1832,7 @@ impl ApiUpdateProfileResponses {
         }
     }
 
-    pub fn user_profile_no_change(&self) -> Option<&UserProfileNoChangeResponse> {
+    pub fn user_profile_no_change(&self) -> Option<&User> {
         if let Self::UserProfileNoChange(ret) = self {
             Some(ret)
         } else {
@@ -1847,7 +1843,7 @@ impl ApiUpdateProfileResponses {
 
 #[derive(Debug)]
 pub enum BadResponseError {
-    ChatCmdError(Arc<ChatCmdErrorResponse>),
+    ChatCmdError(Arc<ChatError>),
     Undocumented(BTreeMap<String, JsonObject>),
 }
 

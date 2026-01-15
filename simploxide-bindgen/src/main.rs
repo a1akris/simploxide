@@ -253,7 +253,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
 
         let (mut response, shapes) = response.disjoin();
 
-        for mut shape in shapes {
+        for mut shape in shapes.iter().cloned() {
             shape.name.push_str("Response");
             match unique_response_shapes.entry(shape.name.clone()) {
                 Entry::Occupied(occupied) => {
@@ -278,7 +278,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
         writeln!(responses_rs, "{response}\n")?;
 
         // ========== Process trait method ==============
-        let method = CommandResponseTraitMethod::new(&command, &response);
+        let method = CommandResponseTraitMethod::new(&command, &response, &shapes);
         writeln!(client_api_rs, "{method}\n")?;
 
         if let Some(wrapper) = method.response_wrapper() {
@@ -399,7 +399,7 @@ impl<T: CommandSyntax> CommandSyntax for Option<T> {
 const BAD_RESPONSE_SHENINGANS: &str = r#"
 #[derive(Debug)]
 pub enum BadResponseError {
-    ChatCmdError(Arc<ChatCmdErrorResponse>),
+    ChatCmdError(Arc<ChatError>),
     Undocumented(BTreeMap<String, JsonObject>),
 }
 

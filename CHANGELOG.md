@@ -1,3 +1,15 @@
+# v0.8.0 - Further API simplifications and improvements
+
+- Now if some response contains only a single documented field instead of
+  returning the response struct the struct field is returned directly reducing
+  data nesting
+
+- Added `simploxide_client::retry_connect` method for scenarios when
+  simplex-cli is run programmatically and it's impossible to tell when web
+  socket port becomes available
+
+[Full diff](https://github.com/a1akris/simploxide/compare/v0.7.0...v0.8.0)
+
 # v0.7.0 - Dependencies upgrade
 
 - Updated `tokio_tungstenite` and `tungstenite` dependencies to `v0.28`
@@ -6,7 +18,7 @@
 
 # v0.6.0 - Major changes in code generation and generated types
 
-- Now new generated `ClientApi` methods segregate good responses from bad ones.
+- Now newly generated `ClientApi` methods segregate good responses from bad ones.
   `Undocumented` responses are considered to be bad by default and result in
   `ClientApiError` but `Result<T, impl ClientApiError>` implements the
   `AllowUndocumentedResponses` trait extension which allows to override this
@@ -14,10 +26,10 @@
   `Result`
 
 - Code generation of the `ClientApi` now simplifies responses by turning
-  response enums into structs where possible and implementing helper response
-  getters for enums where simplification is impossible.
+  response enums into structs where possible and by implementing helper
+  response getters for enums where simplification is impossible.
 
-- Introduce a new `ClientApiError` trait which must be implemented by
+- Introduced a new `ClientApiError` trait which must be implemented by
   `ClientApi::Error` types. This trait is mainly needed to be able handle
   undocumented responses in different ways.
 
@@ -41,7 +53,7 @@
 
 - A new script that maintains this repository by automatically generating and
   submitting new type definitions whenever SimpleX-Chat changes its API
-  definitions
+  specifications
 
 [Full diff](https://github.com/a1akris/simploxide/compare/v0.3.0...v0.4.0)
 

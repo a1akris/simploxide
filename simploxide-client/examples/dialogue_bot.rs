@@ -18,9 +18,7 @@ use std::{collections::BTreeMap, error::Error, sync::Arc};
 async fn main() -> Result<(), Box<dyn Error>> {
     let (client, mut events) = simploxide_client::connect("ws://127.0.0.1:5225").await?;
 
-    // Use destructuring to extract data from responses
-    let ActiveUserResponse { ref user, .. } = *client.show_active_user().await?;
-
+    let user = client.show_active_user().await?;
     println!(
         "Bot profile: {} ({})",
         user.profile.display_name, user.profile.full_name

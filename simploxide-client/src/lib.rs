@@ -178,12 +178,12 @@ pub mod prelude;
 pub type ClientResult<T = ()> = std::result::Result<T, ClientError>;
 
 /// A wrapper over [`simploxide_core::connect`] that turns [`simploxide_core::RawClient`] into
-/// [`Client`] and raw event queue into the [`EventStream`] with automatic event deserialization.
+/// [`Client`] and raw event queue into the [`EventStream`] which handle serialization/deserialization.
 ///
 /// ```ignore
 /// let (client, mut events) = simploxide_client::connect("ws://127.0.0.1:5225").await?;
 ///
-/// let current_user  = client.api_show_active_user().await?;
+/// let current_user = client.api_show_active_user().await?;
 /// println!("{current_user:#?}");
 ///
 /// while let Some(ev) = events.try_next().await? {
@@ -193,6 +193,37 @@ pub type ClientResult<T = ()> = std::result::Result<T, ClientError>;
 pub async fn connect<S: AsRef<str>>(uri: S) -> Result<(Client, EventStream), WsError> {
     let (raw_client, raw_event_queue) = simploxide_core::connect(uri.as_ref()).await?;
     Ok((Client::from(raw_client), EventStream::from(raw_event_queue)))
+}
+
+/// Like [`connect`] but retries to connect `retries_count` times before returning an error. This
+/// method is needed when you run simplex-cli programmatically and don't know when WebSocket port
+/// becomes available.
+///
+/// ```ignore
+/// let port = 5225;
+/// let cli = SimplexCli::spawn(port);
+/// let uri = format!("ws://127.0.0.1:{port}");
+///
+/// let (client, mut events) = simploxide_client::retry_connect(&uri, Duration::from_secs(1), 10).await?;
+///
+/// //...
+///
+/// ```
+pub async fn retry_connect<S: AsRef<str>>(
+    uri: S,
+    retry_delay: std::time::Duration,
+    mut retries_count: usize,
+) -> Result<(Client, EventStream), WsError> {
+    loop {
+        match connect(uri.as_ref()).await {
+            Ok(connection) => break Ok(connection),
+            Err(e) if retries_count == 0 => break Err(e),
+            Err(_) => {
+                retries_count -= 1;
+                tokio::time::sleep(retry_delay).await
+            }
+        }
+    }
 }
 
 pub struct EventStream(EventReceiver);
