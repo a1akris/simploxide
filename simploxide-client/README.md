@@ -6,18 +6,9 @@ SimpleX-Chat WebSocket client
 
 1. [Install Rust](https://www.rust-lang.org/learn/get-started) if you haven't already.
 1. [Get SimpleX chat CLI](https://github.com/simplex-chat/simplex-chat/blob/stable/docs/CLI.md#%F0%9F%9A%80-installation)
-1. Run SimpleX Chat CLI with the following flags to prepare the bot account:
+1. Run SimpleX Chat CLI as an API server with a precreated bot account(all example bots are connecting to port `5225` by default):
    ```bash
-   simplex-chat --create-bot-display-name 'SimplOxide Examples' --create-bot-allow-files
-   ```
-    1. Alternatively, you can run this command from the SimpleX CLI itself:
-       ```bash
-       /create bot files=on 'SimplOxide Examples'
-       ```
-1. Run SimpleX Chat CLI as an API server listening on port 5225(all example
-   bots are connecting to this port by default):
-   ```bash
-   simplex-chat -p 5225
+   simplex-chat -p 5225 --create-bot-display-name 'SimplOxide Examples' --create-bot-allow-files
    ```
 1. Run the squaring bot:
    ```bash

@@ -1,4 +1,4 @@
-//! The example expects that the bot account was already pre-created via CLI by `create bot
+//! The example expects that the bot account was already pre-created via CLI by `/create bot
 //! <bot_name> <bot_fullname>` command.
 //!
 //! To compile this example pass the --all-features flag like this:
