@@ -155,17 +155,13 @@
 //! manner.
 //!
 use futures::Stream;
-use simploxide_api_types::{
-    JsonObject,
-    client_api::{BadResponseError, ClientApiError},
-    events::Event,
-};
+use simploxide_api_types::{JsonObject, events::Event};
 use simploxide_core::{EventQueue, EventReceiver, RawClient};
 use std::{sync::Arc, task};
 
 pub use simploxide_api_types::{
     self as types,
-    client_api::{self, ClientApi},
+    client_api::{self, BadResponseError, ClientApi, ClientApiError},
     commands, events, responses,
     utils::CommandSyntax,
 };
