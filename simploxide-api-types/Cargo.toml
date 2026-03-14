@@ -16,5 +16,5 @@ keywords = ["simplex", "types", "api", "chat"]
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde-aux = "4"
+serde-aux = { version = "4", default-features = false }
 bon = { version = "3", optional = true }
