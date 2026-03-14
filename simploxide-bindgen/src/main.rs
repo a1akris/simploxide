@@ -2,6 +2,7 @@ use std::process::ExitCode;
 use std::{collections::BTreeMap, error::Error};
 use std::{collections::btree_map::Entry, io::Write as _};
 
+use convert_case::{Case, Casing};
 use simploxide_bindgen::{
     commands::{self, CommandFmt, CommandResponse, CommandResponseTraitMethod, ResponseWrapperFmt},
     events,
@@ -59,8 +60,8 @@ fn generate_types(types_md: &str) -> Result<(), Box<dyn Error>> {
 
     writeln!(lib_rs, "//! This crate is auto-generated\n")?;
     writeln!(lib_rs, "#![allow(clippy::large_enum_variant)]")?;
-    writeln!(lib_rs, "#![allow(clippy::should_implement_trait)]")?;
-    writeln!(lib_rs, "#![allow(clippy::unnecessary_to_owned)]")?;
+    writeln!(lib_rs, "#![allow(clippy::new_without_default)]")?;
+    // writeln!(lib_rs, "#![allow(clippy::unnecessary_to_owned)]")?;
     writeln!(lib_rs)?;
     writeln!(lib_rs, "pub mod errors;")?;
     writeln!(lib_rs, "pub mod events;")?;
@@ -115,6 +116,10 @@ fn generate_types(types_md: &str) -> Result<(), Box<dyn Error>> {
             writeln!(lib_rs, "{}", api_type)?;
             if let Some(syntax) = syntax.or(api_type.command_syntax_impl()?) {
                 writeln!(lib_rs, "{syntax}\n")?;
+            }
+
+            if let ApiType::DiscriminatedUnion(ref x) = api_type {
+                writeln!(lib_rs, "{}", DiscriminatedUnionConstructors(x))?;
             }
         }
     }
@@ -496,3 +501,38 @@ pub trait ClientApiError: From<BadResponseError> + std::error::Error {
     fn bad_response_mut(&mut self) -> Option<&mut BadResponseError>;
 }
 "#;
+
+struct DiscriminatedUnionConstructors<'a>(&'a DiscriminatedUnionType);
+
+impl std::fmt::Display for DiscriminatedUnionConstructors<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "impl {} {{", self.0.name)?;
+
+        for variant in &self.0.variants {
+            write!(f, "pub fn {}(", variant.rust_name.to_case(Case::Snake))?;
+            for field in &variant.fields {
+                write!(f, "{}: {},", field.rust_name, field.typ)?;
+            }
+
+            writeln!(f, ") -> Self {{")?;
+
+            write!(f, "Self::{}", variant.rust_name)?;
+
+            if !variant.fields.is_empty() {
+                write!(f, " {{ ")?;
+                for field in &variant.fields {
+                    write!(f, "{},", field.rust_name)?;
+                }
+                write!(f, " undocumented: Default::default() }}")?;
+            }
+
+            writeln!(f)?;
+            writeln!(f, "}}")?;
+            writeln!(f)?;
+        }
+
+        writeln!(f, "}}")?;
+
+        Ok(())
+    }
+}

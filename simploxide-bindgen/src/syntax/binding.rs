@@ -69,6 +69,7 @@ impl Interpretable for EnumType {
             .prelude(|_, code_buffer| {
                 bufwriteln!(code_buffer, "impl CommandSyntax for {} {{", self.name);
                 bufwriteln!(code_buffer, :>4, "const COMMAND_BUF_SIZE: usize = 16;",);
+                bufwriteln!(code_buffer,);
                 bufwriteln!(code_buffer, :>4, "fn append_command_syntax(&self, buf: &mut String) {{",);
                 Ok(())
             })
@@ -97,6 +98,7 @@ impl Interpretable for RecordType {
                 } else {
                     bufwriteln!(out, :>4, "const COMMAND_BUF_SIZE: usize = 64;");
                 }
+                bufwriteln!(out,);
                 bufwriteln!(out, :>4, "fn append_command_syntax(&self, buf: &mut String) {{",);
 
                 Ok(())
@@ -876,6 +878,7 @@ mod tests {
         expect![[r#"
             impl CommandSyntax for Greeting {
                 const COMMAND_BUF_SIZE: usize = 16;
+
                 fn append_command_syntax(&self, buf: &mut String) {
                     match self {
                         Self::Hi => {
