@@ -157,7 +157,8 @@
 use futures::Stream;
 use simploxide_api_types::{JsonObject, events::Event};
 use simploxide_core::{EventQueue, EventReceiver, RawClient};
-use std::{sync::Arc, task};
+
+use std::task;
 
 pub use simploxide_api_types::{
     self as types,
@@ -231,15 +232,15 @@ impl From<EventQueue> for EventStream {
 }
 
 impl Stream for EventStream {
-    type Item = CoreResult<Arc<Event>>;
+    type Item = CoreResult<Event>;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut task::Context<'_>,
     ) -> task::Poll<Option<Self::Item>> {
-        self.0.poll_recv(cx).map(|opt| {
-            opt.map(|res| res.map(|ev| serde_json::from_value::<Arc<Event>>(ev).unwrap()))
-        })
+        self.0
+            .poll_recv(cx)
+            .map(|opt| opt.map(|res| res.map(|ev| serde_json::from_value::<Event>(ev).unwrap())))
     }
 }
 

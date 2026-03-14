@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     'reactor: while let Some(ev) = events.try_next().await? {
-        match ev.as_ref() {
+        match ev {
             Event::ContactConnected(c) => {
                 dialogue.query_data(c.contact.contact_id).await?;
             }

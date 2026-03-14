@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Implement reactor
     'reactor: while let Some(ev) = events.try_next().await? {
-        match ev.as_ref() {
+        match ev {
             // A new user connected
             Event::ContactConnected(connected) => {
                 println!("{} connected", connected.contact.profile.display_name);
