@@ -410,7 +410,7 @@ const BAD_RESPONSE_SHENINGANS: &str = r#"
 #[derive(Debug)]
 pub enum BadResponseError {
     ChatCmdError(Arc<ChatError>),
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
 }
 
 impl std::error::Error for BadResponseError {}
@@ -434,7 +434,7 @@ impl std::fmt::Display for BadResponseError {
 
 pub enum UndocumentedResponse<T> {
     Documented(T),
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
 }
 
 /// If you want to ~~suffer~~ handle undocumented responses you can use this extension trait

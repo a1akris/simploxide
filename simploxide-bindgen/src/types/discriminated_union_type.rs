@@ -77,15 +77,15 @@ impl std::fmt::Display for DiscriminatedUnionType {
             // Capture undocumented fields
             writeln!(
                 f,
-                "        #[serde(flatten, skip_serializing_if = \"BTreeMap::is_empty\")]"
+                "        #[serde(flatten, skip_serializing_if = \"JsonObject::is_null\")]"
             )?;
-            writeln!(f, "        undocumented: BTreeMap<String, JsonObject>")?;
+            writeln!(f, "        undocumented: JsonObject")?;
 
             writeln!(f, "    }},")?;
         }
 
         writeln!(f, "    #[serde(untagged)]")?;
-        writeln!(f, "    Undocumented(BTreeMap<String, JsonObject>)")?;
+        writeln!(f, "    Undocumented(JsonObject)")?;
 
         writeln!(f, "}}")
     }
