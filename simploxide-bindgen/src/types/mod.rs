@@ -219,7 +219,7 @@ pub fn is_vec_type(typ: &str) -> bool {
 }
 
 pub fn is_map_type(typ: &str) -> bool {
-    typ.starts_with("HashMap<")
+    typ.starts_with("BTreeMap<")
 }
 
 pub fn is_numeric_type(typ: &str) -> bool {
@@ -270,7 +270,7 @@ fn resolve_type(t: &str) -> Result<String, String> {
         let key = resolve_type(lhs.trim())?;
         let val = resolve_type(rhs.trim())?;
 
-        return Ok(format!("HashMap<{key}, {val}>"));
+        return Ok(format!("BTreeMap<{key}, {val}>"));
     }
 
     if let Some(t) = t.strip_suffix(']') {
