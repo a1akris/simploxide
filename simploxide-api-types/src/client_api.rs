@@ -38,7 +38,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserContactLinkCreatedResponse>, Self::Error>> + Send {
         async move {
             let command = ApiCreateMyAddress { user_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -74,7 +74,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
         async move {
             let command = ApiDeleteMyAddress { user_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -110,7 +110,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserContactLinkResponse>, Self::Error>> + Send {
         async move {
             let command = ApiShowMyAddress { user_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -145,7 +145,7 @@ pub trait ClientApi: Sync {
         command: ApiSetProfileAddress,
     ) -> impl Future<Output = Result<Arc<UserProfileUpdatedResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -182,7 +182,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserContactLinkUpdatedResponse>, Self::Error>> + Send {
         async move {
             let command = ApiSetAddressSettings { user_id, settings };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -217,7 +217,7 @@ pub trait ClientApi: Sync {
         command: ApiSendMessages,
     ) -> impl Future<Output = Result<Arc<NewChatItemsResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -252,7 +252,7 @@ pub trait ClientApi: Sync {
         command: ApiUpdateChatItem,
     ) -> impl Future<Output = Result<ApiUpdateChatItemResponses, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -299,7 +299,7 @@ pub trait ClientApi: Sync {
                 chat_item_ids,
                 delete_mode,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -339,7 +339,7 @@ pub trait ClientApi: Sync {
                 group_id,
                 chat_item_ids,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -374,7 +374,7 @@ pub trait ClientApi: Sync {
         command: ApiChatItemReaction,
     ) -> impl Future<Output = Result<Arc<ChatItemReactionResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -409,7 +409,7 @@ pub trait ClientApi: Sync {
         command: ReceiveFile,
     ) -> impl Future<Output = Result<ReceiveFileResponses, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -450,7 +450,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<CancelFileResponses, Self::Error>> + Send {
         async move {
             let command = CancelFile { file_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -497,7 +497,7 @@ pub trait ClientApi: Sync {
                 contact_id,
                 member_role,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -533,7 +533,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserAcceptedGroupSentResponse>, Self::Error>> + Send {
         async move {
             let command = ApiJoinGroup { group_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -575,7 +575,7 @@ pub trait ClientApi: Sync {
                 group_member_id,
                 member_role,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -617,7 +617,7 @@ pub trait ClientApi: Sync {
                 group_member_ids,
                 member_role,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -653,7 +653,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<MembersBlockedForAllUserResponse>, Self::Error>> + Send
     {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -688,7 +688,7 @@ pub trait ClientApi: Sync {
         command: ApiRemoveMembers,
     ) -> impl Future<Output = Result<Arc<UserDeletedMembersResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -724,7 +724,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<LeftMemberUserResponse>, Self::Error>> + Send {
         async move {
             let command = ApiLeaveGroup { group_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -760,7 +760,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<GroupMembersResponse>, Self::Error>> + Send {
         async move {
             let command = ApiListMembers { group_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -795,7 +795,7 @@ pub trait ClientApi: Sync {
         command: ApiNewGroup,
     ) -> impl Future<Output = Result<Arc<GroupCreatedResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -835,7 +835,7 @@ pub trait ClientApi: Sync {
                 group_id,
                 group_profile,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -875,7 +875,7 @@ pub trait ClientApi: Sync {
                 group_id,
                 member_role,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -915,7 +915,7 @@ pub trait ClientApi: Sync {
                 group_id,
                 member_role,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -951,7 +951,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<GroupLinkDeletedResponse>, Self::Error>> + Send {
         async move {
             let command = ApiDeleteGroupLink { group_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -987,7 +987,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<GroupLinkResponse>, Self::Error>> + Send {
         async move {
             let command = ApiGetGroupLink { group_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1022,7 +1022,7 @@ pub trait ClientApi: Sync {
         command: ApiAddContact,
     ) -> impl Future<Output = Result<Arc<InvitationResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1057,7 +1057,7 @@ pub trait ClientApi: Sync {
         command: ApiConnectPlan,
     ) -> impl Future<Output = Result<Arc<ConnectionPlanResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1092,7 +1092,7 @@ pub trait ClientApi: Sync {
         command: ApiConnect,
     ) -> impl Future<Output = Result<ApiConnectResponses, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1135,7 +1135,7 @@ pub trait ClientApi: Sync {
         command: Connect,
     ) -> impl Future<Output = Result<ConnectResponses, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1180,7 +1180,7 @@ pub trait ClientApi: Sync {
     {
         async move {
             let command = ApiAcceptContact { contact_req_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1216,7 +1216,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<ContactRequestRejectedResponse>, Self::Error>> + Send {
         async move {
             let command = ApiRejectContact { contact_req_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1252,7 +1252,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<ContactsListResponse>, Self::Error>> + Send {
         async move {
             let command = ApiListContacts { user_id };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1287,7 +1287,7 @@ pub trait ClientApi: Sync {
         command: ApiListGroups,
     ) -> impl Future<Output = Result<Arc<GroupsListResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1327,7 +1327,7 @@ pub trait ClientApi: Sync {
                 chat_ref,
                 chat_delete_mode,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1368,7 +1368,7 @@ pub trait ClientApi: Sync {
     fn show_active_user(&self) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
         async move {
             let command = ShowActiveUser {};
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1404,7 +1404,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
         async move {
             let command = CreateActiveUser { new_user };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1437,7 +1437,7 @@ pub trait ClientApi: Sync {
     fn list_users(&self) -> impl Future<Output = Result<Arc<Vec<UserInfo>>, Self::Error>> + Send {
         async move {
             let command = ListUsers {};
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1472,7 +1472,7 @@ pub trait ClientApi: Sync {
         command: ApiSetActiveUser,
     ) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1507,7 +1507,7 @@ pub trait ClientApi: Sync {
         command: ApiDeleteUser,
     ) -> impl Future<Output = Result<Arc<Option<User>>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1544,7 +1544,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<ApiUpdateProfileResponses, Self::Error>> + Send {
         async move {
             let command = ApiUpdateProfile { user_id, profile };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1589,7 +1589,7 @@ pub trait ClientApi: Sync {
                 contact_id,
                 preferences,
             };
-            let json = self.send_raw(command.interpret()).await?;
+            let json = self.send_raw(command.to_command_string()).await?;
             // Safe to unwrap because unrecognized JSON goes to undocumented variant
             let response = serde_json::from_value(json).unwrap();
             match response {
@@ -1844,7 +1844,7 @@ impl ApiUpdateProfileResponses {
 #[derive(Debug)]
 pub enum BadResponseError {
     ChatCmdError(Arc<ChatError>),
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
 }
 
 impl std::error::Error for BadResponseError {}
@@ -1868,7 +1868,7 @@ impl std::fmt::Display for BadResponseError {
 
 pub enum UndocumentedResponse<T> {
     Documented(T),
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
 }
 
 /// If you want to ~~suffer~~ handle undocumented responses you can use this extension trait

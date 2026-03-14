@@ -1,6 +1,7 @@
 use super::*;
 use crate::utils::CommandSyntax;
 
+use std::fmt::Write;
 /// ### Address commands
 ///
 /// Bots can use these commands to automatically check and create address when initialized
@@ -23,11 +24,11 @@ pub struct ApiCreateMyAddress {
 }
 
 impl CommandSyntax for ApiCreateMyAddress {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_address ");
-        buf.push_str(&self.user_id.to_string());
-        buf
+        write!(buf, "{}", self.user_id).unwrap();
     }
 }
 
@@ -53,11 +54,11 @@ pub struct ApiDeleteMyAddress {
 }
 
 impl CommandSyntax for ApiDeleteMyAddress {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_delete_address ");
-        buf.push_str(&self.user_id.to_string());
-        buf
+        write!(buf, "{}", self.user_id).unwrap();
     }
 }
 
@@ -83,11 +84,11 @@ pub struct ApiShowMyAddress {
 }
 
 impl CommandSyntax for ApiShowMyAddress {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_show_address ");
-        buf.push_str(&self.user_id.to_string());
-        buf
+        write!(buf, "{}", self.user_id).unwrap();
     }
 }
 
@@ -114,17 +115,17 @@ pub struct ApiSetProfileAddress {
 }
 
 impl CommandSyntax for ApiSetProfileAddress {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_profile_address ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         buf.push(' ');
         if self.enable {
             buf.push_str("on");
         } else {
             buf.push_str("off");
         }
-        buf
     }
 }
 
@@ -151,13 +152,16 @@ pub struct ApiSetAddressSettings {
 }
 
 impl CommandSyntax for ApiSetAddressSettings {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_address_settings ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         buf.push(' ');
-        buf.push_str(&serde_json::to_string(&self.settings).unwrap());
-        buf
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.settings).unwrap();
+        }
     }
 }
 
@@ -186,10 +190,11 @@ pub struct ApiSendMessages {
 }
 
 impl CommandSyntax for ApiSendMessages {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_send ");
-        buf.push_str(&self.send_ref.interpret());
+        self.send_ref.append_command_syntax(buf);
         if self.live_message {
             buf.push(' ');
             buf.push_str("live=");
@@ -198,12 +203,14 @@ impl CommandSyntax for ApiSendMessages {
         if let Some(ttl) = &self.ttl {
             buf.push(' ');
             buf.push_str("ttl=");
-            buf.push_str(&ttl.to_string());
+            write!(buf, "{}", ttl).unwrap();
         }
         buf.push(' ');
         buf.push_str("json ");
-        buf.push_str(&serde_json::to_string(&self.composed_messages).unwrap());
-        buf
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.composed_messages).unwrap();
+        }
     }
 }
 
@@ -232,13 +239,14 @@ pub struct ApiUpdateChatItem {
 }
 
 impl CommandSyntax for ApiUpdateChatItem {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_update ");
         buf.push_str("item ");
-        buf.push_str(&self.chat_ref.interpret());
+        self.chat_ref.append_command_syntax(buf);
         buf.push(' ');
-        buf.push_str(&self.chat_item_id.to_string());
+        write!(buf, "{}", self.chat_item_id).unwrap();
         if self.live_message {
             buf.push(' ');
             buf.push_str("live=");
@@ -246,8 +254,10 @@ impl CommandSyntax for ApiUpdateChatItem {
         }
         buf.push(' ');
         buf.push_str("json ");
-        buf.push_str(&serde_json::to_string(&self.updated_message).unwrap());
-        buf
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.updated_message).unwrap();
+        }
     }
 }
 
@@ -275,19 +285,20 @@ pub struct ApiDeleteChatItem {
 }
 
 impl CommandSyntax for ApiDeleteChatItem {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_delete ");
         buf.push_str("item ");
-        buf.push_str(&self.chat_ref.interpret());
+        self.chat_ref.append_command_syntax(buf);
         buf.push(' ');
         let mut iter = self.chat_item_ids.iter();
         if let Some(el) = iter.next() {
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
         for el in iter {
             buf.push(',');
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
         buf.push(' ');
         match self.delete_mode {
@@ -301,7 +312,6 @@ impl CommandSyntax for ApiDeleteChatItem {
                 buf.push_str("internalMark");
             }
         }
-        buf
     }
 }
 
@@ -328,23 +338,23 @@ pub struct ApiDeleteMemberChatItem {
 }
 
 impl CommandSyntax for ApiDeleteMemberChatItem {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_delete ");
         buf.push_str("member ");
         buf.push_str("item ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
+        write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
         let mut iter = self.chat_item_ids.iter();
         if let Some(el) = iter.next() {
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
         for el in iter {
             buf.push(',');
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
-        buf
     }
 }
 
@@ -373,12 +383,13 @@ pub struct ApiChatItemReaction {
 }
 
 impl CommandSyntax for ApiChatItemReaction {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_reaction ");
-        buf.push_str(&self.chat_ref.interpret());
+        self.chat_ref.append_command_syntax(buf);
         buf.push(' ');
-        buf.push_str(&self.chat_item_id.to_string());
+        write!(buf, "{}", self.chat_item_id).unwrap();
         buf.push(' ');
         if self.add {
             buf.push_str("on");
@@ -386,8 +397,10 @@ impl CommandSyntax for ApiChatItemReaction {
             buf.push_str("off");
         }
         buf.push(' ');
-        buf.push_str(&serde_json::to_string(&self.reaction).unwrap());
-        buf
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.reaction).unwrap();
+        }
     }
 }
 
@@ -417,10 +430,11 @@ pub struct ReceiveFile {
 }
 
 impl CommandSyntax for ReceiveFile {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/freceive ");
-        buf.push_str(&self.file_id.to_string());
+        write!(buf, "{}", self.file_id).unwrap();
         if self.user_approved_relays {
             buf.push(' ');
             buf.push_str("approved_relays=");
@@ -446,9 +460,8 @@ impl CommandSyntax for ReceiveFile {
         }
         if let Some(file_path) = &self.file_path {
             buf.push(' ');
-            buf.push_str(&file_path.to_string());
+            write!(buf, "{}", file_path).unwrap();
         }
-        buf
     }
 }
 
@@ -474,11 +487,11 @@ pub struct CancelFile {
 }
 
 impl CommandSyntax for CancelFile {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/fcancel ");
-        buf.push_str(&self.file_id.to_string());
-        buf
+        write!(buf, "{}", self.file_id).unwrap();
     }
 }
 
@@ -506,13 +519,14 @@ pub struct ApiAddMember {
 }
 
 impl CommandSyntax for ApiAddMember {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_add ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
+        write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
-        buf.push_str(&self.contact_id.to_string());
+        write!(buf, "{}", self.contact_id).unwrap();
         buf.push(' ');
         match self.member_role {
             GroupMemberRole::Observer => {
@@ -534,7 +548,6 @@ impl CommandSyntax for ApiAddMember {
                 buf.push_str("owner");
             }
         }
-        buf
     }
 }
 
@@ -560,12 +573,12 @@ pub struct ApiJoinGroup {
 }
 
 impl CommandSyntax for ApiJoinGroup {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_join ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
-        buf
+        write!(buf, "{}", self.group_id).unwrap();
     }
 }
 
@@ -593,14 +606,15 @@ pub struct ApiAcceptMember {
 }
 
 impl CommandSyntax for ApiAcceptMember {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_accept ");
         buf.push_str("member ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
+        write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
-        buf.push_str(&self.group_member_id.to_string());
+        write!(buf, "{}", self.group_member_id).unwrap();
         buf.push(' ');
         match self.member_role {
             GroupMemberRole::Observer => {
@@ -622,7 +636,6 @@ impl CommandSyntax for ApiAcceptMember {
                 buf.push_str("owner");
             }
         }
-        buf
     }
 }
 
@@ -650,20 +663,21 @@ pub struct ApiMembersRole {
 }
 
 impl CommandSyntax for ApiMembersRole {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_member ");
         buf.push_str("role ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
+        write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
         let mut iter = self.group_member_ids.iter();
         if let Some(el) = iter.next() {
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
         for el in iter {
             buf.push(',');
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
         buf.push(' ');
         match self.member_role {
@@ -686,7 +700,6 @@ impl CommandSyntax for ApiMembersRole {
                 buf.push_str("owner");
             }
         }
-        buf
     }
 }
 
@@ -714,19 +727,20 @@ pub struct ApiBlockMembersForAll {
 }
 
 impl CommandSyntax for ApiBlockMembersForAll {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_block ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
+        write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
         let mut iter = self.group_member_ids.iter();
         if let Some(el) = iter.next() {
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
         for el in iter {
             buf.push(',');
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
         buf.push(' ');
         buf.push_str("blocked=");
@@ -735,7 +749,6 @@ impl CommandSyntax for ApiBlockMembersForAll {
         } else {
             buf.push_str("off");
         }
-        buf
     }
 }
 
@@ -763,26 +776,26 @@ pub struct ApiRemoveMembers {
 }
 
 impl CommandSyntax for ApiRemoveMembers {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_remove ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
+        write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
         let mut iter = self.group_member_ids.iter();
         if let Some(el) = iter.next() {
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
         for el in iter {
             buf.push(',');
-            buf.push_str(&el.to_string());
+            write!(buf, "{el}").unwrap();
         }
         if self.with_messages {
             buf.push(' ');
             buf.push_str("messages=");
             buf.push_str("on");
         }
-        buf
     }
 }
 
@@ -808,12 +821,12 @@ pub struct ApiLeaveGroup {
 }
 
 impl CommandSyntax for ApiLeaveGroup {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_leave ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
-        buf
+        write!(buf, "{}", self.group_id).unwrap();
     }
 }
 
@@ -839,12 +852,12 @@ pub struct ApiListMembers {
 }
 
 impl CommandSyntax for ApiListMembers {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_members ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
-        buf
+        write!(buf, "{}", self.group_id).unwrap();
     }
 }
 
@@ -872,18 +885,21 @@ pub struct ApiNewGroup {
 }
 
 impl CommandSyntax for ApiNewGroup {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_group ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         if self.incognito {
             buf.push(' ');
             buf.push_str("incognito=");
             buf.push_str("on");
         }
         buf.push(' ');
-        buf.push_str(&serde_json::to_string(&self.group_profile).unwrap());
-        buf
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.group_profile).unwrap();
+        }
     }
 }
 
@@ -910,14 +926,17 @@ pub struct ApiUpdateGroupProfile {
 }
 
 impl CommandSyntax for ApiUpdateGroupProfile {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_group_profile ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
+        write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
-        buf.push_str(&serde_json::to_string(&self.group_profile).unwrap());
-        buf
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.group_profile).unwrap();
+        }
     }
 }
 
@@ -944,12 +963,13 @@ pub struct ApiCreateGroupLink {
 }
 
 impl CommandSyntax for ApiCreateGroupLink {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_create ");
         buf.push_str("link ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
+        write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
         match self.member_role {
             GroupMemberRole::Observer => {
@@ -971,7 +991,6 @@ impl CommandSyntax for ApiCreateGroupLink {
                 buf.push_str("owner");
             }
         }
-        buf
     }
 }
 
@@ -998,13 +1017,14 @@ pub struct ApiGroupLinkMemberRole {
 }
 
 impl CommandSyntax for ApiGroupLinkMemberRole {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_set ");
         buf.push_str("link ");
         buf.push_str("role ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
+        write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
         match self.member_role {
             GroupMemberRole::Observer => {
@@ -1026,7 +1046,6 @@ impl CommandSyntax for ApiGroupLinkMemberRole {
                 buf.push_str("owner");
             }
         }
-        buf
     }
 }
 
@@ -1052,13 +1071,13 @@ pub struct ApiDeleteGroupLink {
 }
 
 impl CommandSyntax for ApiDeleteGroupLink {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_delete ");
         buf.push_str("link ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
-        buf
+        write!(buf, "{}", self.group_id).unwrap();
     }
 }
 
@@ -1084,13 +1103,13 @@ pub struct ApiGetGroupLink {
 }
 
 impl CommandSyntax for ApiGetGroupLink {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_get ");
         buf.push_str("link ");
         buf.push('#');
-        buf.push_str(&self.group_id.to_string());
-        buf
+        write!(buf, "{}", self.group_id).unwrap();
     }
 }
 
@@ -1117,16 +1136,16 @@ pub struct ApiAddContact {
 }
 
 impl CommandSyntax for ApiAddContact {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_connect ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         if self.incognito {
             buf.push(' ');
             buf.push_str("incognito=");
             buf.push_str("on");
         }
-        buf
     }
 }
 
@@ -1153,20 +1172,19 @@ pub struct ApiConnectPlan {
 }
 
 impl CommandSyntax for ApiConnectPlan {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_connect ");
         buf.push_str("plan ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         buf.push(' ');
-        buf.push_str(
-            &self
-                .connection_link
-                .as_deref()
-                .unwrap_or_default()
-                .to_string(),
-        );
-        buf
+        write!(
+            buf,
+            "{}",
+            self.connection_link.as_deref().unwrap_or_default()
+        )
+        .unwrap();
     }
 }
 
@@ -1194,15 +1212,15 @@ pub struct ApiConnect {
 }
 
 impl CommandSyntax for ApiConnect {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_connect ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         if let Some(prepared_link) = &self.prepared_link {
             buf.push(' ');
-            buf.push_str(&prepared_link.interpret());
+            prepared_link.append_command_syntax(buf);
         }
-        buf
     }
 }
 
@@ -1229,14 +1247,14 @@ pub struct Connect {
 }
 
 impl CommandSyntax for Connect {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/connect");
         if let Some(conn_link) = &self.conn_link {
             buf.push(' ');
-            buf.push_str(&conn_link.to_string());
+            write!(buf, "{}", conn_link).unwrap();
         }
-        buf
     }
 }
 
@@ -1262,11 +1280,11 @@ pub struct ApiAcceptContact {
 }
 
 impl CommandSyntax for ApiAcceptContact {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_accept ");
-        buf.push_str(&self.contact_req_id.to_string());
-        buf
+        write!(buf, "{}", self.contact_req_id).unwrap();
     }
 }
 
@@ -1292,11 +1310,11 @@ pub struct ApiRejectContact {
 }
 
 impl CommandSyntax for ApiRejectContact {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_reject ");
-        buf.push_str(&self.contact_req_id.to_string());
-        buf
+        write!(buf, "{}", self.contact_req_id).unwrap();
     }
 }
 
@@ -1322,11 +1340,11 @@ pub struct ApiListContacts {
 }
 
 impl CommandSyntax for ApiListContacts {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_contacts ");
-        buf.push_str(&self.user_id.to_string());
-        buf
+        write!(buf, "{}", self.user_id).unwrap();
     }
 }
 
@@ -1354,20 +1372,20 @@ pub struct ApiListGroups {
 }
 
 impl CommandSyntax for ApiListGroups {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_groups ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         if let Some(contact_id) = &self.contact_id {
             buf.push(' ');
             buf.push('@');
-            buf.push_str(&contact_id.to_string());
+            write!(buf, "{}", contact_id).unwrap();
         }
         if let Some(search) = &self.search {
             buf.push(' ');
-            buf.push_str(&search.to_string());
+            write!(buf, "{}", search).unwrap();
         }
-        buf
     }
 }
 
@@ -1394,13 +1412,13 @@ pub struct ApiDeleteChat {
 }
 
 impl CommandSyntax for ApiDeleteChat {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_delete ");
-        buf.push_str(&self.chat_ref.interpret());
+        self.chat_ref.append_command_syntax(buf);
         buf.push(' ');
-        buf.push_str(&self.chat_delete_mode.interpret());
-        buf
+        self.chat_delete_mode.append_command_syntax(buf);
     }
 }
 
@@ -1424,10 +1442,10 @@ impl CommandSyntax for ApiDeleteChat {
 pub struct ShowActiveUser {}
 
 impl CommandSyntax for ShowActiveUser {
-    fn interpret(&self) -> String {
-        let mut buf = String::new();
+    const COMMAND_BUF_SIZE: usize = 0;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/user");
-        buf
     }
 }
 
@@ -1453,12 +1471,15 @@ pub struct CreateActiveUser {
 }
 
 impl CommandSyntax for CreateActiveUser {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_create ");
         buf.push_str("user ");
-        buf.push_str(&serde_json::to_string(&self.new_user).unwrap());
-        buf
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.new_user).unwrap();
+        }
     }
 }
 
@@ -1482,10 +1503,10 @@ impl CommandSyntax for CreateActiveUser {
 pub struct ListUsers {}
 
 impl CommandSyntax for ListUsers {
-    fn interpret(&self) -> String {
-        let mut buf = String::new();
+    const COMMAND_BUF_SIZE: usize = 0;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/users");
-        buf
     }
 }
 
@@ -1512,15 +1533,18 @@ pub struct ApiSetActiveUser {
 }
 
 impl CommandSyntax for ApiSetActiveUser {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_user ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         if let Some(view_pwd) = &self.view_pwd {
             buf.push(' ');
-            buf.push_str(&serde_json::to_string(&view_pwd).unwrap());
+            // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+            unsafe {
+                serde_json::to_writer(buf.as_mut_vec(), &view_pwd).unwrap();
+            }
         }
-        buf
     }
 }
 
@@ -1548,11 +1572,12 @@ pub struct ApiDeleteUser {
 }
 
 impl CommandSyntax for ApiDeleteUser {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_delete ");
         buf.push_str("user ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         buf.push(' ');
         buf.push_str("del_smp=");
         if self.del_smp_queues {
@@ -1562,9 +1587,11 @@ impl CommandSyntax for ApiDeleteUser {
         }
         if let Some(view_pwd) = &self.view_pwd {
             buf.push(' ');
-            buf.push_str(&serde_json::to_string(&view_pwd).unwrap());
+            // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+            unsafe {
+                serde_json::to_writer(buf.as_mut_vec(), &view_pwd).unwrap();
+            }
         }
-        buf
     }
 }
 
@@ -1591,13 +1618,16 @@ pub struct ApiUpdateProfile {
 }
 
 impl CommandSyntax for ApiUpdateProfile {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_profile ");
-        buf.push_str(&self.user_id.to_string());
+        write!(buf, "{}", self.user_id).unwrap();
         buf.push(' ');
-        buf.push_str(&serde_json::to_string(&self.profile).unwrap());
-        buf
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.profile).unwrap();
+        }
     }
 }
 
@@ -1624,14 +1654,17 @@ pub struct ApiSetContactPrefs {
 }
 
 impl CommandSyntax for ApiSetContactPrefs {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(1024);
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_set ");
         buf.push_str("prefs ");
         buf.push('@');
-        buf.push_str(&self.contact_id.to_string());
+        write!(buf, "{}", self.contact_id).unwrap();
         buf.push(' ');
-        buf.push_str(&serde_json::to_string(&self.preferences).unwrap());
-        buf
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.preferences).unwrap();
+        }
     }
 }

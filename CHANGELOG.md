@@ -1,3 +1,22 @@
+# v0.9.0 - Better data shapes and optimizations
+
+- `Arc<Event>` is turned into `Event(Arc<EventData>)` allowing to move events
+  around and implementing `Send + 'static` event dispatchers
+
+- Command syntax generators are now better optimized and generate command
+  strings using only single memory allocation.
+
+- Most discriminated unions now have constructor methods which makes code that
+  builds complex structs significantly shorter
+
+- The type of undocumented fields - `BTreeMap<String, serde_json::Value>` is reduced to simple `serde_json::Value`.
+
+- All `HashMaps` are replaced with `BTreeMaps` to consume less memory and to
+  support more uses in `const` contexts.
+
+- Reduce dependencies by disabling default features in certain crates
+
+
 # v0.8.0 - Further API simplifications and improvements
 
 - Now if some response contains only a single documented field instead of

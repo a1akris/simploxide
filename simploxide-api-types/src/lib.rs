@@ -1,8 +1,7 @@
 //! This crate is auto-generated
 
 #![allow(clippy::large_enum_variant)]
-#![allow(clippy::should_implement_trait)]
-#![allow(clippy::unnecessary_to_owned)]
+#![allow(clippy::new_without_default)]
 
 pub mod client_api;
 pub mod commands;
@@ -16,10 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::{
     deserialize_number_from_string, deserialize_option_number_from_string,
 };
-use std::{
-    collections::{BTreeMap, HashMap},
-    sync::Arc,
-};
+use std::{collections::BTreeMap, fmt::Write as _, sync::Arc};
 use utils::CommandSyntax;
 
 pub type UtcTime = String;
@@ -35,9 +31,9 @@ pub struct ACIReaction {
     #[serde(rename = "chatReaction")]
     pub chat_reaction: CIReaction,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -53,9 +49,9 @@ pub struct AChat {
     #[serde(rename = "chatStats")]
     pub chat_stats: ChatStats,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -68,9 +64,9 @@ pub struct AChatItem {
     #[serde(rename = "chatItem")]
     pub chat_item: ChatItem,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -86,9 +82,9 @@ pub struct AddressSettings {
     #[serde(rename = "autoReply", skip_serializing_if = "Option::is_none")]
     pub auto_reply: Option<MsgContent>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -98,9 +94,9 @@ pub struct AutoAccept {
     #[serde(rename = "acceptIncognito")]
     pub accept_incognito: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -110,9 +106,9 @@ pub struct BlockingInfo {
     #[serde(rename = "reason")]
     pub reason: BlockingReason,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -138,9 +134,9 @@ pub struct BusinessChatInfo {
     #[serde(rename = "customerId")]
     pub customer_id: String,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -184,32 +180,32 @@ pub enum CIContent {
         #[serde(rename = "msgContent")]
         msg_content: MsgContent,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvMsgContent")]
     RcvMsgContent {
         #[serde(rename = "msgContent")]
         msg_content: MsgContent,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndDeleted")]
     SndDeleted {
         #[serde(rename = "deleteMode")]
         delete_mode: CIDeleteMode,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvDeleted")]
     RcvDeleted {
         #[serde(rename = "deleteMode")]
         delete_mode: CIDeleteMode,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndCall")]
     SndCall {
@@ -222,8 +218,8 @@ pub enum CIContent {
         )]
         duration: i32,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvCall")]
     RcvCall {
@@ -236,16 +232,16 @@ pub enum CIContent {
         )]
         duration: i32,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvIntegrityError")]
     RcvIntegrityError {
         #[serde(rename = "msgError")]
         msg_error: MsgErrorType,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvDecryptionError")]
     RcvDecryptionError {
@@ -258,8 +254,8 @@ pub enum CIContent {
         )]
         msg_count: u32,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvGroupInvitation")]
     RcvGroupInvitation {
@@ -269,8 +265,8 @@ pub enum CIContent {
         #[serde(rename = "memberRole")]
         member_role: GroupMemberRole,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndGroupInvitation")]
     SndGroupInvitation {
@@ -280,48 +276,48 @@ pub enum CIContent {
         #[serde(rename = "memberRole")]
         member_role: GroupMemberRole,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvDirectEvent")]
     RcvDirectEvent {
         #[serde(rename = "rcvDirectEvent")]
         rcv_direct_event: RcvDirectEvent,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvGroupEvent")]
     RcvGroupEvent {
         #[serde(rename = "rcvGroupEvent")]
         rcv_group_event: RcvGroupEvent,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndGroupEvent")]
     SndGroupEvent {
         #[serde(rename = "sndGroupEvent")]
         snd_group_event: SndGroupEvent,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvConnEvent")]
     RcvConnEvent {
         #[serde(rename = "rcvConnEvent")]
         rcv_conn_event: RcvConnEvent,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndConnEvent")]
     SndConnEvent {
         #[serde(rename = "sndConnEvent")]
         snd_conn_event: SndConnEvent,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvChatFeature")]
     RcvChatFeature {
@@ -339,8 +335,8 @@ pub enum CIContent {
         )]
         param: Option<i32>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndChatFeature")]
     SndChatFeature {
@@ -358,8 +354,8 @@ pub enum CIContent {
         )]
         param: Option<i32>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvChatPreference")]
     RcvChatPreference {
@@ -377,8 +373,8 @@ pub enum CIContent {
         )]
         param: Option<i32>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndChatPreference")]
     SndChatPreference {
@@ -396,8 +392,8 @@ pub enum CIContent {
         )]
         param: Option<i32>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvGroupFeature")]
     RcvGroupFeature {
@@ -418,8 +414,8 @@ pub enum CIContent {
         #[serde(rename = "memberRole_", skip_serializing_if = "Option::is_none")]
         member_role: Option<GroupMemberRole>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndGroupFeature")]
     SndGroupFeature {
@@ -440,24 +436,24 @@ pub enum CIContent {
         #[serde(rename = "memberRole_", skip_serializing_if = "Option::is_none")]
         member_role: Option<GroupMemberRole>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvChatFeatureRejected")]
     RcvChatFeatureRejected {
         #[serde(rename = "feature")]
         feature: ChatFeature,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvGroupFeatureRejected")]
     RcvGroupFeatureRejected {
         #[serde(rename = "groupFeature")]
         group_feature: GroupFeature,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndModerated")]
     SndModerated,
@@ -470,37 +466,295 @@ pub enum CIContent {
         #[serde(rename = "e2eeInfo")]
         e_2_ee_info: E2EInfo,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvDirectE2EEInfo")]
     RcvDirectE2EeInfo {
         #[serde(rename = "e2eeInfo")]
         e_2_ee_info: E2EInfo,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndGroupE2EEInfo")]
     SndGroupE2EeInfo {
         #[serde(rename = "e2eeInfo")]
         e_2_ee_info: E2EInfo,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvGroupE2EEInfo")]
     RcvGroupE2EeInfo {
         #[serde(rename = "e2eeInfo")]
         e_2_ee_info: E2EInfo,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "chatBanner")]
     ChatBanner,
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl CIContent {
+    pub fn snd_msg_content(msg_content: MsgContent) -> Self {
+        Self::SndMsgContent {
+            msg_content,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_msg_content(msg_content: MsgContent) -> Self {
+        Self::RcvMsgContent {
+            msg_content,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_deleted(delete_mode: CIDeleteMode) -> Self {
+        Self::SndDeleted {
+            delete_mode,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_deleted(delete_mode: CIDeleteMode) -> Self {
+        Self::RcvDeleted {
+            delete_mode,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_call(status: CICallStatus, duration: i32) -> Self {
+        Self::SndCall {
+            status,
+            duration,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_call(status: CICallStatus, duration: i32) -> Self {
+        Self::RcvCall {
+            status,
+            duration,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_integrity_error(msg_error: MsgErrorType) -> Self {
+        Self::RcvIntegrityError {
+            msg_error,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_decryption_error(msg_decrypt_error: MsgDecryptError, msg_count: u32) -> Self {
+        Self::RcvDecryptionError {
+            msg_decrypt_error,
+            msg_count,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_group_invitation(
+        group_invitation: CIGroupInvitation,
+        member_role: GroupMemberRole,
+    ) -> Self {
+        Self::RcvGroupInvitation {
+            group_invitation,
+            member_role,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_group_invitation(
+        group_invitation: CIGroupInvitation,
+        member_role: GroupMemberRole,
+    ) -> Self {
+        Self::SndGroupInvitation {
+            group_invitation,
+            member_role,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_direct_event(rcv_direct_event: RcvDirectEvent) -> Self {
+        Self::RcvDirectEvent {
+            rcv_direct_event,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_group_event(rcv_group_event: RcvGroupEvent) -> Self {
+        Self::RcvGroupEvent {
+            rcv_group_event,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_group_event(snd_group_event: SndGroupEvent) -> Self {
+        Self::SndGroupEvent {
+            snd_group_event,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_conn_event(rcv_conn_event: RcvConnEvent) -> Self {
+        Self::RcvConnEvent {
+            rcv_conn_event,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_conn_event(snd_conn_event: SndConnEvent) -> Self {
+        Self::SndConnEvent {
+            snd_conn_event,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_chat_feature(
+        feature: ChatFeature,
+        enabled: PrefEnabled,
+        param: Option<i32>,
+    ) -> Self {
+        Self::RcvChatFeature {
+            feature,
+            enabled,
+            param,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_chat_feature(
+        feature: ChatFeature,
+        enabled: PrefEnabled,
+        param: Option<i32>,
+    ) -> Self {
+        Self::SndChatFeature {
+            feature,
+            enabled,
+            param,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_chat_preference(
+        feature: ChatFeature,
+        allowed: FeatureAllowed,
+        param: Option<i32>,
+    ) -> Self {
+        Self::RcvChatPreference {
+            feature,
+            allowed,
+            param,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_chat_preference(
+        feature: ChatFeature,
+        allowed: FeatureAllowed,
+        param: Option<i32>,
+    ) -> Self {
+        Self::SndChatPreference {
+            feature,
+            allowed,
+            param,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_group_feature(
+        group_feature: GroupFeature,
+        preference: GroupPreference,
+        param: Option<i32>,
+        member_role: Option<GroupMemberRole>,
+    ) -> Self {
+        Self::RcvGroupFeature {
+            group_feature,
+            preference,
+            param,
+            member_role,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_group_feature(
+        group_feature: GroupFeature,
+        preference: GroupPreference,
+        param: Option<i32>,
+        member_role: Option<GroupMemberRole>,
+    ) -> Self {
+        Self::SndGroupFeature {
+            group_feature,
+            preference,
+            param,
+            member_role,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_chat_feature_rejected(feature: ChatFeature) -> Self {
+        Self::RcvChatFeatureRejected {
+            feature,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_group_feature_rejected(group_feature: GroupFeature) -> Self {
+        Self::RcvGroupFeatureRejected {
+            group_feature,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_moderated() -> Self {
+        Self::SndModerated
+    }
+
+    pub fn rcv_moderated() -> Self {
+        Self::RcvModerated
+    }
+
+    pub fn rcv_blocked() -> Self {
+        Self::RcvBlocked
+    }
+
+    pub fn snd_direct_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
+        Self::SndDirectE2EeInfo {
+            e_2_ee_info,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_direct_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
+        Self::RcvDirectE2EeInfo {
+            e_2_ee_info,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_group_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
+        Self::SndGroupE2EeInfo {
+            e_2_ee_info,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_group_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
+        Self::RcvGroupE2EeInfo {
+            e_2_ee_info,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn chat_banner() -> Self {
+        Self::ChatBanner
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -527,24 +781,24 @@ pub enum CIDeleted {
         #[serde(rename = "chatType")]
         chat_type: ChatType,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "blocked")]
     Blocked {
         #[serde(rename = "deletedTs", skip_serializing_if = "Option::is_none")]
         deleted_ts: Option<UtcTime>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "blockedByAdmin")]
     BlockedByAdmin {
         #[serde(rename = "deletedTs", skip_serializing_if = "Option::is_none")]
         deleted_ts: Option<UtcTime>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "moderated")]
     Moderated {
@@ -554,11 +808,43 @@ pub enum CIDeleted {
         #[serde(rename = "byGroupMember")]
         by_group_member: GroupMember,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl CIDeleted {
+    pub fn deleted(deleted_ts: Option<UtcTime>, chat_type: ChatType) -> Self {
+        Self::Deleted {
+            deleted_ts,
+            chat_type,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn blocked(deleted_ts: Option<UtcTime>) -> Self {
+        Self::Blocked {
+            deleted_ts,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn blocked_by_admin(deleted_ts: Option<UtcTime>) -> Self {
+        Self::BlockedByAdmin {
+            deleted_ts,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn moderated(deleted_ts: Option<UtcTime>, by_group_member: GroupMember) -> Self {
+        Self::Moderated {
+            deleted_ts,
+            by_group_member,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -576,15 +862,44 @@ pub enum CIDirection {
         #[serde(rename = "groupMember")]
         group_member: GroupMember,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "localSnd")]
     LocalSnd,
     #[serde(rename = "localRcv")]
     LocalRcv,
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl CIDirection {
+    pub fn direct_snd() -> Self {
+        Self::DirectSnd
+    }
+
+    pub fn direct_rcv() -> Self {
+        Self::DirectRcv
+    }
+
+    pub fn group_snd() -> Self {
+        Self::GroupSnd
+    }
+
+    pub fn group_rcv(group_member: GroupMember) -> Self {
+        Self::GroupRcv {
+            group_member,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn local_snd() -> Self {
+        Self::LocalSnd
+    }
+
+    pub fn local_rcv() -> Self {
+        Self::LocalRcv
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -612,9 +927,9 @@ pub struct CIFile {
     #[serde(rename = "fileProtocol")]
     pub file_protocol: FileProtocol,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -637,8 +952,8 @@ pub enum CIFileStatus {
         )]
         snd_total: i64,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndCancelled")]
     SndCancelled,
@@ -649,16 +964,16 @@ pub enum CIFileStatus {
         #[serde(rename = "sndFileError")]
         snd_file_error: FileError,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndWarning")]
     SndWarning {
         #[serde(rename = "sndFileError")]
         snd_file_error: FileError,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvInvitation")]
     RcvInvitation,
@@ -678,8 +993,8 @@ pub enum CIFileStatus {
         )]
         rcv_total: i64,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvAborted")]
     RcvAborted,
@@ -692,27 +1007,112 @@ pub enum CIFileStatus {
         #[serde(rename = "rcvFileError")]
         rcv_file_error: FileError,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvWarning")]
     RcvWarning {
         #[serde(rename = "rcvFileError")]
         rcv_file_error: FileError,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "invalid")]
     Invalid {
         #[serde(rename = "text")]
         text: String,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl CIFileStatus {
+    pub fn snd_stored() -> Self {
+        Self::SndStored
+    }
+
+    pub fn snd_transfer(snd_progress: i64, snd_total: i64) -> Self {
+        Self::SndTransfer {
+            snd_progress,
+            snd_total,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_cancelled() -> Self {
+        Self::SndCancelled
+    }
+
+    pub fn snd_complete() -> Self {
+        Self::SndComplete
+    }
+
+    pub fn snd_error(snd_file_error: FileError) -> Self {
+        Self::SndError {
+            snd_file_error,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_warning(snd_file_error: FileError) -> Self {
+        Self::SndWarning {
+            snd_file_error,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_invitation() -> Self {
+        Self::RcvInvitation
+    }
+
+    pub fn rcv_accepted() -> Self {
+        Self::RcvAccepted
+    }
+
+    pub fn rcv_transfer(rcv_progress: i64, rcv_total: i64) -> Self {
+        Self::RcvTransfer {
+            rcv_progress,
+            rcv_total,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_aborted() -> Self {
+        Self::RcvAborted
+    }
+
+    pub fn rcv_complete() -> Self {
+        Self::RcvComplete
+    }
+
+    pub fn rcv_cancelled() -> Self {
+        Self::RcvCancelled
+    }
+
+    pub fn rcv_error(rcv_file_error: FileError) -> Self {
+        Self::RcvError {
+            rcv_file_error,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_warning(rcv_file_error: FileError) -> Self {
+        Self::RcvWarning {
+            rcv_file_error,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn invalid(text: String) -> Self {
+        Self::Invalid {
+            text,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -745,8 +1145,8 @@ pub enum CIForwardedFrom {
         )]
         chat_item_id: Option<i64>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "group")]
     Group {
@@ -772,11 +1172,47 @@ pub enum CIForwardedFrom {
         )]
         chat_item_id: Option<i64>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl CIForwardedFrom {
+    pub fn unknown() -> Self {
+        Self::Unknown
+    }
+
+    pub fn contact(
+        chat_name: String,
+        msg_dir: MsgDirection,
+        contact_id: Option<i64>,
+        chat_item_id: Option<i64>,
+    ) -> Self {
+        Self::Contact {
+            chat_name,
+            msg_dir,
+            contact_id,
+            chat_item_id,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn group(
+        chat_name: String,
+        msg_dir: MsgDirection,
+        group_id: Option<i64>,
+        chat_item_id: Option<i64>,
+    ) -> Self {
+        Self::Group {
+            chat_name,
+            msg_dir,
+            group_id,
+            chat_item_id,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -804,9 +1240,9 @@ pub struct CIGroupInvitation {
     #[serde(rename = "status")]
     pub status: CIGroupInvitationStatus,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -833,9 +1269,9 @@ pub struct CIMention {
     #[serde(rename = "memberRef", skip_serializing_if = "Option::is_none")]
     pub member_ref: Option<CIMentionMember>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -857,9 +1293,9 @@ pub struct CIMentionMember {
     #[serde(rename = "memberRole")]
     pub member_role: GroupMemberRole,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -925,9 +1361,9 @@ pub struct CIMeta {
     #[serde(rename = "updatedAt")]
     pub updated_at: UtcTime,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -957,9 +1393,9 @@ pub struct CIQuote {
     #[serde(rename = "formattedText", skip_serializing_if = "Option::is_none")]
     pub formatted_text: Option<Vec<FormattedText>>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -978,9 +1414,9 @@ pub struct CIReaction {
     #[serde(rename = "reaction")]
     pub reaction: MsgReaction,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -999,9 +1435,9 @@ pub struct CIReactionCount {
     )]
     pub total_reacted: i32,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1015,8 +1451,8 @@ pub enum CIStatus {
         #[serde(rename = "sndProgress")]
         snd_progress: SndCIStatusProgress,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndRcvd")]
     SndRcvd {
@@ -1026,8 +1462,8 @@ pub enum CIStatus {
         #[serde(rename = "sndProgress")]
         snd_progress: SndCIStatusProgress,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndErrorAuth")]
     SndErrorAuth,
@@ -1036,16 +1472,16 @@ pub enum CIStatus {
         #[serde(rename = "agentError")]
         agent_error: SndError,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndWarning")]
     SndWarning {
         #[serde(rename = "agentError")]
         agent_error: SndError,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvNew")]
     RcvNew,
@@ -1056,11 +1492,65 @@ pub enum CIStatus {
         #[serde(rename = "text")]
         text: String,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl CIStatus {
+    pub fn snd_new() -> Self {
+        Self::SndNew
+    }
+
+    pub fn snd_sent(snd_progress: SndCIStatusProgress) -> Self {
+        Self::SndSent {
+            snd_progress,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_rcvd(msg_rcpt_status: MsgReceiptStatus, snd_progress: SndCIStatusProgress) -> Self {
+        Self::SndRcvd {
+            msg_rcpt_status,
+            snd_progress,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_error_auth() -> Self {
+        Self::SndErrorAuth
+    }
+
+    pub fn snd_error(agent_error: SndError) -> Self {
+        Self::SndError {
+            agent_error,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_warning(agent_error: SndError) -> Self {
+        Self::SndWarning {
+            agent_error,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_new() -> Self {
+        Self::RcvNew
+    }
+
+    pub fn rcv_read() -> Self {
+        Self::RcvRead
+    }
+
+    pub fn invalid(text: String) -> Self {
+        Self::Invalid {
+            text,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1073,9 +1563,9 @@ pub struct CITimed {
     #[serde(rename = "deleteAt", skip_serializing_if = "Option::is_none")]
     pub delete_at: Option<UtcTime>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1093,8 +1583,8 @@ pub enum ChatBotCommand {
         #[serde(rename = "params", skip_serializing_if = "Option::is_none")]
         params: Option<String>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "menu")]
     Menu {
@@ -1104,11 +1594,30 @@ pub enum ChatBotCommand {
         #[serde(rename = "commands")]
         commands: Vec<ChatBotCommand>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl ChatBotCommand {
+    pub fn command(keyword: String, label: String, params: Option<String>) -> Self {
+        Self::Command {
+            keyword,
+            label,
+            params,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn menu(label: String, commands: Vec<ChatBotCommand>) -> Self {
+        Self::Menu {
+            label,
+            commands,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 /// *Syntax:*
@@ -1125,26 +1634,27 @@ pub enum ChatDeleteMode {
         #[serde(rename = "notify")]
         notify: bool,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "entity")]
     Entity {
         #[serde(rename = "notify")]
         notify: bool,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "messages")]
     Messages,
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
 }
 
 impl CommandSyntax for ChatDeleteMode {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         match self {
             Self::Full { notify, .. } => {
                 buf.push_str("full");
@@ -1160,7 +1670,26 @@ impl CommandSyntax for ChatDeleteMode {
             }
             Self::Messages | Self::Undocumented(_) => {}
         }
-        buf
+    }
+}
+
+impl ChatDeleteMode {
+    pub fn full(notify: bool) -> Self {
+        Self::Full {
+            notify,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn entity(notify: bool) -> Self {
+        Self::Entity {
+            notify,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn messages() -> Self {
+        Self::Messages
     }
 }
 
@@ -1193,8 +1722,8 @@ pub enum ChatInfo {
         #[serde(rename = "contact")]
         contact: Contact,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "group")]
     Group {
@@ -1204,35 +1733,73 @@ pub enum ChatInfo {
         #[serde(rename = "groupChatScope", skip_serializing_if = "Option::is_none")]
         group_chat_scope: Option<GroupChatScopeInfo>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "local")]
     Local {
         #[serde(rename = "noteFolder")]
         note_folder: NoteFolder,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "contactRequest")]
     ContactRequest {
         #[serde(rename = "contactRequest")]
         contact_request: UserContactRequest,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "contactConnection")]
     ContactConnection {
         #[serde(rename = "contactConnection")]
         contact_connection: PendingContactConnection,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl ChatInfo {
+    pub fn direct(contact: Contact) -> Self {
+        Self::Direct {
+            contact,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn group(group_info: GroupInfo, group_chat_scope: Option<GroupChatScopeInfo>) -> Self {
+        Self::Group {
+            group_info,
+            group_chat_scope,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn local(note_folder: NoteFolder) -> Self {
+        Self::Local {
+            note_folder,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn contact_request(contact_request: UserContactRequest) -> Self {
+        Self::ContactRequest {
+            contact_request,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn contact_connection(contact_connection: PendingContactConnection) -> Self {
+        Self::ContactConnection {
+            contact_connection,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1249,7 +1816,7 @@ pub struct ChatItem {
     pub content: CIContent,
 
     #[serde(rename = "mentions")]
-    pub mentions: HashMap<String, CIMention>,
+    pub mentions: BTreeMap<String, CIMention>,
 
     #[serde(rename = "formattedText", skip_serializing_if = "Option::is_none")]
     pub formatted_text: Option<Vec<FormattedText>>,
@@ -1263,9 +1830,9 @@ pub struct ChatItem {
     #[serde(rename = "file", skip_serializing_if = "Option::is_none")]
     pub file: Option<CIFile>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 /// Message deletion result.
@@ -1279,9 +1846,9 @@ pub struct ChatItemDeletion {
     #[serde(rename = "toChatItem", skip_serializing_if = "Option::is_none")]
     pub to_chat_item: Option<AChatItem>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -1314,20 +1881,20 @@ pub struct ChatRef {
     #[serde(rename = "chatScope", skip_serializing_if = "Option::is_none")]
     pub chat_scope: Option<GroupChatScope>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 impl CommandSyntax for ChatRef {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(256);
-        buf.push_str(&self.chat_type.interpret());
-        buf.push_str(&self.chat_id.to_string());
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        self.chat_type.append_command_syntax(buf);
+        write!(buf, "{}", self.chat_id).unwrap();
         if let Some(chat_scope) = &self.chat_scope {
-            buf.push_str(&chat_scope.interpret());
+            chat_scope.append_command_syntax(buf);
         }
-        buf
     }
 }
 
@@ -1344,9 +1911,9 @@ pub struct ChatSettings {
     #[serde(rename = "favorite")]
     pub favorite: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1380,9 +1947,9 @@ pub struct ChatStats {
     #[serde(rename = "unreadChat")]
     pub unread_chat: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 /// *Syntax:*
@@ -1403,8 +1970,9 @@ pub enum ChatType {
 }
 
 impl CommandSyntax for ChatType {
-    fn interpret(&self) -> String {
-        let mut buf = String::new();
+    const COMMAND_BUF_SIZE: usize = 16;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         match self {
             Self::Direct => {
                 buf.push('@');
@@ -1416,7 +1984,6 @@ impl CommandSyntax for ChatType {
                 buf.push('*');
             }
         }
-        buf
     }
 }
 
@@ -1447,9 +2014,9 @@ pub struct ChatWallpaper {
     )]
     pub scale: Option<f64>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -1505,11 +2072,11 @@ pub struct ComposedMessage {
     pub msg_content: MsgContent,
 
     #[serde(rename = "mentions")]
-    pub mentions: HashMap<String, i64>,
+    pub mentions: BTreeMap<String, i64>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -1654,9 +2221,9 @@ pub struct Connection {
     #[serde(rename = "createdAt")]
     pub created_at: UtcTime,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1671,8 +2238,8 @@ pub enum ConnectionEntity {
         #[serde(rename = "contact", skip_serializing_if = "Option::is_none")]
         contact: Option<Contact>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvGroupMsgConnection")]
     RcvGroupMsgConnection {
@@ -1685,8 +2252,8 @@ pub enum ConnectionEntity {
         #[serde(rename = "groupMember")]
         group_member: GroupMember,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "sndFileConnection")]
     SndFileConnection {
@@ -1696,8 +2263,8 @@ pub enum ConnectionEntity {
         #[serde(rename = "sndFileTransfer")]
         snd_file_transfer: SndFileTransfer,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "rcvFileConnection")]
     RcvFileConnection {
@@ -1707,8 +2274,8 @@ pub enum ConnectionEntity {
         #[serde(rename = "rcvFileTransfer")]
         rcv_file_transfer: RcvFileTransfer,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "userContactConnection")]
     UserContactConnection {
@@ -1718,11 +2285,70 @@ pub enum ConnectionEntity {
         #[serde(rename = "userContact")]
         user_contact: UserContact,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl ConnectionEntity {
+    pub fn rcv_direct_msg_connection(
+        entity_connection: Connection,
+        contact: Option<Contact>,
+    ) -> Self {
+        Self::RcvDirectMsgConnection {
+            entity_connection,
+            contact,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_group_msg_connection(
+        entity_connection: Connection,
+        group_info: GroupInfo,
+        group_member: GroupMember,
+    ) -> Self {
+        Self::RcvGroupMsgConnection {
+            entity_connection,
+            group_info,
+            group_member,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn snd_file_connection(
+        entity_connection: Connection,
+        snd_file_transfer: SndFileTransfer,
+    ) -> Self {
+        Self::SndFileConnection {
+            entity_connection,
+            snd_file_transfer,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn rcv_file_connection(
+        entity_connection: Connection,
+        rcv_file_transfer: RcvFileTransfer,
+    ) -> Self {
+        Self::RcvFileConnection {
+            entity_connection,
+            rcv_file_transfer,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn user_contact_connection(
+        entity_connection: Connection,
+        user_contact: UserContact,
+    ) -> Self {
+        Self::UserContactConnection {
+            entity_connection,
+            user_contact,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -1744,35 +2370,65 @@ pub enum ConnectionPlan {
         #[serde(rename = "invitationLinkPlan")]
         invitation_link_plan: InvitationLinkPlan,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "contactAddress")]
     ContactAddress {
         #[serde(rename = "contactAddressPlan")]
         contact_address_plan: ContactAddressPlan,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "groupLink")]
     GroupLink {
         #[serde(rename = "groupLinkPlan")]
         group_link_plan: GroupLinkPlan,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "error")]
     Error {
         #[serde(rename = "chatError")]
         chat_error: ChatError,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl ConnectionPlan {
+    pub fn invitation_link(invitation_link_plan: InvitationLinkPlan) -> Self {
+        Self::InvitationLink {
+            invitation_link_plan,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn contact_address(contact_address_plan: ContactAddressPlan) -> Self {
+        Self::ContactAddress {
+            contact_address_plan,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn group_link(group_link_plan: GroupLinkPlan) -> Self {
+        Self::GroupLink {
+            group_link_plan,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn error(chat_error: ChatError) -> Self {
+        Self::Error {
+            chat_error,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1871,9 +2527,9 @@ pub struct Contact {
     #[serde(rename = "customData", skip_serializing_if = "Option::is_none")]
     pub custom_data: Option<JsonObject>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1885,8 +2541,8 @@ pub enum ContactAddressPlan {
         #[serde(rename = "contactSLinkData_", skip_serializing_if = "Option::is_none")]
         contact_s_link_data: Option<ContactShortLinkData>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "ownLink")]
     OwnLink,
@@ -1897,27 +2553,65 @@ pub enum ContactAddressPlan {
         #[serde(rename = "contact")]
         contact: Contact,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "known")]
     Known {
         #[serde(rename = "contact")]
         contact: Contact,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "contactViaAddress")]
     ContactViaAddress {
         #[serde(rename = "contact")]
         contact: Contact,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl ContactAddressPlan {
+    pub fn ok(contact_s_link_data: Option<ContactShortLinkData>) -> Self {
+        Self::Ok {
+            contact_s_link_data,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn own_link() -> Self {
+        Self::OwnLink
+    }
+
+    pub fn connecting_confirm_reconnect() -> Self {
+        Self::ConnectingConfirmReconnect
+    }
+
+    pub fn connecting_prohibit(contact: Contact) -> Self {
+        Self::ConnectingProhibit {
+            contact,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn known(contact: Contact) -> Self {
+        Self::Known {
+            contact,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn contact_via_address(contact: Contact) -> Self {
+        Self::ContactViaAddress {
+            contact,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1933,9 +2627,9 @@ pub struct ContactShortLinkData {
     #[serde(rename = "business")]
     pub business: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -1959,19 +2653,35 @@ pub enum ContactUserPref {
         #[serde(rename = "preference")]
         preference: SimplePreference,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "user")]
     User {
         #[serde(rename = "preference")]
         preference: SimplePreference,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl ContactUserPref {
+    pub fn contact(preference: SimplePreference) -> Self {
+        Self::Contact {
+            preference,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn user(preference: SimplePreference) -> Self {
+        Self::User {
+            preference,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1987,9 +2697,9 @@ pub struct ContactUserPreference {
     #[serde(rename = "contactPreference")]
     pub contact_preference: SimplePreference,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2020,9 +2730,9 @@ pub struct ContactUserPreferences {
     #[serde(rename = "commands", skip_serializing_if = "Option::is_none")]
     pub commands: Option<Vec<ChatBotCommand>>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 /// *Syntax:*
@@ -2040,20 +2750,20 @@ pub struct CreatedConnLink {
     #[serde(rename = "connShortLink", skip_serializing_if = "Option::is_none")]
     pub conn_short_link: Option<String>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 impl CommandSyntax for CreatedConnLink {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
-        buf.push_str(&self.conn_full_link.to_string());
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        write!(buf, "{}", self.conn_full_link).unwrap();
         if let Some(conn_short_link) = &self.conn_short_link {
             buf.push(' ');
-            buf.push_str(&conn_short_link.to_string());
+            write!(buf, "{}", conn_short_link).unwrap();
         }
-        buf
     }
 }
 
@@ -2067,9 +2777,9 @@ pub struct CryptoFile {
     #[serde(rename = "cryptoArgs", skip_serializing_if = "Option::is_none")]
     pub crypto_args: Option<CryptoFileArgs>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2082,9 +2792,9 @@ pub struct CryptoFileArgs {
     #[serde(rename = "fileNonce")]
     pub file_nonce: String,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2094,9 +2804,9 @@ pub struct E2EInfo {
     #[serde(rename = "pqEnabled", skip_serializing_if = "Option::is_none")]
     pub pq_enabled: Option<bool>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -2127,9 +2837,9 @@ pub struct FileDescr {
     #[serde(rename = "fileDescrComplete")]
     pub file_descr_complete: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2157,9 +2867,9 @@ pub struct FileInvitation {
     #[serde(rename = "fileDescr", skip_serializing_if = "Option::is_none")]
     pub file_descr: Option<FileDescr>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -2232,9 +2942,9 @@ pub struct FileTransferMeta {
     #[serde(rename = "cancelled")]
     pub cancelled: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2256,8 +2966,8 @@ pub enum Format {
         #[serde(rename = "color")]
         color: Color,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "uri")]
     Uri,
@@ -2269,8 +2979,8 @@ pub enum Format {
         #[serde(rename = "linkUri")]
         link_uri: String,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "simplexLink")]
     SimplexLink {
@@ -2286,31 +2996,109 @@ pub enum Format {
         #[serde(rename = "smpHosts")]
         smp_hosts: Vec<String>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "command")]
     Command {
         #[serde(rename = "commandStr")]
         command_str: String,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "mention")]
     Mention {
         #[serde(rename = "memberName")]
         member_name: String,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "email")]
     Email,
     #[serde(rename = "phone")]
     Phone,
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl Format {
+    pub fn bold() -> Self {
+        Self::Bold
+    }
+
+    pub fn italic() -> Self {
+        Self::Italic
+    }
+
+    pub fn strike_through() -> Self {
+        Self::StrikeThrough
+    }
+
+    pub fn snippet() -> Self {
+        Self::Snippet
+    }
+
+    pub fn secret() -> Self {
+        Self::Secret
+    }
+
+    pub fn colored(color: Color) -> Self {
+        Self::Colored {
+            color,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn uri() -> Self {
+        Self::Uri
+    }
+
+    pub fn hyper_link(show_text: Option<String>, link_uri: String) -> Self {
+        Self::HyperLink {
+            show_text,
+            link_uri,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn simplex_link(
+        show_text: Option<String>,
+        link_type: SimplexLinkType,
+        simplex_uri: String,
+        smp_hosts: Vec<String>,
+    ) -> Self {
+        Self::SimplexLink {
+            show_text,
+            link_type,
+            simplex_uri,
+            smp_hosts,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn command(command_str: String) -> Self {
+        Self::Command {
+            command_str,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn mention(member_name: String) -> Self {
+        Self::Mention {
+            member_name,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn email() -> Self {
+        Self::Email
+    }
+
+    pub fn phone() -> Self {
+        Self::Phone
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2323,9 +3111,9 @@ pub struct FormattedText {
     #[serde(rename = "text")]
     pub text: String,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2365,9 +3153,9 @@ pub struct FullGroupPreferences {
     #[serde(rename = "commands")]
     pub commands: Vec<ChatBotCommand>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2398,9 +3186,9 @@ pub struct FullPreferences {
     #[serde(rename = "commands")]
     pub commands: Vec<ChatBotCommand>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2413,9 +3201,9 @@ pub struct Group {
     #[serde(rename = "members")]
     pub members: Vec<GroupMember>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 /// *Syntax:*
@@ -2437,16 +3225,17 @@ pub enum GroupChatScope {
         )]
         group_member_id: Option<i64>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
 }
 
 impl CommandSyntax for GroupChatScope {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("(_support");
         match self {
             Self::MemberSupport {
@@ -2454,13 +3243,21 @@ impl CommandSyntax for GroupChatScope {
             } => {
                 if let Some(group_member_id) = group_member_id {
                     buf.push(':');
-                    buf.push_str(&group_member_id.to_string());
+                    write!(buf, "{}", group_member_id).unwrap();
                 }
             }
             Self::Undocumented(_) => {}
         }
         buf.push(')');
-        buf
+    }
+}
+
+impl GroupChatScope {
+    pub fn member_support(group_member_id: Option<i64>) -> Self {
+        Self::MemberSupport {
+            group_member_id,
+            undocumented: Default::default(),
+        }
     }
 }
 
@@ -2473,11 +3270,20 @@ pub enum GroupChatScopeInfo {
         #[serde(rename = "groupMember_", skip_serializing_if = "Option::is_none")]
         group_member: Option<GroupMember>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl GroupChatScopeInfo {
+    pub fn member_support(group_member: Option<GroupMember>) -> Self {
+        Self::MemberSupport {
+            group_member,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2514,9 +3320,9 @@ pub struct GroupDirectInvitation {
     #[serde(rename = "groupDirectInvStartedConnection")]
     pub group_direct_inv_started_connection: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -2630,9 +3436,9 @@ pub struct GroupInfo {
     #[serde(rename = "viaGroupLinkUri", skip_serializing_if = "Option::is_none")]
     pub via_group_link_uri: Option<String>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2645,9 +3451,9 @@ pub struct GroupInfoSummary {
     #[serde(rename = "groupSummary")]
     pub group_summary: GroupSummary,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2675,9 +3481,9 @@ pub struct GroupLink {
     #[serde(rename = "acceptMemberRole")]
     pub accept_member_role: GroupMemberRole,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2689,16 +3495,16 @@ pub enum GroupLinkPlan {
         #[serde(rename = "groupSLinkData_", skip_serializing_if = "Option::is_none")]
         group_s_link_data: Option<GroupShortLinkData>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "ownLink")]
     OwnLink {
         #[serde(rename = "groupInfo")]
         group_info: GroupInfo,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "connectingConfirmReconnect")]
     ConnectingConfirmReconnect,
@@ -2707,19 +3513,53 @@ pub enum GroupLinkPlan {
         #[serde(rename = "groupInfo_", skip_serializing_if = "Option::is_none")]
         group_info: Option<GroupInfo>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "known")]
     Known {
         #[serde(rename = "groupInfo")]
         group_info: GroupInfo,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl GroupLinkPlan {
+    pub fn ok(group_s_link_data: Option<GroupShortLinkData>) -> Self {
+        Self::Ok {
+            group_s_link_data,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn own_link(group_info: GroupInfo) -> Self {
+        Self::OwnLink {
+            group_info,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn connecting_confirm_reconnect() -> Self {
+        Self::ConnectingConfirmReconnect
+    }
+
+    pub fn connecting_prohibit(group_info: Option<GroupInfo>) -> Self {
+        Self::ConnectingProhibit {
+            group_info,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn known(group_info: GroupInfo) -> Self {
+        Self::Known {
+            group_info,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2802,9 +3642,9 @@ pub struct GroupMember {
     #[serde(rename = "supportChat", skip_serializing_if = "Option::is_none")]
     pub support_chat: Option<GroupSupportChat>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2814,9 +3654,9 @@ pub struct GroupMemberAdmission {
     #[serde(rename = "review", skip_serializing_if = "Option::is_none")]
     pub review: Option<MemberCriteria>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -2848,9 +3688,9 @@ pub struct GroupMemberRef {
     #[serde(rename = "profile")]
     pub profile: Profile,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -2878,9 +3718,9 @@ pub struct GroupMemberSettings {
     #[serde(rename = "showMessages")]
     pub show_messages: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -2926,9 +3766,9 @@ pub struct GroupPreference {
     #[serde(rename = "enable")]
     pub enable: GroupFeatureEnabled,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2968,9 +3808,9 @@ pub struct GroupPreferences {
     #[serde(rename = "commands", skip_serializing_if = "Option::is_none")]
     pub commands: Option<Vec<ChatBotCommand>>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2998,9 +3838,9 @@ pub struct GroupProfile {
     #[serde(rename = "memberAdmission", skip_serializing_if = "Option::is_none")]
     pub member_admission: Option<GroupMemberAdmission>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3010,9 +3850,9 @@ pub struct GroupShortLinkData {
     #[serde(rename = "groupProfile")]
     pub group_profile: GroupProfile,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3025,9 +3865,9 @@ pub struct GroupSummary {
     )]
     pub current_members: i32,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3058,9 +3898,9 @@ pub struct GroupSupportChat {
     )]
     pub last_msg_from_member_ts: Option<UtcTime>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -3082,8 +3922,8 @@ pub enum InvitationLinkPlan {
         #[serde(rename = "contactSLinkData_", skip_serializing_if = "Option::is_none")]
         contact_s_link_data: Option<ContactShortLinkData>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "ownLink")]
     OwnLink,
@@ -3092,19 +3932,46 @@ pub enum InvitationLinkPlan {
         #[serde(rename = "contact_", skip_serializing_if = "Option::is_none")]
         contact: Option<Contact>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "known")]
     Known {
         #[serde(rename = "contact")]
         contact: Contact,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl InvitationLinkPlan {
+    pub fn ok(contact_s_link_data: Option<ContactShortLinkData>) -> Self {
+        Self::Ok {
+            contact_s_link_data,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn own_link() -> Self {
+        Self::OwnLink
+    }
+
+    pub fn connecting(contact: Option<Contact>) -> Self {
+        Self::Connecting {
+            contact,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn known(contact: Contact) -> Self {
+        Self::Known {
+            contact,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3119,15 +3986,32 @@ pub enum InvitedBy {
         )]
         by_contact_id: i64,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "user")]
     User,
     #[serde(rename = "unknown")]
     Unknown,
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl InvitedBy {
+    pub fn contact(by_contact_id: i64) -> Self {
+        Self::Contact {
+            by_contact_id,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn user() -> Self {
+        Self::User
+    }
+
+    pub fn unknown() -> Self {
+        Self::Unknown
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3148,8 +4032,8 @@ pub enum LinkContent {
         )]
         duration: Option<i32>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "unknown")]
     Unknown {
@@ -3159,11 +4043,36 @@ pub enum LinkContent {
         #[serde(rename = "json")]
         json: JsonObject,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl LinkContent {
+    pub fn page() -> Self {
+        Self::Page
+    }
+
+    pub fn image() -> Self {
+        Self::Image
+    }
+
+    pub fn video(duration: Option<i32>) -> Self {
+        Self::Video {
+            duration,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn unknown(tag: String, json: JsonObject) -> Self {
+        Self::Unknown {
+            tag,
+            json,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3185,9 +4094,9 @@ pub struct LinkPreview {
     #[serde(rename = "content", skip_serializing_if = "Option::is_none")]
     pub content: Option<LinkContent>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3224,9 +4133,9 @@ pub struct LocalProfile {
     #[serde(rename = "localAlias")]
     pub local_alias: String,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -3253,8 +4162,8 @@ pub enum MsgChatLink {
         #[serde(rename = "business")]
         business: bool,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "invitation")]
     Invitation {
@@ -3264,8 +4173,8 @@ pub enum MsgChatLink {
         #[serde(rename = "profile")]
         profile: Profile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "group")]
     Group {
@@ -3275,11 +4184,38 @@ pub enum MsgChatLink {
         #[serde(rename = "groupProfile")]
         group_profile: GroupProfile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl MsgChatLink {
+    pub fn contact(conn_link: String, profile: Profile, business: bool) -> Self {
+        Self::Contact {
+            conn_link,
+            profile,
+            business,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn invitation(inv_link: String, profile: Profile) -> Self {
+        Self::Invitation {
+            inv_link,
+            profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn group(conn_link: String, group_profile: GroupProfile) -> Self {
+        Self::Group {
+            conn_link,
+            group_profile,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3291,8 +4227,8 @@ pub enum MsgContent {
         #[serde(rename = "text")]
         text: String,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "link")]
     Link {
@@ -3302,8 +4238,8 @@ pub enum MsgContent {
         #[serde(rename = "preview")]
         preview: LinkPreview,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "image")]
     Image {
@@ -3313,8 +4249,8 @@ pub enum MsgContent {
         #[serde(rename = "image")]
         image: String,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "video")]
     Video {
@@ -3330,8 +4266,8 @@ pub enum MsgContent {
         )]
         duration: i32,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "voice")]
     Voice {
@@ -3344,16 +4280,16 @@ pub enum MsgContent {
         )]
         duration: i32,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "file")]
     File {
         #[serde(rename = "text")]
         text: String,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "report")]
     Report {
@@ -3363,8 +4299,8 @@ pub enum MsgContent {
         #[serde(rename = "reason")]
         reason: ReportReason,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "chat")]
     Chat {
@@ -3374,8 +4310,8 @@ pub enum MsgContent {
         #[serde(rename = "chatLink")]
         chat_link: MsgChatLink,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "unknown")]
     Unknown {
@@ -3388,11 +4324,85 @@ pub enum MsgContent {
         #[serde(rename = "json")]
         json: JsonObject,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl MsgContent {
+    pub fn text(text: String) -> Self {
+        Self::Text {
+            text,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn link(text: String, preview: LinkPreview) -> Self {
+        Self::Link {
+            text,
+            preview,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn image(text: String, image: String) -> Self {
+        Self::Image {
+            text,
+            image,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn video(text: String, image: String, duration: i32) -> Self {
+        Self::Video {
+            text,
+            image,
+            duration,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn voice(text: String, duration: i32) -> Self {
+        Self::Voice {
+            text,
+            duration,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn file(text: String) -> Self {
+        Self::File {
+            text,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn report(text: String, reason: ReportReason) -> Self {
+        Self::Report {
+            text,
+            reason,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn chat(text: String, chat_link: MsgChatLink) -> Self {
+        Self::Chat {
+            text,
+            chat_link,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn unknown(tag: String, text: String, json: JsonObject) -> Self {
+        Self::Unknown {
+            tag,
+            text,
+            json,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -3426,8 +4436,8 @@ pub enum MsgReaction {
         #[serde(rename = "emoji")]
         emoji: String,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "unknown")]
     Unknown {
@@ -3437,11 +4447,28 @@ pub enum MsgReaction {
         #[serde(rename = "json")]
         json: JsonObject,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl MsgReaction {
+    pub fn emoji(emoji: String) -> Self {
+        Self::Emoji {
+            emoji,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn unknown(tag: String, json: JsonObject) -> Self {
+        Self::Unknown {
+            tag,
+            json,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -3464,9 +4491,9 @@ pub struct NewUser {
     #[serde(rename = "pastTimestamp")]
     pub past_timestamp: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3497,9 +4524,9 @@ pub struct NoteFolder {
     #[serde(rename = "unread")]
     pub unread: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3552,9 +4579,9 @@ pub struct PendingContactConnection {
     #[serde(rename = "updatedAt")]
     pub updated_at: UtcTime,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3567,9 +4594,9 @@ pub struct PrefEnabled {
     #[serde(rename = "forContact")]
     pub for_contact: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3600,9 +4627,9 @@ pub struct Preferences {
     #[serde(rename = "commands", skip_serializing_if = "Option::is_none")]
     pub commands: Option<Vec<ChatBotCommand>>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3621,9 +4648,9 @@ pub struct PreparedContact {
     #[serde(rename = "requestSharedMsgId", skip_serializing_if = "Option::is_none")]
     pub request_shared_msg_id: Option<String>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3645,9 +4672,9 @@ pub struct PreparedGroup {
     #[serde(rename = "requestSharedMsgId", skip_serializing_if = "Option::is_none")]
     pub request_shared_msg_id: Option<String>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3675,9 +4702,9 @@ pub struct Profile {
     #[serde(rename = "peerType", skip_serializing_if = "Option::is_none")]
     pub peer_type: Option<ChatPeerType>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -3705,16 +4732,16 @@ pub enum RcvConnEvent {
         #[serde(rename = "phase")]
         phase: SwitchPhase,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "ratchetSync")]
     RatchetSync {
         #[serde(rename = "syncStatus")]
         sync_status: RatchetSyncState,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "verificationCodeReset")]
     VerificationCodeReset,
@@ -3723,11 +4750,38 @@ pub enum RcvConnEvent {
         #[serde(rename = "enabled")]
         enabled: bool,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl RcvConnEvent {
+    pub fn switch_queue(phase: SwitchPhase) -> Self {
+        Self::SwitchQueue {
+            phase,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn ratchet_sync(sync_status: RatchetSyncState) -> Self {
+        Self::RatchetSync {
+            sync_status,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn verification_code_reset() -> Self {
+        Self::VerificationCodeReset
+    }
+
+    pub fn pq_enabled(enabled: bool) -> Self {
+        Self::PqEnabled {
+            enabled,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3744,19 +4798,40 @@ pub enum RcvDirectEvent {
         #[serde(rename = "toProfile")]
         to_profile: Profile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "groupInvLinkReceived")]
     GroupInvLinkReceived {
         #[serde(rename = "groupProfile")]
         group_profile: GroupProfile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl RcvDirectEvent {
+    pub fn contact_deleted() -> Self {
+        Self::ContactDeleted
+    }
+
+    pub fn profile_updated(from_profile: Profile, to_profile: Profile) -> Self {
+        Self::ProfileUpdated {
+            from_profile,
+            to_profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn group_inv_link_received(group_profile: GroupProfile) -> Self {
+        Self::GroupInvLinkReceived {
+            group_profile,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3781,9 +4856,9 @@ pub struct RcvFileDescr {
     #[serde(rename = "fileDescrComplete")]
     pub file_descr_complete: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3804,9 +4879,9 @@ pub struct RcvFileInfo {
     #[serde(rename = "agentConnId", skip_serializing_if = "Option::is_none")]
     pub agent_conn_id: Option<String>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3820,35 +4895,69 @@ pub enum RcvFileStatus {
         #[serde(rename = "fileInfo")]
         file_info: RcvFileInfo,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "connected")]
     Connected {
         #[serde(rename = "fileInfo")]
         file_info: RcvFileInfo,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "complete")]
     Complete {
         #[serde(rename = "fileInfo")]
         file_info: RcvFileInfo,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "cancelled")]
     Cancelled {
         #[serde(rename = "fileInfo_", skip_serializing_if = "Option::is_none")]
         file_info: Option<RcvFileInfo>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl RcvFileStatus {
+    pub fn new() -> Self {
+        Self::New
+    }
+
+    pub fn accepted(file_info: RcvFileInfo) -> Self {
+        Self::Accepted {
+            file_info,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn connected(file_info: RcvFileInfo) -> Self {
+        Self::Connected {
+            file_info,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn complete(file_info: RcvFileInfo) -> Self {
+        Self::Complete {
+            file_info,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn cancelled(file_info: Option<RcvFileInfo>) -> Self {
+        Self::Cancelled {
+            file_info,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3893,9 +5002,9 @@ pub struct RcvFileTransfer {
     #[serde(rename = "cryptoArgs", skip_serializing_if = "Option::is_none")]
     pub crypto_args: Option<CryptoFileArgs>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3913,8 +5022,8 @@ pub enum RcvGroupEvent {
         #[serde(rename = "profile")]
         profile: Profile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "memberConnected")]
     MemberConnected,
@@ -3929,8 +5038,8 @@ pub enum RcvGroupEvent {
         #[serde(rename = "profile")]
         profile: Profile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "userAccepted")]
     UserAccepted,
@@ -3950,8 +5059,8 @@ pub enum RcvGroupEvent {
         #[serde(rename = "role")]
         role: GroupMemberRole,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "memberBlocked")]
     MemberBlocked {
@@ -3967,16 +5076,16 @@ pub enum RcvGroupEvent {
         #[serde(rename = "blocked")]
         blocked: bool,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "userRole")]
     UserRole {
         #[serde(rename = "role")]
         role: GroupMemberRole,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "memberDeleted")]
     MemberDeleted {
@@ -3989,8 +5098,8 @@ pub enum RcvGroupEvent {
         #[serde(rename = "profile")]
         profile: Profile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "userDeleted")]
     UserDeleted,
@@ -4001,8 +5110,8 @@ pub enum RcvGroupEvent {
         #[serde(rename = "groupProfile")]
         group_profile: GroupProfile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "invitedViaGroupLink")]
     InvitedViaGroupLink,
@@ -4016,13 +5125,111 @@ pub enum RcvGroupEvent {
         #[serde(rename = "toProfile")]
         to_profile: Profile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "newMemberPendingReview")]
     NewMemberPendingReview,
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl RcvGroupEvent {
+    pub fn member_added(group_member_id: i64, profile: Profile) -> Self {
+        Self::MemberAdded {
+            group_member_id,
+            profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn member_connected() -> Self {
+        Self::MemberConnected
+    }
+
+    pub fn member_accepted(group_member_id: i64, profile: Profile) -> Self {
+        Self::MemberAccepted {
+            group_member_id,
+            profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn user_accepted() -> Self {
+        Self::UserAccepted
+    }
+
+    pub fn member_left() -> Self {
+        Self::MemberLeft
+    }
+
+    pub fn member_role(group_member_id: i64, profile: Profile, role: GroupMemberRole) -> Self {
+        Self::MemberRole {
+            group_member_id,
+            profile,
+            role,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn member_blocked(group_member_id: i64, profile: Profile, blocked: bool) -> Self {
+        Self::MemberBlocked {
+            group_member_id,
+            profile,
+            blocked,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn user_role(role: GroupMemberRole) -> Self {
+        Self::UserRole {
+            role,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn member_deleted(group_member_id: i64, profile: Profile) -> Self {
+        Self::MemberDeleted {
+            group_member_id,
+            profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn user_deleted() -> Self {
+        Self::UserDeleted
+    }
+
+    pub fn group_deleted() -> Self {
+        Self::GroupDeleted
+    }
+
+    pub fn group_updated(group_profile: GroupProfile) -> Self {
+        Self::GroupUpdated {
+            group_profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn invited_via_group_link() -> Self {
+        Self::InvitedViaGroupLink
+    }
+
+    pub fn member_created_contact() -> Self {
+        Self::MemberCreatedContact
+    }
+
+    pub fn member_profile_updated(from_profile: Profile, to_profile: Profile) -> Self {
+        Self::MemberProfileUpdated {
+            from_profile,
+            to_profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn new_member_pending_review() -> Self {
+        Self::NewMemberPendingReview
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -4051,9 +5258,9 @@ pub struct RoleGroupPreference {
     #[serde(rename = "role", skip_serializing_if = "Option::is_none")]
     pub role: Option<GroupMemberRole>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4066,9 +5273,9 @@ pub struct SecurityCode {
     #[serde(rename = "verifiedAt")]
     pub verified_at: UtcTime,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4078,9 +5285,9 @@ pub struct SimplePreference {
     #[serde(rename = "allow")]
     pub allow: FeatureAllowed,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -4121,8 +5328,8 @@ pub enum SndConnEvent {
         #[serde(rename = "member", skip_serializing_if = "Option::is_none")]
         member: Option<GroupMemberRef>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "ratchetSync")]
     RatchetSync {
@@ -4132,19 +5339,44 @@ pub enum SndConnEvent {
         #[serde(rename = "member", skip_serializing_if = "Option::is_none")]
         member: Option<GroupMemberRef>,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "pqEnabled")]
     PqEnabled {
         #[serde(rename = "enabled")]
         enabled: bool,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl SndConnEvent {
+    pub fn switch_queue(phase: SwitchPhase, member: Option<GroupMemberRef>) -> Self {
+        Self::SwitchQueue {
+            phase,
+            member,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn ratchet_sync(sync_status: RatchetSyncState, member: Option<GroupMemberRef>) -> Self {
+        Self::RatchetSync {
+            sync_status,
+            member,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn pq_enabled(enabled: bool) -> Self {
+        Self::PqEnabled {
+            enabled,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4203,9 +5435,9 @@ pub struct SndFileTransfer {
     #[serde(rename = "fileInline", skip_serializing_if = "Option::is_none")]
     pub file_inline: Option<InlineFileMode>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4226,8 +5458,8 @@ pub enum SndGroupEvent {
         #[serde(rename = "role")]
         role: GroupMemberRole,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "memberBlocked")]
     MemberBlocked {
@@ -4243,16 +5475,16 @@ pub enum SndGroupEvent {
         #[serde(rename = "blocked")]
         blocked: bool,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "userRole")]
     UserRole {
         #[serde(rename = "role")]
         role: GroupMemberRole,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "memberDeleted")]
     MemberDeleted {
@@ -4265,8 +5497,8 @@ pub enum SndGroupEvent {
         #[serde(rename = "profile")]
         profile: Profile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "userLeft")]
     UserLeft,
@@ -4275,8 +5507,8 @@ pub enum SndGroupEvent {
         #[serde(rename = "groupProfile")]
         group_profile: GroupProfile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "memberAccepted")]
     MemberAccepted {
@@ -4289,13 +5521,71 @@ pub enum SndGroupEvent {
         #[serde(rename = "profile")]
         profile: Profile,
 
-        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
-        undocumented: BTreeMap<String, JsonObject>,
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
     },
     #[serde(rename = "userPendingReview")]
     UserPendingReview,
     #[serde(untagged)]
-    Undocumented(BTreeMap<String, JsonObject>),
+    Undocumented(JsonObject),
+}
+
+impl SndGroupEvent {
+    pub fn member_role(group_member_id: i64, profile: Profile, role: GroupMemberRole) -> Self {
+        Self::MemberRole {
+            group_member_id,
+            profile,
+            role,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn member_blocked(group_member_id: i64, profile: Profile, blocked: bool) -> Self {
+        Self::MemberBlocked {
+            group_member_id,
+            profile,
+            blocked,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn user_role(role: GroupMemberRole) -> Self {
+        Self::UserRole {
+            role,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn member_deleted(group_member_id: i64, profile: Profile) -> Self {
+        Self::MemberDeleted {
+            group_member_id,
+            profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn user_left() -> Self {
+        Self::UserLeft
+    }
+
+    pub fn group_updated(group_profile: GroupProfile) -> Self {
+        Self::GroupUpdated {
+            group_profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn member_accepted(group_member_id: i64, profile: Profile) -> Self {
+        Self::MemberAccepted {
+            group_member_id,
+            profile,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn user_pending_review() -> Self {
+        Self::UserPendingReview
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -4327,9 +5617,9 @@ pub struct TimedMessagesGroupPreference {
     )]
     pub ttl: Option<i32>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4347,9 +5637,9 @@ pub struct TimedMessagesPreference {
     )]
     pub ttl: Option<i32>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -4402,9 +5692,9 @@ pub struct UIColors {
     #[serde(rename = "receivedReply", skip_serializing_if = "Option::is_none")]
     pub received_reply: Option<String>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4420,9 +5710,9 @@ pub struct UIThemeEntityOverride {
     #[serde(rename = "colors")]
     pub colors: UIColors,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4435,9 +5725,9 @@ pub struct UIThemeEntityOverrides {
     #[serde(rename = "dark", skip_serializing_if = "Option::is_none")]
     pub dark: Option<UIThemeEntityOverride>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4448,11 +5738,11 @@ pub struct UpdatedMessage {
     pub msg_content: MsgContent,
 
     #[serde(rename = "mentions")]
-    pub mentions: HashMap<String, i64>,
+    pub mentions: BTreeMap<String, i64>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4516,9 +5806,9 @@ pub struct User {
     #[serde(rename = "uiThemes", skip_serializing_if = "Option::is_none")]
     pub ui_themes: Option<UIThemeEntityOverrides>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4542,9 +5832,9 @@ pub struct UserContact {
     )]
     pub group_id: Option<i64>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4569,9 +5859,9 @@ pub struct UserContactLink {
     #[serde(rename = "addressSettings")]
     pub address_settings: AddressSettings,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4644,9 +5934,9 @@ pub struct UserContactRequest {
     #[serde(rename = "requestSharedMsgId", skip_serializing_if = "Option::is_none")]
     pub request_shared_msg_id: Option<String>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4662,9 +5952,9 @@ pub struct UserInfo {
     )]
     pub unread_count: i32,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4686,9 +5976,9 @@ pub struct UserProfileUpdateSummary {
     #[serde(rename = "changedContacts")]
     pub changed_contacts: Vec<Contact>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4701,9 +5991,9 @@ pub struct UserPwdHash {
     #[serde(rename = "salt")]
     pub salt: String,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4722,9 +6012,9 @@ pub struct VersionRange {
     )]
     pub max_version: i32,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4743,9 +6033,9 @@ pub struct XFTPRcvFile {
     #[serde(rename = "userApprovedRelays")]
     pub user_approved_relays: bool,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4767,7 +6057,7 @@ pub struct XFTPSndFile {
     #[serde(rename = "cryptoArgs", skip_serializing_if = "Option::is_none")]
     pub crypto_args: Option<CryptoFileArgs>,
 
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: BTreeMap<String, JsonObject>,
+    pub undocumented: JsonObject,
 }
