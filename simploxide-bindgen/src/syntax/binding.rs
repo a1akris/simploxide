@@ -68,12 +68,11 @@ impl Interpretable for EnumType {
             .bind(EnumInterpreter::with_offset(self, 8))
             .prelude(|_, code_buffer| {
                 bufwriteln!(code_buffer, "impl CommandSyntax for {} {{", self.name);
-                bufwriteln!(code_buffer, :>4, "fn interpret(&self) -> String {{",);
-                bufwriteln!(code_buffer, :>8, "let mut buf = String::new();");
+                bufwriteln!(code_buffer, :>4, "const COMMAND_BUF_SIZE: usize = 16;",);
+                bufwriteln!(code_buffer, :>4, "fn append_command_syntax(&self, buf: &mut String) {{",);
                 Ok(())
             })
             .postlude(|_, code_buffer| {
-                bufwriteln!(code_buffer, :>8, "buf",);
                 bufwriteln!(code_buffer, :>4, "}}",);
                 bufwriteln!(code_buffer, "}}",);
                 Ok(())
@@ -89,22 +88,20 @@ impl Interpretable for RecordType {
             .bind(RecordInterpreter::with_offset(self, 8))
             .prelude(|_, out| {
                 bufwriteln!(out, "impl CommandSyntax for {} {{", self.name);
-                bufwriteln!(out, :>4, "fn interpret(&self) -> String {{",);
-
                 if self.syntax.contains("json(") {
-                    bufwriteln!(out, :>8, "let mut buf = String::with_capacity(1024);");
+                    bufwriteln!(out, :>4, "const COMMAND_BUF_SIZE: usize = 1024;");
                 } else if self.fields.len() > 2 || self.syntax.contains("[0]>") {
-                    bufwriteln!(out, :>8, "let mut buf = String::with_capacity(256);");
+                    bufwriteln!(out, :>4, "const COMMAND_BUF_SIZE: usize = 256;");
                 } else if self.fields.is_empty() {
-                    bufwriteln!(out, :>8, "let mut buf = String::new();");
+                    bufwriteln!(out, :>4, "const COMMAND_BUF_SIZE: usize = 0;");
                 } else {
-                    bufwriteln!(out, :>8, "let mut buf = String::with_capacity(64);");
+                    bufwriteln!(out, :>4, "const COMMAND_BUF_SIZE: usize = 64;");
                 }
+                bufwriteln!(out, :>4, "fn append_command_syntax(&self, buf: &mut String) {{",);
 
                 Ok(())
             })
             .postlude(|_, out| {
-                bufwriteln!(out, :>8, "buf");
                 bufwriteln!(out, :>4, "}}");
                 bufwriteln!(out, "}}");
                 Ok(())
@@ -691,7 +688,7 @@ impl<'this> SyntaxInterpreter for RecordInterpreter<'this> {
             None => ("self.", maybe_unwrap(field), out),
         };
 
-        bufwriteln!(dest, :> self.offset, "buf.push_str(&{self_str}{}{unwrap}.to_string());", field.rust_name);
+        bufwriteln!(dest, :> self.offset, "write!(buf, \"{{}}\", {self_str}{}{unwrap}).unwrap();", field.rust_name);
 
         self.curr_field_ix += 1;
         Ok(())
@@ -714,7 +711,7 @@ impl<'this> SyntaxInterpreter for RecordInterpreter<'this> {
             None => ("self.", out),
         };
 
-        bufwriteln!(dest, :> self.offset, "buf.push_str(&{self_str}{}.interpret());", field.rust_name);
+        bufwriteln!(dest, :> self.offset, "{self_str}{}.append_command_syntax(buf);", field.rust_name);
 
         self.curr_field_ix += 1;
         Ok(())
@@ -739,7 +736,11 @@ impl<'this> SyntaxInterpreter for RecordInterpreter<'this> {
 
         bufwriteln!(
             dest,
-            :> self.offset, "buf.push_str(&serde_json::to_string(&{self_str}{}).unwrap());",
+            :> self.offset, "// SAFETY: serde_json guarantees to produce valid UTF-8 sequences",
+        );
+        bufwriteln!(
+            dest,
+            :> self.offset, "unsafe {{ serde_json::to_writer(buf.as_mut_vec(), &{self_str}{}).unwrap(); }}",
             field.rust_name,
         );
 
@@ -767,11 +768,11 @@ impl<'this> SyntaxInterpreter for RecordInterpreter<'this> {
 
         bufwriteln!(dest, :> self.offset, "let mut iter = {self_str}{}{unwrap}.iter();", field.rust_name);
         bufwriteln!(dest, :> self.offset, "if let Some(el) = iter.next() {{");
-        bufwriteln!(dest, :> self.offset + 4, "buf.push_str(&el.to_string());");
+        bufwriteln!(dest, :> self.offset + 4, "write!(buf, \"{{el}}\").unwrap();");
         bufwriteln!(dest, :> self.offset, "}}");
         bufwriteln!(dest, :> self.offset, "for el in iter {{");
         interpret_literal(delim, self.offset + 4, dest);
-        bufwriteln!(dest, :> self.offset + 4, "buf.push_str(&el.to_string());");
+        bufwriteln!(dest, :> self.offset + 4, "write!(buf, \"{{el}}\").unwrap();");
         bufwriteln!(dest, :> self.offset, "}}");
 
         self.curr_field_ix += 1;
@@ -874,8 +875,8 @@ mod tests {
 
         expect![[r#"
             impl CommandSyntax for Greeting {
-                fn interpret(&self) -> String {
-                    let mut buf = String::new();
+                const COMMAND_BUF_SIZE: usize = 16;
+                fn append_command_syntax(&self, buf: &mut String) {
                     match self {
                         Self::Hi => {
                             buf.push_str("Hello,");
@@ -886,7 +887,6 @@ mod tests {
                     }
                     buf.push(' ');
                     buf.push_str("World!");
-                    buf
                 }
             }
         "#]]
@@ -894,7 +894,15 @@ mod tests {
     }
 
     trait CommandSyntax {
-        fn interpret(&self) -> String;
+        const COMMAND_BUF_SIZE: usize;
+
+        fn to_command_string(&self) -> String {
+            let mut buf = String::with_capacity(Self::COMMAND_BUF_SIZE);
+            self.append_command_syntax(&mut buf);
+            buf
+        }
+
+        fn append_command_syntax(&self, buf: &mut String);
     }
 
     enum Greeting {
@@ -903,8 +911,8 @@ mod tests {
     }
 
     impl CommandSyntax for Greeting {
-        fn interpret(&self) -> String {
-            let mut buf = String::with_capacity(64);
+        const COMMAND_BUF_SIZE: usize = 16;
+        fn append_command_syntax(&self, buf: &mut String) {
             match self {
                 Self::Hi => {
                     buf.push_str("Hello,");
@@ -915,13 +923,12 @@ mod tests {
             }
             buf.push(' ');
             buf.push_str("World!");
-            buf
         }
     }
 
     #[test]
     fn real_greeting() {
-        assert_eq!(Greeting::Hi.interpret(), "Hello, World!");
-        assert_eq!(Greeting::Bye.interpret(), "Goodbye, World!");
+        assert_eq!(Greeting::Hi.to_command_string(), "Hello, World!");
+        assert_eq!(Greeting::Bye.to_command_string(), "Goodbye, World!");
     }
 }

@@ -74,7 +74,10 @@ fn generate_types(types_md: &str) -> Result<(), Box<dyn Error>> {
         lib_rs,
         "use serde_aux::field_attributes::{{deserialize_number_from_string, deserialize_option_number_from_string}};"
     )?;
-    writeln!(lib_rs, "use std::{{collections::{{BTreeMap}}, sync::Arc}};")?;
+    writeln!(
+        lib_rs,
+        "use std::{{collections::BTreeMap, sync::Arc, fmt::Write as _}};"
+    )?;
     writeln!(lib_rs, "use errors::*;")?;
     writeln!(lib_rs, "use utils::CommandSyntax;")?;
     writeln!(lib_rs)?;
@@ -201,6 +204,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     )?;
     writeln!(client_api_rs, "use std::future::Future;")?;
     writeln!(client_api_rs, "use std::sync::Arc;")?;
+    writeln!(commands_rs, "use std::fmt::Write;")?;
     writeln!(client_api_rs)?;
     writeln!(client_api_rs, "{}\n", CLIENT_API_ERROR_TRAIT)?;
 
@@ -325,20 +329,20 @@ fn hack_discriminated_union_syntax(du: &DiscriminatedUnionType) -> Option<String
         Some(
             r#"
 impl CommandSyntax for GroupChatScope {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("(_support");
         match self {
             Self::MemberSupport { group_member_id, .. } => {
                 if let Some(group_member_id) = group_member_id {
                     buf.push(':');
-                    buf.push_str(&group_member_id.to_string());
+                    write!(buf, "{}", group_member_id).unwrap();
                 }
             }
             Self::Undocumented(_) => {}
         }
         buf.push(')');
-        buf
     }
 }
 "#
@@ -348,8 +352,9 @@ impl CommandSyntax for GroupChatScope {
         Some(
             r#"
 impl CommandSyntax for ChatDeleteMode {
-    fn interpret(&self) -> String {
-        let mut buf = String::with_capacity(64);
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
         match self {
             Self::Full { notify, .. } => {
                 buf.push_str("full");
@@ -365,7 +370,6 @@ impl CommandSyntax for ChatDeleteMode {
             }
             Self::Messages | Self::Undocumented(_) => {}
         }
-        buf
     }
 }
 "#
@@ -378,16 +382,25 @@ impl CommandSyntax for ChatDeleteMode {
 
 const COMMAND_SYNTAX_TRAIT: &str = r#"
 pub trait CommandSyntax {
+    const COMMAND_BUF_SIZE: usize;
+
     /// Generate a SimpleX command string from self
-    fn interpret(&self) -> String;
+    fn to_command_string(&self) -> String {
+        let mut buf = String::with_capacity(Self::COMMAND_BUF_SIZE);
+        self.append_command_syntax(&mut buf);
+        buf
+    }
+
+    fn append_command_syntax(&self, buf: &mut String);
 }
 
 // TODO: This is a workaround for some syntaxes that don't use optional values in square brackets.
 impl<T: CommandSyntax> CommandSyntax for Option<T> {
-    fn interpret(&self) -> String {
-        match self {
-            Some(c) => c.interpret(),
-            None => String::new(),
+    const COMMAND_BUF_SIZE: usize = T::COMMAND_BUF_SIZE;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        if let Some(command) = self {
+            command.append_command_syntax(buf);
         }
     }
 }

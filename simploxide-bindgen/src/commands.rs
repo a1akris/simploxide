@@ -212,7 +212,7 @@ impl<'a> std::fmt::Display for CommandResponseTraitMethod<'a> {
 
         writeln!(
             f,
-            "        let json = self.send_raw(command.interpret()).await?;"
+            "        let json = self.send_raw(command.to_command_string()).await?;"
         )?;
         writeln!(
             f,
