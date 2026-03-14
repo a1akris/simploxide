@@ -150,7 +150,7 @@ impl Field {
     pub fn from_api_name(api_name: String, typ: String) -> Self {
         Self {
             api_name: api_name.clone(),
-            rust_name: api_name.to_case(Case::Snake),
+            rust_name: api_name.remove_empty().to_case(Case::Snake),
             typ,
         }
     }
@@ -199,7 +199,7 @@ impl FromStr for Field {
             .ok_or_else(|| format!("Failed to parse field at line: '{line}'"))?;
 
         let api_name = name.trim().to_owned();
-        let rust_name = api_name.to_case(Case::Snake);
+        let rust_name = api_name.remove_empty().to_case(Case::Snake);
         let typ = resolve_type(typ.trim())?;
 
         Ok(Field {

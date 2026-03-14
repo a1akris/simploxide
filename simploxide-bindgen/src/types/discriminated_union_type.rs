@@ -104,7 +104,7 @@ impl DiscriminatedUnionVariant {
     pub fn from_api_name(api_name: String, fields: Vec<Field>) -> Self {
         Self {
             api_name: api_name.clone(),
-            rust_name: api_name.to_case(Case::Pascal),
+            rust_name: api_name.remove_empty().to_case(Case::Pascal),
             doc_comments: Vec::new(),
             fields,
         }

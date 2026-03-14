@@ -167,7 +167,11 @@ impl<'a> CommandResponseTraitMethod<'a> {
 impl<'a> std::fmt::Display for CommandResponseTraitMethod<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.command.write_docs_fmt(f)?;
-        write!(f, "    fn {}(&self", self.command.name.to_case(Case::Snake))?;
+        write!(
+            f,
+            "    fn {}(&self",
+            self.command.name.remove_empty().to_case(Case::Snake)
+        )?;
 
         let (ret_type, unwrapped_response_typename) =
             if let Some(inlined_variant) = self.can_inline_response() {
@@ -336,7 +340,7 @@ impl std::fmt::Display for ResponseWrapperFmt {
             writeln!(
                 f,
                 "    pub fn {}(&self) -> Option<&{}> {{",
-                var.rust_name.to_case(Case::Snake),
+                var.rust_name.remove_empty().to_case(Case::Snake),
                 var.fields[0].typ
             )?;
 

@@ -61,7 +61,7 @@ impl EnumVariant {
     pub fn from_api_name(api_name: &str) -> Self {
         Self {
             api_name: api_name.to_owned(),
-            rust_name: api_name.to_case(Case::Pascal),
+            rust_name: api_name.remove_empty().to_case(Case::Pascal),
         }
     }
 }
@@ -75,7 +75,7 @@ impl FromStr for EnumVariant {
         }
 
         let api_name = s.trim_matches('"').to_owned();
-        let rust_name = api_name.to_case(Case::Pascal);
+        let rust_name = api_name.remove_empty().to_case(Case::Pascal);
 
         Ok(Self {
             api_name,
