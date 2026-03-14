@@ -173,10 +173,19 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
         .collect::<Result<_, _>>()?;
 
     let mut events_rs = std::fs::File::create(EVENTS_RS)?;
-    let (top_level_enum, records) = discriminated_records.into_types("Event".to_owned());
+    let (mut top_level_enum, records) = discriminated_records.into_types("Event".to_owned());
+
+    for field in top_level_enum
+        .variants
+        .iter_mut()
+        .flat_map(|v| v.fields.iter_mut())
+    {
+        field.typ = format!("Arc<{}>", field.typ);
+    }
 
     writeln!(events_rs, "use crate::{{*, errors::*}};")?;
     writeln!(events_rs)?;
+
     writeln!(events_rs, "{top_level_enum}\n")?;
 
     for record in records {
