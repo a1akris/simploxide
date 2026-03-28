@@ -75,7 +75,7 @@ pub struct AChatItem {
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct AddressSettings {
-    #[serde(rename = "businessAddress")]
+    #[serde(rename = "businessAddress", default)]
     pub business_address: bool,
 
     #[serde(rename = "autoAccept", skip_serializing_if = "Option::is_none")]
@@ -93,7 +93,7 @@ pub struct AddressSettings {
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct AutoAccept {
-    #[serde(rename = "acceptIncognito")]
+    #[serde(rename = "acceptIncognito", default)]
     pub accept_incognito: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -107,6 +107,9 @@ pub struct AutoAccept {
 pub struct BlockingInfo {
     #[serde(rename = "reason")]
     pub reason: BlockingReason,
+
+    #[serde(rename = "notice", skip_serializing_if = "Option::is_none")]
+    pub notice: Option<ClientNotice>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1328,7 +1331,7 @@ pub struct CIMeta {
     #[serde(rename = "itemDeleted", skip_serializing_if = "Option::is_none")]
     pub item_deleted: Option<CIDeleted>,
 
-    #[serde(rename = "itemEdited")]
+    #[serde(rename = "itemEdited", default)]
     pub item_edited: bool,
 
     #[serde(rename = "itemTimed", skip_serializing_if = "Option::is_none")]
@@ -1337,13 +1340,16 @@ pub struct CIMeta {
     #[serde(rename = "itemLive", skip_serializing_if = "Option::is_none")]
     pub item_live: Option<bool>,
 
-    #[serde(rename = "userMention")]
+    #[serde(rename = "userMention", default)]
     pub user_mention: bool,
 
-    #[serde(rename = "deletable")]
+    #[serde(rename = "hasLink", default)]
+    pub has_link: bool,
+
+    #[serde(rename = "deletable", default)]
     pub deletable: bool,
 
-    #[serde(rename = "editable")]
+    #[serde(rename = "editable", default)]
     pub editable: bool,
 
     #[serde(
@@ -1354,7 +1360,7 @@ pub struct CIMeta {
     )]
     pub forwarded_by_member: Option<i64>,
 
-    #[serde(rename = "showGroupAsSender")]
+    #[serde(rename = "showGroupAsSender", default)]
     pub show_group_as_sender: bool,
 
     #[serde(rename = "createdAt")]
@@ -1428,7 +1434,7 @@ pub struct CIReactionCount {
     #[serde(rename = "reaction")]
     pub reaction: MsgReaction,
 
-    #[serde(rename = "userReacted")]
+    #[serde(rename = "userReacted", default)]
     pub user_reacted: bool,
 
     #[serde(
@@ -1633,7 +1639,7 @@ impl ChatBotCommand {
 pub enum ChatDeleteMode {
     #[serde(rename = "full")]
     Full {
-        #[serde(rename = "notify")]
+        #[serde(rename = "notify", default)]
         notify: bool,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -1641,7 +1647,7 @@ pub enum ChatDeleteMode {
     },
     #[serde(rename = "entity")]
     Entity {
-        #[serde(rename = "notify")]
+        #[serde(rename = "notify", default)]
         notify: bool,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -1910,7 +1916,7 @@ pub struct ChatSettings {
     #[serde(rename = "sendRcpts", skip_serializing_if = "Option::is_none")]
     pub send_rcpts: Option<bool>,
 
-    #[serde(rename = "favorite")]
+    #[serde(rename = "favorite", default)]
     pub favorite: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -1946,7 +1952,7 @@ pub struct ChatStats {
     )]
     pub min_unread_item_id: i64,
 
-    #[serde(rename = "unreadChat")]
+    #[serde(rename = "unreadChat", default)]
     pub unread_chat: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -2033,6 +2039,23 @@ pub enum ChatWallpaperScale {
     Repeat,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ClientNotice {
+    #[serde(
+        rename = "ttl",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_option_number_from_string",
+        default
+    )]
+    pub ttl: Option<i64>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Color {
@@ -2081,10 +2104,10 @@ pub struct ComposedMessage {
     pub undocumented: JsonObject,
 }
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
 #[non_exhaustive]
 pub enum ConnStatus {
-    #[default]
     #[serde(rename = "new")]
     New,
     #[serde(rename = "prepared")]
@@ -2095,12 +2118,63 @@ pub enum ConnStatus {
     Requested,
     #[serde(rename = "accepted")]
     Accepted,
-    #[serde(rename = "snd-ready")]
+    #[serde(rename = "sndReady")]
     SndReady,
     #[serde(rename = "ready")]
     Ready,
     #[serde(rename = "deleted")]
     Deleted,
+    #[serde(rename = "failed")]
+    Failed {
+        #[serde(rename = "connError")]
+        conn_error: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl ConnStatus {
+    pub fn new() -> Self {
+        Self::New
+    }
+
+    pub fn prepared() -> Self {
+        Self::Prepared
+    }
+
+    pub fn joined() -> Self {
+        Self::Joined
+    }
+
+    pub fn requested() -> Self {
+        Self::Requested
+    }
+
+    pub fn accepted() -> Self {
+        Self::Accepted
+    }
+
+    pub fn snd_ready() -> Self {
+        Self::SndReady
+    }
+
+    pub fn ready() -> Self {
+        Self::Ready
+    }
+
+    pub fn deleted() -> Self {
+        Self::Deleted
+    }
+
+    pub fn failed(conn_error: String) -> Self {
+        Self::Failed {
+            conn_error,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -2156,7 +2230,7 @@ pub struct Connection {
     )]
     pub via_user_contact_link: Option<i64>,
 
-    #[serde(rename = "viaGroupLink")]
+    #[serde(rename = "viaGroupLink", default)]
     pub via_group_link: bool,
 
     #[serde(rename = "groupLinkId", skip_serializing_if = "Option::is_none")]
@@ -2179,7 +2253,7 @@ pub struct Connection {
     #[serde(rename = "connStatus")]
     pub conn_status: ConnStatus,
 
-    #[serde(rename = "contactConnInitiated")]
+    #[serde(rename = "contactConnInitiated", default)]
     pub contact_conn_initiated: bool,
 
     #[serde(rename = "localAlias")]
@@ -2196,10 +2270,10 @@ pub struct Connection {
     #[serde(rename = "connectionCode", skip_serializing_if = "Option::is_none")]
     pub connection_code: Option<SecurityCode>,
 
-    #[serde(rename = "pqSupport")]
+    #[serde(rename = "pqSupport", default)]
     pub pq_support: bool,
 
-    #[serde(rename = "pqEncryption")]
+    #[serde(rename = "pqEncryption", default)]
     pub pq_encryption: bool,
 
     #[serde(rename = "pqSndEnabled", skip_serializing_if = "Option::is_none")]
@@ -2257,28 +2331,6 @@ pub enum ConnectionEntity {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
-    #[serde(rename = "sndFileConnection")]
-    SndFileConnection {
-        #[serde(rename = "entityConnection")]
-        entity_connection: Connection,
-
-        #[serde(rename = "sndFileTransfer")]
-        snd_file_transfer: SndFileTransfer,
-
-        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
-        undocumented: JsonObject,
-    },
-    #[serde(rename = "rcvFileConnection")]
-    RcvFileConnection {
-        #[serde(rename = "entityConnection")]
-        entity_connection: Connection,
-
-        #[serde(rename = "rcvFileTransfer")]
-        rcv_file_transfer: RcvFileTransfer,
-
-        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
-        undocumented: JsonObject,
-    },
     #[serde(rename = "userContactConnection")]
     UserContactConnection {
         #[serde(rename = "entityConnection")]
@@ -2315,28 +2367,6 @@ impl ConnectionEntity {
             entity_connection,
             group_info,
             group_member,
-            undocumented: Default::default(),
-        }
-    }
-
-    pub fn snd_file_connection(
-        entity_connection: Connection,
-        snd_file_transfer: SndFileTransfer,
-    ) -> Self {
-        Self::SndFileConnection {
-            entity_connection,
-            snd_file_transfer,
-            undocumented: Default::default(),
-        }
-    }
-
-    pub fn rcv_file_connection(
-        entity_connection: Connection,
-        rcv_file_transfer: RcvFileTransfer,
-    ) -> Self {
-        Self::RcvFileConnection {
-            entity_connection,
-            rcv_file_transfer,
             undocumented: Default::default(),
         }
     }
@@ -2452,15 +2482,7 @@ pub struct Contact {
     #[serde(rename = "activeConn", skip_serializing_if = "Option::is_none")]
     pub active_conn: Option<Connection>,
 
-    #[serde(
-        rename = "viaGroup",
-        skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_option_number_from_string",
-        default
-    )]
-    pub via_group: Option<i64>,
-
-    #[serde(rename = "contactUsed")]
+    #[serde(rename = "contactUsed", default)]
     pub contact_used: bool,
 
     #[serde(rename = "contactStatus")]
@@ -2503,7 +2525,7 @@ pub struct Contact {
     )]
     pub contact_group_member_id: Option<i64>,
 
-    #[serde(rename = "contactGrpInvSent")]
+    #[serde(rename = "contactGrpInvSent", default)]
     pub contact_grp_inv_sent: bool,
 
     #[serde(rename = "groupDirectInv", skip_serializing_if = "Option::is_none")]
@@ -2523,7 +2545,7 @@ pub struct Contact {
     #[serde(rename = "uiThemes", skip_serializing_if = "Option::is_none")]
     pub ui_themes: Option<UIThemeEntityOverrides>,
 
-    #[serde(rename = "chatDeleted")]
+    #[serde(rename = "chatDeleted", default)]
     pub chat_deleted: bool,
 
     #[serde(rename = "customData", skip_serializing_if = "Option::is_none")]
@@ -2626,7 +2648,7 @@ pub struct ContactShortLinkData {
     #[serde(rename = "message", skip_serializing_if = "Option::is_none")]
     pub message: Option<MsgContent>,
 
-    #[serde(rename = "business")]
+    #[serde(rename = "business", default)]
     pub business: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -2836,7 +2858,7 @@ pub struct FileDescr {
     )]
     pub file_descr_part_no: i32,
 
-    #[serde(rename = "fileDescrComplete")]
+    #[serde(rename = "fileDescrComplete", default)]
     pub file_descr_complete: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -2941,7 +2963,7 @@ pub struct FileTransferMeta {
     )]
     pub chunk_size: i64,
 
-    #[serde(rename = "cancelled")]
+    #[serde(rename = "cancelled", default)]
     pub cancelled: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -2963,6 +2985,8 @@ pub enum Format {
     Snippet,
     #[serde(rename = "secret")]
     Secret,
+    #[serde(rename = "small")]
+    Small,
     #[serde(rename = "colored")]
     Colored {
         #[serde(rename = "color")]
@@ -3044,6 +3068,10 @@ impl Format {
 
     pub fn secret() -> Self {
         Self::Secret
+    }
+
+    pub fn small() -> Self {
+        Self::Small
     }
 
     pub fn colored(color: Color) -> Self {
@@ -3319,7 +3347,7 @@ pub struct GroupDirectInvitation {
     )]
     pub from_group_member_conn_id: Option<i64>,
 
-    #[serde(rename = "groupDirectInvStartedConnection")]
+    #[serde(rename = "groupDirectInvStartedConnection", default)]
     pub group_direct_inv_started_connection: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -3372,6 +3400,9 @@ pub struct GroupInfo {
         deserialize_with = "deserialize_number_from_string"
     )]
     pub group_id: i64,
+
+    #[serde(rename = "useRelays", default)]
+    pub use_relays: bool,
 
     #[serde(rename = "localDisplayName")]
     pub local_display_name: String,
@@ -3429,6 +3460,9 @@ pub struct GroupInfo {
     #[serde(rename = "customData", skip_serializing_if = "Option::is_none")]
     pub custom_data: Option<JsonObject>,
 
+    #[serde(rename = "groupSummary")]
+    pub group_summary: GroupSummary,
+
     #[serde(
         rename = "membersRequireAttention",
         deserialize_with = "deserialize_number_from_string"
@@ -3437,21 +3471,6 @@ pub struct GroupInfo {
 
     #[serde(rename = "viaGroupLinkUri", skip_serializing_if = "Option::is_none")]
     pub via_group_link_uri: Option<String>,
-
-    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: JsonObject,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct GroupInfoSummary {
-    #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
-
-    #[serde(rename = "groupSummary")]
-    pub group_summary: GroupSummary,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -3471,10 +3490,10 @@ pub struct GroupLink {
     #[serde(rename = "connLinkContact")]
     pub conn_link_contact: CreatedConnLink,
 
-    #[serde(rename = "shortLinkDataSet")]
+    #[serde(rename = "shortLinkDataSet", default)]
     pub short_link_data_set: bool,
 
-    #[serde(rename = "shortLinkLargeDataSet")]
+    #[serde(rename = "shortLinkLargeDataSet", default)]
     pub short_link_large_data_set: bool,
 
     #[serde(rename = "groupLinkId")]
@@ -3580,6 +3599,12 @@ pub struct GroupMember {
     )]
     pub group_id: i64,
 
+    #[serde(
+        rename = "indexInGroup",
+        deserialize_with = "deserialize_number_from_string"
+    )]
+    pub index_in_group: i64,
+
     #[serde(rename = "memberId")]
     pub member_id: String,
 
@@ -3595,7 +3620,7 @@ pub struct GroupMember {
     #[serde(rename = "memberSettings")]
     pub member_settings: GroupMemberSettings,
 
-    #[serde(rename = "blockedByAdmin")]
+    #[serde(rename = "blockedByAdmin", default)]
     pub blocked_by_admin: bool,
 
     #[serde(rename = "invitedBy")]
@@ -3717,7 +3742,7 @@ pub enum GroupMemberRole {
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct GroupMemberSettings {
-    #[serde(rename = "showMessages")]
+    #[serde(rename = "showMessages", default)]
     pub show_messages: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -3865,7 +3890,7 @@ pub struct GroupSummary {
         rename = "currentMembers",
         deserialize_with = "deserialize_number_from_string"
     )]
-    pub current_members: i32,
+    pub current_members: i64,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -4161,7 +4186,7 @@ pub enum MsgChatLink {
         #[serde(rename = "profile")]
         profile: Profile,
 
-        #[serde(rename = "business")]
+        #[serde(rename = "business", default)]
         business: bool,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -4490,7 +4515,7 @@ pub struct NewUser {
     #[serde(rename = "profile", skip_serializing_if = "Option::is_none")]
     pub profile: Option<Profile>,
 
-    #[serde(rename = "pastTimestamp")]
+    #[serde(rename = "pastTimestamp", default)]
     pub past_timestamp: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -4520,10 +4545,10 @@ pub struct NoteFolder {
     #[serde(rename = "chatTs")]
     pub chat_ts: UtcTime,
 
-    #[serde(rename = "favorite")]
+    #[serde(rename = "favorite", default)]
     pub favorite: bool,
 
-    #[serde(rename = "unread")]
+    #[serde(rename = "unread", default)]
     pub unread: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -4547,7 +4572,7 @@ pub struct PendingContactConnection {
     #[serde(rename = "pccConnStatus")]
     pub pcc_conn_status: ConnStatus,
 
-    #[serde(rename = "viaContactUri")]
+    #[serde(rename = "viaContactUri", default)]
     pub via_contact_uri: bool,
 
     #[serde(
@@ -4590,10 +4615,10 @@ pub struct PendingContactConnection {
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct PrefEnabled {
-    #[serde(rename = "forUser")]
+    #[serde(rename = "forUser", default)]
     pub for_user: bool,
 
-    #[serde(rename = "forContact")]
+    #[serde(rename = "forContact", default)]
     pub for_contact: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -4662,10 +4687,10 @@ pub struct PreparedGroup {
     #[serde(rename = "connLinkToConnect")]
     pub conn_link_to_connect: CreatedConnLink,
 
-    #[serde(rename = "connLinkPreparedConnection")]
+    #[serde(rename = "connLinkPreparedConnection", default)]
     pub conn_link_prepared_connection: bool,
 
-    #[serde(rename = "connLinkStartedConnection")]
+    #[serde(rename = "connLinkStartedConnection", default)]
     pub conn_link_started_connection: bool,
 
     #[serde(rename = "welcomeSharedMsgId", skip_serializing_if = "Option::is_none")]
@@ -4749,7 +4774,7 @@ pub enum RcvConnEvent {
     VerificationCodeReset,
     #[serde(rename = "pqEnabled")]
     PqEnabled {
-        #[serde(rename = "enabled")]
+        #[serde(rename = "enabled", default)]
         enabled: bool,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -4855,31 +4880,8 @@ pub struct RcvFileDescr {
     )]
     pub file_descr_part_no: i32,
 
-    #[serde(rename = "fileDescrComplete")]
+    #[serde(rename = "fileDescrComplete", default)]
     pub file_descr_complete: bool,
-
-    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: JsonObject,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct RcvFileInfo {
-    #[serde(rename = "filePath")]
-    pub file_path: String,
-
-    #[serde(
-        rename = "connId",
-        skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_option_number_from_string",
-        default
-    )]
-    pub conn_id: Option<i64>,
-
-    #[serde(rename = "agentConnId", skip_serializing_if = "Option::is_none")]
-    pub agent_conn_id: Option<String>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -4894,32 +4896,32 @@ pub enum RcvFileStatus {
     New,
     #[serde(rename = "accepted")]
     Accepted {
-        #[serde(rename = "fileInfo")]
-        file_info: RcvFileInfo,
+        #[serde(rename = "filePath")]
+        file_path: String,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
     #[serde(rename = "connected")]
     Connected {
-        #[serde(rename = "fileInfo")]
-        file_info: RcvFileInfo,
+        #[serde(rename = "filePath")]
+        file_path: String,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
     #[serde(rename = "complete")]
     Complete {
-        #[serde(rename = "fileInfo")]
-        file_info: RcvFileInfo,
+        #[serde(rename = "filePath")]
+        file_path: String,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
     #[serde(rename = "cancelled")]
     Cancelled {
-        #[serde(rename = "fileInfo_", skip_serializing_if = "Option::is_none")]
-        file_info: Option<RcvFileInfo>,
+        #[serde(rename = "filePath_", skip_serializing_if = "Option::is_none")]
+        file_path: Option<String>,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
@@ -4933,30 +4935,30 @@ impl RcvFileStatus {
         Self::New
     }
 
-    pub fn accepted(file_info: RcvFileInfo) -> Self {
+    pub fn accepted(file_path: String) -> Self {
         Self::Accepted {
-            file_info,
+            file_path,
             undocumented: Default::default(),
         }
     }
 
-    pub fn connected(file_info: RcvFileInfo) -> Self {
+    pub fn connected(file_path: String) -> Self {
         Self::Connected {
-            file_info,
+            file_path,
             undocumented: Default::default(),
         }
     }
 
-    pub fn complete(file_info: RcvFileInfo) -> Self {
+    pub fn complete(file_path: String) -> Self {
         Self::Complete {
-            file_info,
+            file_path,
             undocumented: Default::default(),
         }
     }
 
-    pub fn cancelled(file_info: Option<RcvFileInfo>) -> Self {
+    pub fn cancelled(file_path: Option<String>) -> Self {
         Self::Cancelled {
-            file_info,
+            file_path,
             undocumented: Default::default(),
         }
     }
@@ -4990,7 +4992,7 @@ pub struct RcvFileTransfer {
     )]
     pub chunk_size: i64,
 
-    #[serde(rename = "cancelled")]
+    #[serde(rename = "cancelled", default)]
     pub cancelled: bool,
 
     #[serde(
@@ -5075,7 +5077,7 @@ pub enum RcvGroupEvent {
         #[serde(rename = "profile")]
         profile: Profile,
 
-        #[serde(rename = "blocked")]
+        #[serde(rename = "blocked", default)]
         blocked: bool,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -5346,7 +5348,7 @@ pub enum SndConnEvent {
     },
     #[serde(rename = "pqEnabled")]
     PqEnabled {
-        #[serde(rename = "enabled")]
+        #[serde(rename = "enabled", default)]
         enabled: bool,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -5474,7 +5476,7 @@ pub enum SndGroupEvent {
         #[serde(rename = "profile")]
         profile: Profile,
 
-        #[serde(rename = "blocked")]
+        #[serde(rename = "blocked", default)]
         blocked: bool,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -5587,6 +5589,49 @@ impl SndGroupEvent {
 
     pub fn user_pending_review() -> Self {
         Self::UserPendingReview
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
+pub enum SubscriptionStatus {
+    #[serde(rename = "active")]
+    Active,
+    #[serde(rename = "pending")]
+    Pending,
+    #[serde(rename = "removed")]
+    Removed {
+        #[serde(rename = "subError")]
+        sub_error: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "noSub")]
+    NoSub,
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl SubscriptionStatus {
+    pub fn active() -> Self {
+        Self::Active
+    }
+
+    pub fn pending() -> Self {
+        Self::Pending
+    }
+
+    pub fn removed(sub_error: String) -> Self {
+        Self::Removed {
+            sub_error,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn no_sub() -> Self {
+        Self::NoSub
     }
 }
 
@@ -5775,7 +5820,7 @@ pub struct User {
     #[serde(rename = "fullPreferences")]
     pub full_preferences: FullPreferences,
 
-    #[serde(rename = "activeUser")]
+    #[serde(rename = "activeUser", default)]
     pub active_user: bool,
 
     #[serde(
@@ -5787,16 +5832,16 @@ pub struct User {
     #[serde(rename = "viewPwdHash", skip_serializing_if = "Option::is_none")]
     pub view_pwd_hash: Option<UserPwdHash>,
 
-    #[serde(rename = "showNtfs")]
+    #[serde(rename = "showNtfs", default)]
     pub show_ntfs: bool,
 
-    #[serde(rename = "sendRcptsContacts")]
+    #[serde(rename = "sendRcptsContacts", default)]
     pub send_rcpts_contacts: bool,
 
-    #[serde(rename = "sendRcptsSmallGroups")]
+    #[serde(rename = "sendRcptsSmallGroups", default)]
     pub send_rcpts_small_groups: bool,
 
-    #[serde(rename = "autoAcceptMemberContacts")]
+    #[serde(rename = "autoAcceptMemberContacts", default)]
     pub auto_accept_member_contacts: bool,
 
     #[serde(
@@ -5852,10 +5897,10 @@ pub struct UserContactLink {
     #[serde(rename = "connLinkContact")]
     pub conn_link_contact: CreatedConnLink,
 
-    #[serde(rename = "shortLinkDataSet")]
+    #[serde(rename = "shortLinkDataSet", default)]
     pub short_link_data_set: bool,
 
-    #[serde(rename = "shortLinkLargeDataSet")]
+    #[serde(rename = "shortLinkLargeDataSet", default)]
     pub short_link_large_data_set: bool,
 
     #[serde(rename = "addressSettings")]
@@ -5927,7 +5972,7 @@ pub struct UserContactRequest {
     #[serde(rename = "xContactId", skip_serializing_if = "Option::is_none")]
     pub x_contact_id: Option<String>,
 
-    #[serde(rename = "pqSupport")]
+    #[serde(rename = "pqSupport", default)]
     pub pq_support: bool,
 
     #[serde(rename = "welcomeSharedMsgId", skip_serializing_if = "Option::is_none")]
@@ -6029,10 +6074,10 @@ pub struct XFTPRcvFile {
     #[serde(rename = "agentRcvFileId", skip_serializing_if = "Option::is_none")]
     pub agent_rcv_file_id: Option<String>,
 
-    #[serde(rename = "agentRcvFileDeleted")]
+    #[serde(rename = "agentRcvFileDeleted", default)]
     pub agent_rcv_file_deleted: bool,
 
-    #[serde(rename = "userApprovedRelays")]
+    #[serde(rename = "userApprovedRelays", default)]
     pub user_approved_relays: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -6053,7 +6098,7 @@ pub struct XFTPSndFile {
     )]
     pub private_snd_file_descr: Option<String>,
 
-    #[serde(rename = "agentSndFileDeleted")]
+    #[serde(rename = "agentSndFileDeleted", default)]
     pub agent_snd_file_deleted: bool,
 
     #[serde(rename = "cryptoArgs", skip_serializing_if = "Option::is_none")]

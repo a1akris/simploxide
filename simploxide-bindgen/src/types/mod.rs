@@ -338,6 +338,7 @@ impl<'a> std::fmt::Display for FieldFmt<'a> {
         let offset = " ".repeat(self.offset);
         let pub_ = if self.is_pub { "pub " } else { "" };
         let is_numeric = self.field.is_numeric();
+        let is_bool = self.field.is_bool();
         let is_optional = self.field.is_optional();
 
         write!(f, "{offset}#[serde(rename = \"{}\"", self.field.api_name)?;
@@ -355,6 +356,8 @@ impl<'a> std::fmt::Display for FieldFmt<'a> {
             } else {
                 write!(f, ", deserialize_with=\"deserialize_number_from_string\"")?;
             }
+        } else if is_bool {
+            write!(f, ", default")?;
         }
 
         writeln!(f, ")]")?;

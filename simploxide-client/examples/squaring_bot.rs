@@ -9,22 +9,27 @@
 //! A bot that receives a number and sends back its square.
 
 use futures::{TryFutureExt as _, TryStreamExt as _};
-use simploxide_client::prelude::*;
+use simploxide_client::{prelude::*, ws::ClientResult};
 use std::{error::Error, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (client, mut events) = simploxide_client::connect("ws://127.0.0.1:5225").await?;
-    let user = client.show_active_user().await?;
+    unsafe {
+        std::env::set_var("RUST_LOG", "debug");
+    }
+
+    pretty_env_logger::init();
+    let (client, mut events) = simploxide_client::ws::connect("ws://127.0.0.1:5225").await?;
+    let response = client.show_active_user().await?;
 
     println!(
         "Bot profile: {} ({})",
-        user.profile.display_name, user.profile.full_name
+        response.user.profile.display_name, response.user.profile.full_name
     );
 
     // Get or create the bot address
     let (address_long, address_short) = client
-        .api_show_my_address(user.user_id)
+        .api_show_my_address(response.user.user_id)
         .map_ok(|resp| {
             (
                 resp.contact_link.conn_link_contact.conn_full_link.clone(),
@@ -32,12 +37,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )
         })
         .or_else(|_| {
-            client.api_create_my_address(user.user_id).map_ok(|resp| {
-                (
-                    resp.conn_link_contact.conn_full_link.clone(),
-                    resp.conn_link_contact.conn_short_link.clone(),
-                )
-            })
+            client
+                .api_create_my_address(response.user.user_id)
+                .map_ok(|resp| {
+                    (
+                        resp.conn_link_contact.conn_full_link.clone(),
+                        resp.conn_link_contact.conn_short_link.clone(),
+                    )
+                })
         })
         .await?;
 
@@ -61,10 +68,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     .live_message(false)
                     .composed_messages(vec![
                         ComposedMessage::builder()
-                            .msg_content(MsgContent::Text {
-                                text: reply,
-                                undocumented: Default::default(),
-                            })
+                            .msg_content(MsgContent::text(reply))
                             .mentions(Default::default())
                             .build(),
                     ])

@@ -1,26 +1,6 @@
 [package]
 name = "simploxide-core"
-version = "0.3.1"
-authors = ["a1akris <alkrivitskiy@pm.me>"]
+version = "0.4.0"
 edition = "2024"
-license = "MIT OR Apache-2.0"
-exclude = ["docs"]
-
-description = "SimpleX-Chat raw websocket client"
-readme = "README.md"
-repository = "https://github.com/a1akris/simploxide"
-documentation = "https://docs.rs/simploxide-core"
-categories = ["network-programming", "asynchronous", "web-programming::websocket"]
-keywords = ["simplex", "chat", "websocket", "client"]
-
 
 [dependencies]
-futures.workspace = true
-log.workspace = true
-serde_json.workspace = true
-serde.workspace = true
-tokio = { workspace = true, features = ["rt", "macros"] }
-
-tokio-tungstenite = { version = "0.28", default-features = false, features = ["connect"] }
-tokio-util = "0.7"
-tokio-stream = "0.1"

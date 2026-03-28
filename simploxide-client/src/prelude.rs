@@ -2,10 +2,8 @@
 
 pub use crate::types::{
     AddressSettings, CIContent, CIDeleteMode, ChatBotCommand, ChatDeleteMode, ChatInfo,
-    ChatPeerType, ChatRef, ChatType, ComposedMessage, CreatedConnLink, CryptoFile, GroupMemberRole,
-    GroupProfile, MsgContent, MsgReaction, NewUser, Preferences, Profile, UpdatedMessage, User,
-    UserInfo,
+    ChatPeerType, ChatRef, ChatType, ComposedMessage, CreatedConnLink, CryptoFile, CryptoFileArgs,
+    FeatureAllowed, GroupMemberRole, GroupProfile, MsgContent, MsgReaction, NewUser, Preferences,
+    Profile, SimplePreference, UpdatedMessage, User, UserInfo,
 };
-pub use crate::{
-    ClientApi as _, ClientError, ClientResult, client_api::*, commands::*, events::*, responses::*,
-};
+pub use crate::{ClientApi as _, client_api::*, commands::*, events::*, responses::*};

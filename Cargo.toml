@@ -1,21 +1,25 @@
 [workspace]
 resolver = "3"
 
-members = [ "simploxide",
-    "simploxide-api-types",
+members = [
+    "simploxide",
     "simploxide-client",
-    "simploxide-core"
+    "simploxide-api-types",
+    "simploxide-core",
+    "simploxide-ws-core",
+    "simploxide-ffi-core",
+    "simploxide-sxcrt-sys",
 ]
 
-# This is a standalone tool that generates sources of `simploxide-api-types` and
-# `simploxide-client` crates and it should be touched only when
-# SimpleX releases a new stable version.
+# This is a standalone tool that generates sources of `simploxide-api-types`
+# and `simploxide-sxcrt-sys` crates and it should be touched only when SimpleX
+# releases a new stable version.
 exclude = ["simploxide-bindgen"]
 
 
 [workspace.dependencies]
 futures = { version = "0.3", default-features = false }
 log = "0.4"
-serde_json = "1"
+serde_json = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
 tokio = { version = "1", features = ["sync"] }

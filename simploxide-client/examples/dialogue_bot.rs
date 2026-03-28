@@ -2,7 +2,7 @@
 //! <bot_name> <bot_fullname>` command.
 //!
 //! To compile this example pass the --all-features flag like this:
-//! `cargo run --example squaring_bot --all-features`
+//! `cargo run --example dialogue_bot --all-features`
 //!
 //! ----
 //!
@@ -11,22 +11,29 @@
 
 use async_trait::async_trait;
 use futures::{TryFutureExt as _, TryStreamExt as _};
-use simploxide_client::prelude::*;
+use simploxide_client::{
+    ffi::{Client, ClientResult, DbOpts, DefaultUser},
+    prelude::*,
+};
 use std::{collections::BTreeMap, error::Error, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (client, mut events) = simploxide_client::connect("ws://127.0.0.1:5225").await?;
+    let (client, mut events) = simploxide_client::ffi::init(
+        DefaultUser::bot("SimplOxide Examples"),
+        DbOpts::unencrypted("./test_db/simploxide"),
+    )
+    .await?;
 
-    let user = client.show_active_user().await?;
+    let response = client.show_active_user().await?;
     println!(
         "Bot profile: {} ({})",
-        user.profile.display_name, user.profile.full_name
+        response.user.profile.display_name, response.user.profile.full_name
     );
 
     // Get or create the bot address
     let (address_long, address_short) = client
-        .api_show_my_address(user.user_id)
+        .api_show_my_address(response.user.user_id)
         .map_ok(|resp| {
             (
                 resp.contact_link.conn_link_contact.conn_full_link.clone(),
@@ -34,12 +41,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )
         })
         .or_else(|_| {
-            client.api_create_my_address(user.user_id).map_ok(|resp| {
-                (
-                    resp.conn_link_contact.conn_full_link.clone(),
-                    resp.conn_link_contact.conn_short_link.clone(),
-                )
-            })
+            client
+                .api_create_my_address(response.user.user_id)
+                .map_ok(|resp| {
+                    (
+                        resp.conn_link_contact.conn_full_link.clone(),
+                        resp.conn_link_contact.conn_short_link.clone(),
+                    )
+                })
         })
         .await?;
 
@@ -49,7 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut dialogue = Dialogue::new(
         client.clone(),
         Arc::new(Greetings {
-            bot_name: user.profile.display_name.clone(),
+            bot_name: response.user.profile.display_name.clone(),
         }),
         Default::default(),
     );
@@ -115,7 +124,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 /// It's not advisable to implement type-safe FSMs without relying on third-party libraries though
 /// because it may take too much time and the result may end up inflexible and hard to maintain.
 struct Dialogue {
-    client: simploxide_client::Client,
+    client: Client,
     init_state: Arc<dyn DialogueState>,
     init_data: BTreeMap<String, String>,
     /// Bot can work with multiple users, so states are stored separately per user.
@@ -124,7 +133,7 @@ struct Dialogue {
 
 impl Dialogue {
     fn new(
-        client: simploxide_client::Client,
+        client: Client,
         init_state: Arc<dyn DialogueState>,
         init_data: BTreeMap<String, String>,
     ) -> Self {
@@ -231,7 +240,7 @@ struct LocalState {
 trait DialogueState: Send + Sync + 'static {
     async fn query_data(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         inputs: &BTreeMap<String, String>,
         contact_id: i64,
     ) -> ClientResult<()>;
@@ -243,7 +252,7 @@ trait DialogueState: Send + Sync + 'static {
     /// Err(None) - stay in the same state on error.
     async fn process_input(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         inputs: &mut BTreeMap<String, String>,
         contact_id: i64,
         input: String,
@@ -259,7 +268,7 @@ struct Greetings {
 impl DialogueState for Greetings {
     async fn query_data(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         _inputs: &BTreeMap<String, String>,
         contact_id: i64,
     ) -> ClientResult<()> {
@@ -281,7 +290,7 @@ impl DialogueState for Greetings {
 
     async fn process_input(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         inputs: &mut BTreeMap<String, String>,
         contact_id: i64,
         input: String,
@@ -339,7 +348,7 @@ struct GetSurname;
 impl DialogueState for GetSurname {
     async fn query_data(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         _inputs: &BTreeMap<String, String>,
         contact_id: i64,
     ) -> ClientResult<()> {
@@ -352,7 +361,7 @@ impl DialogueState for GetSurname {
 
     async fn process_input(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         inputs: &mut BTreeMap<String, String>,
         contact_id: i64,
         input: String,
@@ -378,7 +387,7 @@ struct GetPhoneNumber;
 impl DialogueState for GetPhoneNumber {
     async fn query_data(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         inputs: &BTreeMap<String, String>,
         contact_id: i64,
     ) -> ClientResult<()> {
@@ -395,7 +404,7 @@ impl DialogueState for GetPhoneNumber {
 
     async fn process_input(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         inputs: &mut BTreeMap<String, String>,
         contact_id: i64,
         input: String,
@@ -453,7 +462,7 @@ struct GetEmail;
 impl DialogueState for GetEmail {
     async fn query_data(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         _inputs: &BTreeMap<String, String>,
         contact_id: i64,
     ) -> ClientResult<()> {
@@ -466,7 +475,7 @@ impl DialogueState for GetEmail {
 
     async fn process_input(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         inputs: &mut BTreeMap<String, String>,
         contact_id: i64,
         input: String,
@@ -514,7 +523,7 @@ struct GetCreditCard;
 impl DialogueState for GetCreditCard {
     async fn query_data(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         _inputs: &BTreeMap<String, String>,
         contact_id: i64,
     ) -> ClientResult<()> {
@@ -530,7 +539,7 @@ impl DialogueState for GetCreditCard {
 
     async fn process_input(
         &self,
-        client: &simploxide_client::Client,
+        client: &Client,
         inputs: &mut BTreeMap<String, String>,
         contact_id: i64,
         input: String,
@@ -568,12 +577,12 @@ impl DialogueState for GetCreditCard {
 }
 
 /// One of the ways to conveniently provide helper methods to your bot is to define them in a trait
-/// and implement this trait for [`simploxide_client::Client`].
+/// and implement this trait for [`Client`].
 trait BotExtensions {
     async fn send_text(&self, chat_id: i64, txt: impl Into<String>) -> ClientResult<()>;
 }
 
-impl BotExtensions for simploxide_client::Client {
+impl BotExtensions for Client {
     async fn send_text(&self, chat_id: i64, txt: impl Into<String>) -> ClientResult<()> {
         self
             // An example of a request constructed without the use of builders.

@@ -15,25 +15,22 @@
 //! preference and show you the file upload icon.
 
 use futures::{TryFutureExt as _, TryStreamExt as _};
-use simploxide_client::{
-    prelude::*,
-    types::{CryptoFile, FeatureAllowed, SimplePreference},
-};
+use simploxide_client::{prelude::*, ws::Client};
 use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (client, mut events) = simploxide_client::connect("ws://127.0.0.1:5225").await?;
+    let (client, mut events) = simploxide_client::ws::connect("ws://127.0.0.1:5225").await?;
 
-    let user = client.show_active_user().await?;
+    let response = client.show_active_user().await?;
     println!(
         "Bot profile: {} ({})",
-        user.profile.display_name, user.profile.full_name
+        response.user.profile.display_name, response.user.profile.full_name
     );
 
     // Get or create the bot address
     let (address_long, address_short) = client
-        .api_show_my_address(user.user_id)
+        .api_show_my_address(response.user.user_id)
         .map_ok(|resp| {
             (
                 resp.contact_link.conn_link_contact.conn_full_link.clone(),
@@ -41,12 +38,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )
         })
         .or_else(|_| {
-            client.api_create_my_address(user.user_id).map_ok(|resp| {
-                (
-                    resp.conn_link_contact.conn_full_link.clone(),
-                    resp.conn_link_contact.conn_short_link.clone(),
-                )
-            })
+            client
+                .api_create_my_address(response.user.user_id)
+                .map_ok(|resp| {
+                    (
+                        resp.conn_link_contact.conn_full_link.clone(),
+                        resp.conn_link_contact.conn_short_link.clone(),
+                    )
+                })
         })
         .await?;
 
@@ -59,10 +58,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // a file upload icon.
     client
         .api_update_profile(
-            user.user_id,
+            response.user.user_id,
             Profile::builder()
-                .display_name(user.profile.display_name.clone())
-                .full_name(user.profile.full_name.clone())
+                .display_name(response.user.profile.display_name.clone())
+                .full_name(response.user.profile.full_name.clone())
                 .preferences(
                     Preferences::builder()
                         .files(
@@ -266,7 +265,7 @@ trait BotExtensions {
     fn recv_file(&self, file_id: i64);
 }
 
-impl BotExtensions for simploxide_client::Client {
+impl BotExtensions for Client {
     fn send_text(&self, chat_id: i64, txt: impl Into<String>) {
         let client = self.clone();
         let text = txt.into();
