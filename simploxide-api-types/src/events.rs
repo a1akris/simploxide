@@ -130,6 +130,15 @@ pub enum Event {
     /// Connection progress events
     #[serde(rename = "groupLinkConnecting")]
     GroupLinkConnecting(Arc<GroupLinkConnecting>),
+    /// Network connection events
+    #[serde(rename = "hostConnected")]
+    HostConnected(Arc<HostConnected>),
+    /// Network connection events
+    #[serde(rename = "hostDisconnected")]
+    HostDisconnected(Arc<HostDisconnected>),
+    /// Network connection events
+    #[serde(rename = "subscriptionStatus")]
+    SubscriptionStatus(Arc<SubscriptionStatus>),
     /// Error events
     #[serde(rename = "messageError")]
     MessageError(Arc<MessageError>),
@@ -376,7 +385,7 @@ pub struct ChatItemReaction {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(rename = "added")]
+    #[serde(rename = "added", default)]
     pub added: bool,
 
     #[serde(rename = "reaction")]
@@ -404,10 +413,10 @@ pub struct ChatItemsDeleted {
     #[serde(rename = "chatItemDeletions")]
     pub chat_item_deletions: Vec<ChatItemDeletion>,
 
-    #[serde(rename = "byUser")]
+    #[serde(rename = "byUser", default)]
     pub by_user: bool,
 
-    #[serde(rename = "timed")]
+    #[serde(rename = "timed", default)]
     pub timed: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -457,7 +466,7 @@ pub struct GroupChatItemsDeleted {
     #[serde(rename = "chatItemIDs")]
     pub chat_item_i_ds: Vec<i64>,
 
-    #[serde(rename = "byUser")]
+    #[serde(rename = "byUser", default)]
     pub by_user: bool,
 
     #[serde(rename = "member_", skip_serializing_if = "Option::is_none")]
@@ -668,7 +677,7 @@ pub struct DeletedMember {
     #[serde(rename = "deletedMember")]
     pub deleted_member: GroupMember,
 
-    #[serde(rename = "withMessages")]
+    #[serde(rename = "withMessages", default)]
     pub with_messages: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -725,7 +734,7 @@ pub struct DeletedMemberUser {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(rename = "withMessages")]
+    #[serde(rename = "withMessages", default)]
     pub with_messages: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -845,7 +854,7 @@ pub struct MemberBlockedForAll {
     #[serde(rename = "member")]
     pub member: GroupMember,
 
-    #[serde(rename = "blocked")]
+    #[serde(rename = "blocked", default)]
     pub blocked: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -1362,6 +1371,72 @@ pub struct GroupLinkConnecting {
     pub undocumented: JsonObject,
 }
 
+/// ### Network connection events
+///
+///
+/// ----
+///
+/// Messaging or file server connected
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct HostConnected {
+    #[serde(rename = "protocol")]
+    pub protocol: String,
+
+    #[serde(rename = "transportHost")]
+    pub transport_host: String,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+/// ### Network connection events
+///
+///
+/// ----
+///
+/// Messaging or file server disconnected
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct HostDisconnected {
+    #[serde(rename = "protocol")]
+    pub protocol: String,
+
+    #[serde(rename = "transportHost")]
+    pub transport_host: String,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+/// ### Network connection events
+///
+///
+/// ----
+///
+/// Messaging subscription status changed
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct SubscriptionStatus {
+    #[serde(rename = "server")]
+    pub server: String,
+
+    #[serde(rename = "subscriptionStatus")]
+    pub subscription_status: crate::SubscriptionStatus,
+
+    #[serde(rename = "connections")]
+    pub connections: Vec<String>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
 /// ### Error events
 ///
 /// Bots may log these events for debugging. There will be many error events - this does NOT indicate a malfunction - e.g., they may happen because of bad network connectivity, or because messages may be delivered to deleted chats for a short period of time (they will be ignored).
@@ -1393,7 +1468,7 @@ pub struct MessageError {
 ///
 /// ----
 ///
-/// Chat error.
+/// Chat error (only used in WebSockets API).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]

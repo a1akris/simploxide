@@ -2,620 +2,918 @@ use super::{errors::*, *};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiCreateMyAddressResponse {
     /// UserContactLinkCreated: User contact address created.
     #[serde(rename = "userContactLinkCreated")]
-    UserContactLinkCreated(UserContactLinkCreatedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    UserContactLinkCreated(Arc<UserContactLinkCreatedResponse>),
+}
+
+impl ApiCreateMyAddressResponse {
+    pub fn into_inner(self) -> Arc<UserContactLinkCreatedResponse> {
+        match self {
+            Self::UserContactLinkCreated(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiDeleteMyAddressResponse {
     /// UserContactLinkDeleted: User contact address deleted.
     #[serde(rename = "userContactLinkDeleted")]
-    UserContactLinkDeleted(UserContactLinkDeletedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    UserContactLinkDeleted(Arc<UserContactLinkDeletedResponse>),
+}
+
+impl ApiDeleteMyAddressResponse {
+    pub fn into_inner(self) -> Arc<UserContactLinkDeletedResponse> {
+        match self {
+            Self::UserContactLinkDeleted(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiShowMyAddressResponse {
     /// UserContactLink: User contact address.
     #[serde(rename = "userContactLink")]
-    UserContactLink(UserContactLinkResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    UserContactLink(Arc<UserContactLinkResponse>),
+}
+
+impl ApiShowMyAddressResponse {
+    pub fn into_inner(self) -> Arc<UserContactLinkResponse> {
+        match self {
+            Self::UserContactLink(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiSetProfileAddressResponse {
     /// UserProfileUpdated: User profile updated.
     #[serde(rename = "userProfileUpdated")]
-    UserProfileUpdated(UserProfileUpdatedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    UserProfileUpdated(Arc<UserProfileUpdatedResponse>),
+}
+
+impl ApiSetProfileAddressResponse {
+    pub fn into_inner(self) -> Arc<UserProfileUpdatedResponse> {
+        match self {
+            Self::UserProfileUpdated(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiSetAddressSettingsResponse {
     /// UserContactLinkUpdated: User contact address updated.
     #[serde(rename = "userContactLinkUpdated")]
-    UserContactLinkUpdated(UserContactLinkUpdatedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    UserContactLinkUpdated(Arc<UserContactLinkUpdatedResponse>),
+}
+
+impl ApiSetAddressSettingsResponse {
+    pub fn into_inner(self) -> Arc<UserContactLinkUpdatedResponse> {
+        match self {
+            Self::UserContactLinkUpdated(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiSendMessagesResponse {
     /// NewChatItems: New messages.
     #[serde(rename = "newChatItems")]
-    NewChatItems(NewChatItemsResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    NewChatItems(Arc<NewChatItemsResponse>),
+}
+
+impl ApiSendMessagesResponse {
+    pub fn into_inner(self) -> Arc<NewChatItemsResponse> {
+        match self {
+            Self::NewChatItems(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiUpdateChatItemResponse {
     /// ChatItemUpdated: Message updated.
     #[serde(rename = "chatItemUpdated")]
-    ChatItemUpdated(ChatItemUpdatedResponse),
+    ChatItemUpdated(Arc<ChatItemUpdatedResponse>),
     /// ChatItemNotChanged: Message not changed.
     #[serde(rename = "chatItemNotChanged")]
-    ChatItemNotChanged(ChatItemNotChangedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ChatItemNotChanged(Arc<ChatItemNotChangedResponse>),
+}
+
+impl ApiUpdateChatItemResponse {
+    pub fn chat_item_updated(&self) -> Option<&ChatItemUpdatedResponse> {
+        if let Self::ChatItemUpdated(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn chat_item_not_changed(&self) -> Option<&ChatItemNotChangedResponse> {
+        if let Self::ChatItemNotChanged(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiDeleteChatItemResponse {
     /// ChatItemsDeleted: Messages deleted.
     #[serde(rename = "chatItemsDeleted")]
-    ChatItemsDeleted(ChatItemsDeletedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ChatItemsDeleted(Arc<ChatItemsDeletedResponse>),
+}
+
+impl ApiDeleteChatItemResponse {
+    pub fn into_inner(self) -> Arc<ChatItemsDeletedResponse> {
+        match self {
+            Self::ChatItemsDeleted(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiDeleteMemberChatItemResponse {
     /// ChatItemsDeleted: Messages deleted.
     #[serde(rename = "chatItemsDeleted")]
-    ChatItemsDeleted(ChatItemsDeletedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ChatItemsDeleted(Arc<ChatItemsDeletedResponse>),
+}
+
+impl ApiDeleteMemberChatItemResponse {
+    pub fn into_inner(self) -> Arc<ChatItemsDeletedResponse> {
+        match self {
+            Self::ChatItemsDeleted(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiChatItemReactionResponse {
     /// ChatItemReaction: Message reaction.
     #[serde(rename = "chatItemReaction")]
-    ChatItemReaction(ChatItemReactionResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ChatItemReaction(Arc<ChatItemReactionResponse>),
+}
+
+impl ApiChatItemReactionResponse {
+    pub fn into_inner(self) -> Arc<ChatItemReactionResponse> {
+        match self {
+            Self::ChatItemReaction(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ReceiveFileResponse {
     /// RcvFileAccepted: File accepted to be received.
     #[serde(rename = "rcvFileAccepted")]
-    RcvFileAccepted(RcvFileAcceptedResponse),
+    RcvFileAccepted(Arc<RcvFileAcceptedResponse>),
     /// RcvFileAcceptedSndCancelled: File accepted, but no longer sent.
     #[serde(rename = "rcvFileAcceptedSndCancelled")]
-    RcvFileAcceptedSndCancelled(RcvFileAcceptedSndCancelledResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    RcvFileAcceptedSndCancelled(Arc<RcvFileAcceptedSndCancelledResponse>),
+}
+
+impl ReceiveFileResponse {
+    pub fn rcv_file_accepted(&self) -> Option<&RcvFileAcceptedResponse> {
+        if let Self::RcvFileAccepted(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn rcv_file_accepted_snd_cancelled(&self) -> Option<&RcvFileAcceptedSndCancelledResponse> {
+        if let Self::RcvFileAcceptedSndCancelled(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum CancelFileResponse {
     /// SndFileCancelled: Cancelled sending file.
     #[serde(rename = "sndFileCancelled")]
-    SndFileCancelled(SndFileCancelledResponse),
+    SndFileCancelled(Arc<SndFileCancelledResponse>),
     /// RcvFileCancelled: Cancelled receiving file.
     #[serde(rename = "rcvFileCancelled")]
-    RcvFileCancelled(RcvFileCancelledResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    RcvFileCancelled(Arc<RcvFileCancelledResponse>),
+}
+
+impl CancelFileResponse {
+    pub fn snd_file_cancelled(&self) -> Option<&SndFileCancelledResponse> {
+        if let Self::SndFileCancelled(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn rcv_file_cancelled(&self) -> Option<&RcvFileCancelledResponse> {
+        if let Self::RcvFileCancelled(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiAddMemberResponse {
     /// SentGroupInvitation: Group invitation sent.
     #[serde(rename = "sentGroupInvitation")]
-    SentGroupInvitation(SentGroupInvitationResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    SentGroupInvitation(Arc<SentGroupInvitationResponse>),
+}
+
+impl ApiAddMemberResponse {
+    pub fn into_inner(self) -> Arc<SentGroupInvitationResponse> {
+        match self {
+            Self::SentGroupInvitation(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiJoinGroupResponse {
     /// UserAcceptedGroupSent: User accepted group invitation.
     #[serde(rename = "userAcceptedGroupSent")]
-    UserAcceptedGroupSent(UserAcceptedGroupSentResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    UserAcceptedGroupSent(Arc<UserAcceptedGroupSentResponse>),
+}
+
+impl ApiJoinGroupResponse {
+    pub fn into_inner(self) -> Arc<UserAcceptedGroupSentResponse> {
+        match self {
+            Self::UserAcceptedGroupSent(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiAcceptMemberResponse {
     /// MemberAccepted: Member accepted to group.
     #[serde(rename = "memberAccepted")]
-    MemberAccepted(MemberAcceptedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    MemberAccepted(Arc<MemberAcceptedResponse>),
+}
+
+impl ApiAcceptMemberResponse {
+    pub fn into_inner(self) -> Arc<MemberAcceptedResponse> {
+        match self {
+            Self::MemberAccepted(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiMembersRoleResponse {
     /// MembersRoleUser: Members role changed by user.
     #[serde(rename = "membersRoleUser")]
-    MembersRoleUser(MembersRoleUserResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    MembersRoleUser(Arc<MembersRoleUserResponse>),
+}
+
+impl ApiMembersRoleResponse {
+    pub fn into_inner(self) -> Arc<MembersRoleUserResponse> {
+        match self {
+            Self::MembersRoleUser(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiBlockMembersForAllResponse {
     /// MembersBlockedForAllUser: Members blocked for all by admin.
     #[serde(rename = "membersBlockedForAllUser")]
-    MembersBlockedForAllUser(MembersBlockedForAllUserResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    MembersBlockedForAllUser(Arc<MembersBlockedForAllUserResponse>),
+}
+
+impl ApiBlockMembersForAllResponse {
+    pub fn into_inner(self) -> Arc<MembersBlockedForAllUserResponse> {
+        match self {
+            Self::MembersBlockedForAllUser(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiRemoveMembersResponse {
     /// UserDeletedMembers: Members deleted.
     #[serde(rename = "userDeletedMembers")]
-    UserDeletedMembers(UserDeletedMembersResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    UserDeletedMembers(Arc<UserDeletedMembersResponse>),
+}
+
+impl ApiRemoveMembersResponse {
+    pub fn into_inner(self) -> Arc<UserDeletedMembersResponse> {
+        match self {
+            Self::UserDeletedMembers(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiLeaveGroupResponse {
     /// LeftMemberUser: User left group.
     #[serde(rename = "leftMemberUser")]
-    LeftMemberUser(LeftMemberUserResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    LeftMemberUser(Arc<LeftMemberUserResponse>),
+}
+
+impl ApiLeaveGroupResponse {
+    pub fn into_inner(self) -> Arc<LeftMemberUserResponse> {
+        match self {
+            Self::LeftMemberUser(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiListMembersResponse {
     /// GroupMembers: Group members.
     #[serde(rename = "groupMembers")]
-    GroupMembers(GroupMembersResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    GroupMembers(Arc<GroupMembersResponse>),
+}
+
+impl ApiListMembersResponse {
+    pub fn into_inner(self) -> Arc<GroupMembersResponse> {
+        match self {
+            Self::GroupMembers(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiNewGroupResponse {
     /// GroupCreated: Group created.
     #[serde(rename = "groupCreated")]
-    GroupCreated(GroupCreatedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    GroupCreated(Arc<GroupCreatedResponse>),
+}
+
+impl ApiNewGroupResponse {
+    pub fn into_inner(self) -> Arc<GroupCreatedResponse> {
+        match self {
+            Self::GroupCreated(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiUpdateGroupProfileResponse {
     /// GroupUpdated: Group updated.
     #[serde(rename = "groupUpdated")]
-    GroupUpdated(GroupUpdatedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    GroupUpdated(Arc<GroupUpdatedResponse>),
+}
+
+impl ApiUpdateGroupProfileResponse {
+    pub fn into_inner(self) -> Arc<GroupUpdatedResponse> {
+        match self {
+            Self::GroupUpdated(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiCreateGroupLinkResponse {
     /// GroupLinkCreated: Group link created.
     #[serde(rename = "groupLinkCreated")]
-    GroupLinkCreated(GroupLinkCreatedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    GroupLinkCreated(Arc<GroupLinkCreatedResponse>),
+}
+
+impl ApiCreateGroupLinkResponse {
+    pub fn into_inner(self) -> Arc<GroupLinkCreatedResponse> {
+        match self {
+            Self::GroupLinkCreated(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiGroupLinkMemberRoleResponse {
     /// GroupLink: Group link.
     #[serde(rename = "groupLink")]
-    GroupLink(GroupLinkResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    GroupLink(Arc<GroupLinkResponse>),
+}
+
+impl ApiGroupLinkMemberRoleResponse {
+    pub fn into_inner(self) -> Arc<GroupLinkResponse> {
+        match self {
+            Self::GroupLink(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiDeleteGroupLinkResponse {
     /// GroupLinkDeleted: Group link deleted.
     #[serde(rename = "groupLinkDeleted")]
-    GroupLinkDeleted(GroupLinkDeletedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    GroupLinkDeleted(Arc<GroupLinkDeletedResponse>),
+}
+
+impl ApiDeleteGroupLinkResponse {
+    pub fn into_inner(self) -> Arc<GroupLinkDeletedResponse> {
+        match self {
+            Self::GroupLinkDeleted(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiGetGroupLinkResponse {
     /// GroupLink: Group link.
     #[serde(rename = "groupLink")]
-    GroupLink(GroupLinkResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    GroupLink(Arc<GroupLinkResponse>),
+}
+
+impl ApiGetGroupLinkResponse {
+    pub fn into_inner(self) -> Arc<GroupLinkResponse> {
+        match self {
+            Self::GroupLink(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiAddContactResponse {
     /// Invitation: One-time invitation.
     #[serde(rename = "invitation")]
-    Invitation(InvitationResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    Invitation(Arc<InvitationResponse>),
+}
+
+impl ApiAddContactResponse {
+    pub fn into_inner(self) -> Arc<InvitationResponse> {
+        match self {
+            Self::Invitation(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiConnectPlanResponse {
     /// ConnectionPlan: Connection link information.
     #[serde(rename = "connectionPlan")]
-    ConnectionPlan(ConnectionPlanResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ConnectionPlan(Arc<ConnectionPlanResponse>),
+}
+
+impl ApiConnectPlanResponse {
+    pub fn into_inner(self) -> Arc<ConnectionPlanResponse> {
+        match self {
+            Self::ConnectionPlan(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiConnectResponse {
     /// SentConfirmation: Confirmation sent to one-time invitation.
     #[serde(rename = "sentConfirmation")]
-    SentConfirmation(SentConfirmationResponse),
+    SentConfirmation(Arc<SentConfirmationResponse>),
     /// ContactAlreadyExists: Contact already exists.
     #[serde(rename = "contactAlreadyExists")]
-    ContactAlreadyExists(ContactAlreadyExistsResponse),
+    ContactAlreadyExists(Arc<ContactAlreadyExistsResponse>),
     /// SentInvitation: Invitation sent to contact address.
     #[serde(rename = "sentInvitation")]
-    SentInvitation(SentInvitationResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    SentInvitation(Arc<SentInvitationResponse>),
+}
+
+impl ApiConnectResponse {
+    pub fn sent_confirmation(&self) -> Option<&SentConfirmationResponse> {
+        if let Self::SentConfirmation(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn contact_already_exists(&self) -> Option<&ContactAlreadyExistsResponse> {
+        if let Self::ContactAlreadyExists(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn sent_invitation(&self) -> Option<&SentInvitationResponse> {
+        if let Self::SentInvitation(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ConnectResponse {
     /// SentConfirmation: Confirmation sent to one-time invitation.
     #[serde(rename = "sentConfirmation")]
-    SentConfirmation(SentConfirmationResponse),
+    SentConfirmation(Arc<SentConfirmationResponse>),
     /// ContactAlreadyExists: Contact already exists.
     #[serde(rename = "contactAlreadyExists")]
-    ContactAlreadyExists(ContactAlreadyExistsResponse),
+    ContactAlreadyExists(Arc<ContactAlreadyExistsResponse>),
     /// SentInvitation: Invitation sent to contact address.
     #[serde(rename = "sentInvitation")]
-    SentInvitation(SentInvitationResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    SentInvitation(Arc<SentInvitationResponse>),
+}
+
+impl ConnectResponse {
+    pub fn sent_confirmation(&self) -> Option<&SentConfirmationResponse> {
+        if let Self::SentConfirmation(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn contact_already_exists(&self) -> Option<&ContactAlreadyExistsResponse> {
+        if let Self::ContactAlreadyExists(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn sent_invitation(&self) -> Option<&SentInvitationResponse> {
+        if let Self::SentInvitation(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiAcceptContactResponse {
     /// AcceptingContactRequest: Contact request accepted.
     #[serde(rename = "acceptingContactRequest")]
-    AcceptingContactRequest(AcceptingContactRequestResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    AcceptingContactRequest(Arc<AcceptingContactRequestResponse>),
+}
+
+impl ApiAcceptContactResponse {
+    pub fn into_inner(self) -> Arc<AcceptingContactRequestResponse> {
+        match self {
+            Self::AcceptingContactRequest(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiRejectContactResponse {
     /// ContactRequestRejected: Contact request rejected.
     #[serde(rename = "contactRequestRejected")]
-    ContactRequestRejected(ContactRequestRejectedResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ContactRequestRejected(Arc<ContactRequestRejectedResponse>),
+}
+
+impl ApiRejectContactResponse {
+    pub fn into_inner(self) -> Arc<ContactRequestRejectedResponse> {
+        match self {
+            Self::ContactRequestRejected(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiListContactsResponse {
     /// ContactsList: Contacts.
     #[serde(rename = "contactsList")]
-    ContactsList(ContactsListResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ContactsList(Arc<ContactsListResponse>),
+}
+
+impl ApiListContactsResponse {
+    pub fn into_inner(self) -> Arc<ContactsListResponse> {
+        match self {
+            Self::ContactsList(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiListGroupsResponse {
     /// GroupsList: Groups.
     #[serde(rename = "groupsList")]
-    GroupsList(GroupsListResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    GroupsList(Arc<GroupsListResponse>),
+}
+
+impl ApiListGroupsResponse {
+    pub fn into_inner(self) -> Arc<GroupsListResponse> {
+        match self {
+            Self::GroupsList(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiDeleteChatResponse {
     /// ContactDeleted: Contact deleted.
     #[serde(rename = "contactDeleted")]
-    ContactDeleted(ContactDeletedResponse),
+    ContactDeleted(Arc<ContactDeletedResponse>),
     /// ContactConnectionDeleted: Connection deleted.
     #[serde(rename = "contactConnectionDeleted")]
-    ContactConnectionDeleted(ContactConnectionDeletedResponse),
+    ContactConnectionDeleted(Arc<ContactConnectionDeletedResponse>),
     /// GroupDeletedUser: User deleted group.
     #[serde(rename = "groupDeletedUser")]
-    GroupDeletedUser(GroupDeletedUserResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    GroupDeletedUser(Arc<GroupDeletedUserResponse>),
+}
+
+impl ApiDeleteChatResponse {
+    pub fn contact_deleted(&self) -> Option<&ContactDeletedResponse> {
+        if let Self::ContactDeleted(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn contact_connection_deleted(&self) -> Option<&ContactConnectionDeletedResponse> {
+        if let Self::ContactConnectionDeleted(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn group_deleted_user(&self) -> Option<&GroupDeletedUserResponse> {
+        if let Self::GroupDeletedUser(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
+pub enum ApiSetGroupCustomDataResponse {
+    /// CmdOk: Ok.
+    #[serde(rename = "cmdOk")]
+    CmdOk(Arc<CmdOkResponse>),
+}
+
+impl ApiSetGroupCustomDataResponse {
+    pub fn into_inner(self) -> Arc<CmdOkResponse> {
+        match self {
+            Self::CmdOk(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ApiSetContactCustomDataResponse {
+    /// CmdOk: Ok.
+    #[serde(rename = "cmdOk")]
+    CmdOk(Arc<CmdOkResponse>),
+}
+
+impl ApiSetContactCustomDataResponse {
+    pub fn into_inner(self) -> Arc<CmdOkResponse> {
+        match self {
+            Self::CmdOk(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ApiSetUserAutoAcceptMemberContactsResponse {
+    /// CmdOk: Ok.
+    #[serde(rename = "cmdOk")]
+    CmdOk(Arc<CmdOkResponse>),
+}
+
+impl ApiSetUserAutoAcceptMemberContactsResponse {
+    pub fn into_inner(self) -> Arc<CmdOkResponse> {
+        match self {
+            Self::CmdOk(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum ShowActiveUserResponse {
     /// ActiveUser: Active user profile.
     #[serde(rename = "activeUser")]
-    ActiveUser(ActiveUserResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ActiveUser(Arc<ActiveUserResponse>),
+}
+
+impl ShowActiveUserResponse {
+    pub fn into_inner(self) -> Arc<ActiveUserResponse> {
+        match self {
+            Self::ActiveUser(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum CreateActiveUserResponse {
     /// ActiveUser: Active user profile.
     #[serde(rename = "activeUser")]
-    ActiveUser(ActiveUserResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ActiveUser(Arc<ActiveUserResponse>),
+}
+
+impl CreateActiveUserResponse {
+    pub fn into_inner(self) -> Arc<ActiveUserResponse> {
+        match self {
+            Self::ActiveUser(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ListUsersResponse {
     /// UsersList: Users.
     #[serde(rename = "usersList")]
-    UsersList(UsersListResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    UsersList(Arc<UsersListResponse>),
+}
+
+impl ListUsersResponse {
+    pub fn into_inner(self) -> Arc<UsersListResponse> {
+        match self {
+            Self::UsersList(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiSetActiveUserResponse {
     /// ActiveUser: Active user profile.
     #[serde(rename = "activeUser")]
-    ActiveUser(ActiveUserResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ActiveUser(Arc<ActiveUserResponse>),
+}
+
+impl ApiSetActiveUserResponse {
+    pub fn into_inner(self) -> Arc<ActiveUserResponse> {
+        match self {
+            Self::ActiveUser(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiDeleteUserResponse {
     /// CmdOk: Ok.
     #[serde(rename = "cmdOk")]
-    CmdOk(CmdOkResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    CmdOk(Arc<CmdOkResponse>),
+}
+
+impl ApiDeleteUserResponse {
+    pub fn into_inner(self) -> Arc<CmdOkResponse> {
+        match self {
+            Self::CmdOk(inner) => inner,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiUpdateProfileResponse {
     /// UserProfileUpdated: User profile updated.
     #[serde(rename = "userProfileUpdated")]
-    UserProfileUpdated(UserProfileUpdatedResponse),
+    UserProfileUpdated(Arc<UserProfileUpdatedResponse>),
     /// UserProfileNoChange: User profile was not changed.
     #[serde(rename = "userProfileNoChange")]
-    UserProfileNoChange(UserProfileNoChangeResponse),
-    /// ChatCmdError: Command error.
-    #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    UserProfileNoChange(Arc<UserProfileNoChangeResponse>),
+}
+
+impl ApiUpdateProfileResponse {
+    pub fn user_profile_updated(&self) -> Option<&UserProfileUpdatedResponse> {
+        if let Self::UserProfileUpdated(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn user_profile_no_change(&self) -> Option<&UserProfileNoChangeResponse> {
+        if let Self::UserProfileNoChange(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-#[non_exhaustive]
 pub enum ApiSetContactPrefsResponse {
     /// ContactPrefsUpdated: Contact preferences updated.
     #[serde(rename = "contactPrefsUpdated")]
-    ContactPrefsUpdated(ContactPrefsUpdatedResponse),
-    /// ChatCmdError: Command error.
+    ContactPrefsUpdated(Arc<ContactPrefsUpdatedResponse>),
+}
+
+impl ApiSetContactPrefsResponse {
+    pub fn into_inner(self) -> Arc<ContactPrefsUpdatedResponse> {
+        match self {
+            Self::ContactPrefsUpdated(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum StartChatResponse {
+    /// ChatStarted: Chat started.
+    #[serde(rename = "chatStarted")]
+    ChatStarted(Arc<ChatStartedResponse>),
+    /// ChatRunning: Chat running.
+    #[serde(rename = "chatRunning")]
+    ChatRunning(Arc<ChatRunningResponse>),
+}
+
+impl StartChatResponse {
+    pub fn chat_started(&self) -> Option<&ChatStartedResponse> {
+        if let Self::ChatStarted(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn chat_running(&self) -> Option<&ChatRunningResponse> {
+        if let Self::ChatRunning(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ApiStopChatResponse {
+    /// ChatStopped: Chat stopped.
+    #[serde(rename = "chatStopped")]
+    ChatStopped(Arc<ChatStoppedResponse>),
+}
+
+impl ApiStopChatResponse {
+    pub fn into_inner(self) -> Arc<ChatStoppedResponse> {
+        match self {
+            Self::ChatStopped(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ChatCmdError {
     #[serde(rename = "chatCmdError")]
-    ChatCmdError(ChatCmdErrorResponse),
-    #[serde(untagged)]
-    Undocumented(JsonObject),
+    ChatCmdErrorResponse(Arc<ChatCmdErrorResponse>),
+}
+
+impl ChatCmdError {
+    pub fn into_inner(self) -> Arc<ChatCmdErrorResponse> {
+        match self {
+            Self::ChatCmdErrorResponse(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ChatCmdErrorResponse {
+    #[serde(rename = "chatError")]
+    pub chat_error: Arc<ChatError>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -648,18 +946,6 @@ pub struct ActiveUserResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct ChatCmdErrorResponse {
-    #[serde(rename = "chatError")]
-    pub chat_error: ChatError,
-
-    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: JsonObject,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ChatItemNotChangedResponse {
     #[serde(rename = "user")]
     pub user: User,
@@ -679,7 +965,7 @@ pub struct ChatItemReactionResponse {
     #[serde(rename = "user")]
     pub user: User,
 
-    #[serde(rename = "added")]
+    #[serde(rename = "added", default)]
     pub added: bool,
 
     #[serde(rename = "reaction")]
@@ -715,12 +1001,39 @@ pub struct ChatItemsDeletedResponse {
     #[serde(rename = "chatItemDeletions")]
     pub chat_item_deletions: Vec<ChatItemDeletion>,
 
-    #[serde(rename = "byUser")]
+    #[serde(rename = "byUser", default)]
     pub by_user: bool,
 
-    #[serde(rename = "timed")]
+    #[serde(rename = "timed", default)]
     pub timed: bool,
 
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ChatRunningResponse {
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ChatStartedResponse {
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ChatStoppedResponse {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -977,7 +1290,7 @@ pub struct GroupsListResponse {
     pub user: User,
 
     #[serde(rename = "groups")]
-    pub groups: Vec<GroupInfoSummary>,
+    pub groups: Vec<GroupInfo>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1048,7 +1361,7 @@ pub struct MembersBlockedForAllUserResponse {
     #[serde(rename = "members")]
     pub members: Vec<GroupMember>,
 
-    #[serde(rename = "blocked")]
+    #[serde(rename = "blocked", default)]
     pub blocked: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -1306,7 +1619,7 @@ pub struct UserDeletedMembersResponse {
     #[serde(rename = "members")]
     pub members: Vec<GroupMember>,
 
-    #[serde(rename = "withMessages")]
+    #[serde(rename = "withMessages", default)]
     pub with_messages: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]

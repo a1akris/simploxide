@@ -1,4 +1,5 @@
 **/target/
 **/generated/
+**/test_db/
 Cargo.lock
 cleanup.sh

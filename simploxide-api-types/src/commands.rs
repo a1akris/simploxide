@@ -1194,7 +1194,7 @@ impl CommandSyntax for ApiConnectPlan {
 ///
 /// ----
 ///
-/// Connect via prepared SimpleX link. The link can be 1-time invitation link, contact address or group link
+/// Connect via prepared SimpleX link. The link can be 1-time invitation link, contact address or group link.
 ///
 /// *Network usage*: interactive.
 ///
@@ -1422,13 +1422,133 @@ impl CommandSyntax for ApiDeleteChat {
     }
 }
 
+/// ### Chat commands
+///
+/// Commands to list and delete conversations.
+///
+/// ----
+///
+/// Set group custom data.
+///
+/// *Network usage*: no.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_set custom #<groupId>[ <json(customData)>]
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct ApiSetGroupCustomData {
+    pub group_id: i64,
+    pub custom_data: Option<JsonObject>,
+}
+
+impl CommandSyntax for ApiSetGroupCustomData {
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_set ");
+        buf.push_str("custom ");
+        buf.push('#');
+        write!(buf, "{}", self.group_id).unwrap();
+        if let Some(custom_data) = &self.custom_data {
+            buf.push(' ');
+            // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+            unsafe {
+                serde_json::to_writer(buf.as_mut_vec(), &custom_data).unwrap();
+            }
+        }
+    }
+}
+
+/// ### Chat commands
+///
+/// Commands to list and delete conversations.
+///
+/// ----
+///
+/// Set contact custom data.
+///
+/// *Network usage*: no.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_set custom @<contactId>[ <json(customData)>]
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct ApiSetContactCustomData {
+    pub contact_id: i64,
+    pub custom_data: Option<JsonObject>,
+}
+
+impl CommandSyntax for ApiSetContactCustomData {
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_set ");
+        buf.push_str("custom ");
+        buf.push('@');
+        write!(buf, "{}", self.contact_id).unwrap();
+        if let Some(custom_data) = &self.custom_data {
+            buf.push(' ');
+            // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+            unsafe {
+                serde_json::to_writer(buf.as_mut_vec(), &custom_data).unwrap();
+            }
+        }
+    }
+}
+
+/// ### Chat commands
+///
+/// Commands to list and delete conversations.
+///
+/// ----
+///
+/// Set auto-accept member contacts.
+///
+/// *Network usage*: no.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_set accept member contacts <userId> on|off
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct ApiSetUserAutoAcceptMemberContacts {
+    pub user_id: i64,
+    pub on_off: bool,
+}
+
+impl CommandSyntax for ApiSetUserAutoAcceptMemberContacts {
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_set ");
+        buf.push_str("accept ");
+        buf.push_str("member ");
+        buf.push_str("contacts ");
+        write!(buf, "{}", self.user_id).unwrap();
+        buf.push(' ');
+        if self.on_off {
+            buf.push_str("on");
+        } else {
+            buf.push_str("off");
+        }
+    }
+}
+
 /// ### User profile commands
 ///
 /// Most bots don't need to use these commands, as bot profile can be configured manually via CLI or desktop client. These commands can be used by bots that need to manage multiple user profiles (e.g., the profiles of support agents).
 ///
 /// ----
 ///
-/// Get active user profile
+/// Get active user profile.
 ///
 /// *Network usage*: no.
 ///
@@ -1455,7 +1575,7 @@ impl CommandSyntax for ShowActiveUser {
 ///
 /// ----
 ///
-/// Create new user profile
+/// Create new user profile.
 ///
 /// *Network usage*: no.
 ///
@@ -1489,7 +1609,7 @@ impl CommandSyntax for CreateActiveUser {
 ///
 /// ----
 ///
-/// Get all user profiles
+/// Get all user profiles.
 ///
 /// *Network usage*: no.
 ///
@@ -1516,7 +1636,7 @@ impl CommandSyntax for ListUsers {
 ///
 /// ----
 ///
-/// Set active user profile
+/// Set active user profile.
 ///
 /// *Network usage*: no.
 ///
@@ -1666,5 +1786,62 @@ impl CommandSyntax for ApiSetContactPrefs {
         unsafe {
             serde_json::to_writer(buf.as_mut_vec(), &self.preferences).unwrap();
         }
+    }
+}
+
+/// ### Chat management
+///
+/// These commands should not be used with CLI-based bots
+///
+/// ----
+///
+/// Start chat controller.
+///
+/// *Network usage*: no.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_start
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct StartChat {
+    pub main_app: bool,
+    pub enable_snd_files: bool,
+}
+
+impl CommandSyntax for StartChat {
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_start");
+    }
+}
+
+/// ### Chat management
+///
+/// These commands should not be used with CLI-based bots
+///
+/// ----
+///
+/// Stop chat controller.
+///
+/// *Network usage*: no.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_stop
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct ApiStopChat {}
+
+impl CommandSyntax for ApiStopChat {
+    const COMMAND_BUF_SIZE: usize = 0;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_stop");
     }
 }

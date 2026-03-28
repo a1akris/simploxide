@@ -4,6 +4,7 @@ use std::{sync::Arc, task::Poll};
 
 use crate::{WsIn, router::ResponseRouter};
 use futures::{Stream, StreamExt};
+use serde::Deserialize;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
@@ -95,36 +96,48 @@ async fn event_dispatcher_task(
 /// event. In this case all buffered events can only be sent to the `event_queue`. This could be
 /// refactored to look less hacky.
 fn process_raw_event(router: Option<&ResponseRouter>, event_queue: &mut EventSender, msg: Message) {
-    let mut json: serde_json::Value = match msg {
-        Message::Text(txt) => serde_json::from_str(&txt).expect("Server sends a valid JSON"),
+    let event = match msg {
+        Message::Text(utf8bytes) => utf8bytes.to_string(),
         unexpected => {
             log::warn!("Ignoring event in unexpecetd format: {unexpected:#?}");
             return;
         }
     };
 
-    let corr_id = json["corrId"].take();
+    let header: EventHeader = match serde_json::from_str(&event) {
+        Ok(header) => header,
+        Err(e) => {
+            log::error!("Got invalid JSON form the server\n{event:?}\n{e}");
+            return;
+        }
+    };
 
-    if !corr_id.is_null() {
-        let id: RequestId = corr_id.as_str().unwrap().parse().unwrap();
-        let response = json["resp"].take();
-        assert!(!response.is_null(), "Server sends a valid resp field");
+    if let Some(corr_id) = header.corr_id {
+        let id: RequestId = match corr_id.parse() {
+            Ok(id) => id,
+            Err(e) => {
+                log::error!("Failed to parse corr_id: {corr_id}\n{e}");
+                return;
+            }
+        };
 
-        if let Some(router) = router {
-            router.deliver(id, response);
-        } else {
-            log::warn!("Dropping response: {response}\nBecause router task already finished");
+        match router {
+            Some(router) => router.deliver(id, event),
+            None => {
+                log::warn!("Dropping response because router task already finished\n{event}");
+            }
         }
     } else {
-        let event = json["resp"].take();
-        // The client may choose to drop the event queue to stop buffering events. This is an
-        // expected behavior so errors are ignored.
-        if event.is_null() {
-            let _ = event_queue.send(Ok(json));
-        } else {
-            let _ = event_queue.send(Ok(event));
-        }
+        let _ = event_queue.send(Ok(event));
     }
+}
+
+/// A helper that detects corr IDs in incoming events
+#[derive(Deserialize)]
+struct EventHeader<'a> {
+    #[serde(rename = "corrId")]
+    #[serde(borrow)]
+    corr_id: Option<&'a str>,
 }
 
 /// A helper that allows to process buffered items. Returns `None` when internal stream buffer

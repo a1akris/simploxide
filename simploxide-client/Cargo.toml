@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-client"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
@@ -14,16 +14,23 @@ categories = ["network-programming", "asynchronous", "web-programming::websocket
 keywords = ["simplex", "chat", "websocket", "client"]
 
 [features]
+default = ["cli"]
 bon = ["simploxide-api-types/bon"]
-
+cli = ["websocket", "simploxide-ws-core/cli"]
+ffi = ["dep:simploxide-ffi-core"]
+websocket = ["dep:simploxide-ws-core"]
 
 [dependencies]
 futures.workspace = true
 serde_json.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread"] }
+serde.workspace = true
+tokio.workspace = true
 
-simploxide-core = { version = "0.3.1", path = "../simploxide-core"}
-simploxide-api-types = { version = "0.7.0", path = "../simploxide-api-types" }
+simploxide-ws-core = { version = "0.1.0", path = "../simploxide-ws-core", optional = true }
+simploxide-ffi-core = { version = "0.1.0", path = "../simploxide-ffi-core", optional = true }
+simploxide-api-types = { version = "0.8.0", path = "../simploxide-api-types" }
 
 [dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 async-trait = "0.1.89"
+pretty_env_logger = "0.5.0"

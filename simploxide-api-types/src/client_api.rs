@@ -1,6 +1,12 @@
 use crate::{commands::*, responses::*, utils::CommandSyntax, *};
+use serde::de::DeserializeOwned;
 use std::future::Future;
 use std::sync::Arc;
+
+/// A helper trait to handle different response wrappers
+pub trait ExtractResponse<T>: DeserializeOwned {
+    fn extract_response(self) -> Result<T, BadResponseError>;
+}
 
 pub trait ClientApiError: From<BadResponseError> + std::error::Error {
     /// If current error is a bad response error return a mut reference to it!
@@ -10,12 +16,13 @@ pub trait ClientApiError: From<BadResponseError> + std::error::Error {
 }
 
 pub trait ClientApi: Sync {
+    type ResponseShape<T>: ExtractResponse<T>
+    where
+        T: for<'de> Deserialize<'de>;
     type Error: ClientApiError;
 
-    fn send_raw(
-        &self,
-        command: String,
-    ) -> impl Future<Output = Result<JsonObject, Self::Error>> + Send;
+    fn send_raw(&self, command: String)
+    -> impl Future<Output = Result<String, Self::Error>> + Send;
 
     /// ### Address commands
     ///
@@ -38,18 +45,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserContactLinkCreatedResponse>, Self::Error>> + Send {
         async move {
             let command = ApiCreateMyAddress { user_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiCreateMyAddressResponse::UserContactLinkCreated(resp) => Ok(Arc::new(resp)),
-                ApiCreateMyAddressResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiCreateMyAddressResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiCreateMyAddressResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -71,21 +71,14 @@ pub trait ClientApi: Sync {
     fn api_delete_my_address(
         &self,
         user_id: i64,
-    ) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<Arc<UserContactLinkDeletedResponse>, Self::Error>> + Send {
         async move {
             let command = ApiDeleteMyAddress { user_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiDeleteMyAddressResponse::UserContactLinkDeleted(resp) => Ok(Arc::new(resp.user)),
-                ApiDeleteMyAddressResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiDeleteMyAddressResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiDeleteMyAddressResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -110,18 +103,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserContactLinkResponse>, Self::Error>> + Send {
         async move {
             let command = ApiShowMyAddress { user_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiShowMyAddressResponse::UserContactLink(resp) => Ok(Arc::new(resp)),
-                ApiShowMyAddressResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiShowMyAddressResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiShowMyAddressResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -145,18 +131,11 @@ pub trait ClientApi: Sync {
         command: ApiSetProfileAddress,
     ) -> impl Future<Output = Result<Arc<UserProfileUpdatedResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiSetProfileAddressResponse::UserProfileUpdated(resp) => Ok(Arc::new(resp)),
-                ApiSetProfileAddressResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiSetProfileAddressResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiSetProfileAddressResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -182,18 +161,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserContactLinkUpdatedResponse>, Self::Error>> + Send {
         async move {
             let command = ApiSetAddressSettings { user_id, settings };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiSetAddressSettingsResponse::UserContactLinkUpdated(resp) => Ok(Arc::new(resp)),
-                ApiSetAddressSettingsResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiSetAddressSettingsResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiSetAddressSettingsResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -217,18 +189,11 @@ pub trait ClientApi: Sync {
         command: ApiSendMessages,
     ) -> impl Future<Output = Result<Arc<NewChatItemsResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiSendMessagesResponse::NewChatItems(resp) => Ok(Arc::new(resp)),
-                ApiSendMessagesResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiSendMessagesResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiSendMessagesResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -250,25 +215,13 @@ pub trait ClientApi: Sync {
     fn api_update_chat_item(
         &self,
         command: ApiUpdateChatItem,
-    ) -> impl Future<Output = Result<ApiUpdateChatItemResponses, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<ApiUpdateChatItemResponse, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiUpdateChatItemResponse::ChatItemUpdated(resp) => {
-                    Ok(ApiUpdateChatItemResponses::ChatItemUpdated(Arc::new(resp)))
-                }
-                ApiUpdateChatItemResponse::ChatItemNotChanged(resp) => Ok(
-                    ApiUpdateChatItemResponses::ChatItemNotChanged(Arc::new(resp)),
-                ),
-                ApiUpdateChatItemResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiUpdateChatItemResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiUpdateChatItemResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response)
         }
     }
 
@@ -299,18 +252,11 @@ pub trait ClientApi: Sync {
                 chat_item_ids,
                 delete_mode,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiDeleteChatItemResponse::ChatItemsDeleted(resp) => Ok(Arc::new(resp)),
-                ApiDeleteChatItemResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiDeleteChatItemResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiDeleteChatItemResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -339,18 +285,11 @@ pub trait ClientApi: Sync {
                 group_id,
                 chat_item_ids,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiDeleteMemberChatItemResponse::ChatItemsDeleted(resp) => Ok(Arc::new(resp)),
-                ApiDeleteMemberChatItemResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiDeleteMemberChatItemResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiDeleteMemberChatItemResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -374,18 +313,11 @@ pub trait ClientApi: Sync {
         command: ApiChatItemReaction,
     ) -> impl Future<Output = Result<Arc<ChatItemReactionResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiChatItemReactionResponse::ChatItemReaction(resp) => Ok(Arc::new(resp)),
-                ApiChatItemReactionResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiChatItemReactionResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiChatItemReactionResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -407,25 +339,13 @@ pub trait ClientApi: Sync {
     fn receive_file(
         &self,
         command: ReceiveFile,
-    ) -> impl Future<Output = Result<ReceiveFileResponses, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<ReceiveFileResponse, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ReceiveFileResponse::RcvFileAccepted(resp) => {
-                    Ok(ReceiveFileResponses::RcvFileAccepted(Arc::new(resp)))
-                }
-                ReceiveFileResponse::RcvFileAcceptedSndCancelled(resp) => Ok(
-                    ReceiveFileResponses::RcvFileAcceptedSndCancelled(Arc::new(resp)),
-                ),
-                ReceiveFileResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ReceiveFileResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ReceiveFileResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response)
         }
     }
 
@@ -447,26 +367,14 @@ pub trait ClientApi: Sync {
     fn cancel_file(
         &self,
         file_id: i64,
-    ) -> impl Future<Output = Result<CancelFileResponses, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<CancelFileResponse, Self::Error>> + Send {
         async move {
             let command = CancelFile { file_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                CancelFileResponse::SndFileCancelled(resp) => {
-                    Ok(CancelFileResponses::SndFileCancelled(Arc::new(resp)))
-                }
-                CancelFileResponse::RcvFileCancelled(resp) => {
-                    Ok(CancelFileResponses::RcvFileCancelled(Arc::new(resp)))
-                }
-                CancelFileResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                CancelFileResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<CancelFileResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response)
         }
     }
 
@@ -497,18 +405,11 @@ pub trait ClientApi: Sync {
                 contact_id,
                 member_role,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiAddMemberResponse::SentGroupInvitation(resp) => Ok(Arc::new(resp)),
-                ApiAddMemberResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiAddMemberResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiAddMemberResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -533,18 +434,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserAcceptedGroupSentResponse>, Self::Error>> + Send {
         async move {
             let command = ApiJoinGroup { group_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiJoinGroupResponse::UserAcceptedGroupSent(resp) => Ok(Arc::new(resp)),
-                ApiJoinGroupResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiJoinGroupResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiJoinGroupResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -575,18 +469,11 @@ pub trait ClientApi: Sync {
                 group_member_id,
                 member_role,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiAcceptMemberResponse::MemberAccepted(resp) => Ok(Arc::new(resp)),
-                ApiAcceptMemberResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiAcceptMemberResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiAcceptMemberResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -617,18 +504,11 @@ pub trait ClientApi: Sync {
                 group_member_ids,
                 member_role,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiMembersRoleResponse::MembersRoleUser(resp) => Ok(Arc::new(resp)),
-                ApiMembersRoleResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiMembersRoleResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiMembersRoleResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -653,18 +533,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<MembersBlockedForAllUserResponse>, Self::Error>> + Send
     {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiBlockMembersForAllResponse::MembersBlockedForAllUser(resp) => Ok(Arc::new(resp)),
-                ApiBlockMembersForAllResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiBlockMembersForAllResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiBlockMembersForAllResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -688,18 +561,11 @@ pub trait ClientApi: Sync {
         command: ApiRemoveMembers,
     ) -> impl Future<Output = Result<Arc<UserDeletedMembersResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiRemoveMembersResponse::UserDeletedMembers(resp) => Ok(Arc::new(resp)),
-                ApiRemoveMembersResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiRemoveMembersResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiRemoveMembersResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -724,18 +590,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<LeftMemberUserResponse>, Self::Error>> + Send {
         async move {
             let command = ApiLeaveGroup { group_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiLeaveGroupResponse::LeftMemberUser(resp) => Ok(Arc::new(resp)),
-                ApiLeaveGroupResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiLeaveGroupResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiLeaveGroupResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -760,18 +619,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<GroupMembersResponse>, Self::Error>> + Send {
         async move {
             let command = ApiListMembers { group_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiListMembersResponse::GroupMembers(resp) => Ok(Arc::new(resp)),
-                ApiListMembersResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiListMembersResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiListMembersResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -795,18 +647,11 @@ pub trait ClientApi: Sync {
         command: ApiNewGroup,
     ) -> impl Future<Output = Result<Arc<GroupCreatedResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiNewGroupResponse::GroupCreated(resp) => Ok(Arc::new(resp)),
-                ApiNewGroupResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiNewGroupResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiNewGroupResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -835,18 +680,11 @@ pub trait ClientApi: Sync {
                 group_id,
                 group_profile,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiUpdateGroupProfileResponse::GroupUpdated(resp) => Ok(Arc::new(resp)),
-                ApiUpdateGroupProfileResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiUpdateGroupProfileResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiUpdateGroupProfileResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -875,18 +713,11 @@ pub trait ClientApi: Sync {
                 group_id,
                 member_role,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiCreateGroupLinkResponse::GroupLinkCreated(resp) => Ok(Arc::new(resp)),
-                ApiCreateGroupLinkResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiCreateGroupLinkResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiCreateGroupLinkResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -915,18 +746,11 @@ pub trait ClientApi: Sync {
                 group_id,
                 member_role,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiGroupLinkMemberRoleResponse::GroupLink(resp) => Ok(Arc::new(resp)),
-                ApiGroupLinkMemberRoleResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiGroupLinkMemberRoleResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiGroupLinkMemberRoleResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -951,18 +775,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<GroupLinkDeletedResponse>, Self::Error>> + Send {
         async move {
             let command = ApiDeleteGroupLink { group_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiDeleteGroupLinkResponse::GroupLinkDeleted(resp) => Ok(Arc::new(resp)),
-                ApiDeleteGroupLinkResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiDeleteGroupLinkResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiDeleteGroupLinkResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -987,18 +804,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<GroupLinkResponse>, Self::Error>> + Send {
         async move {
             let command = ApiGetGroupLink { group_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiGetGroupLinkResponse::GroupLink(resp) => Ok(Arc::new(resp)),
-                ApiGetGroupLinkResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiGetGroupLinkResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiGetGroupLinkResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1022,18 +832,11 @@ pub trait ClientApi: Sync {
         command: ApiAddContact,
     ) -> impl Future<Output = Result<Arc<InvitationResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiAddContactResponse::Invitation(resp) => Ok(Arc::new(resp)),
-                ApiAddContactResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiAddContactResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiAddContactResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1057,18 +860,11 @@ pub trait ClientApi: Sync {
         command: ApiConnectPlan,
     ) -> impl Future<Output = Result<Arc<ConnectionPlanResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiConnectPlanResponse::ConnectionPlan(resp) => Ok(Arc::new(resp)),
-                ApiConnectPlanResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiConnectPlanResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiConnectPlanResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1078,7 +874,7 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
-    /// Connect via prepared SimpleX link. The link can be 1-time invitation link, contact address or group link
+    /// Connect via prepared SimpleX link. The link can be 1-time invitation link, contact address or group link.
     ///
     /// *Network usage*: interactive.
     ///
@@ -1090,28 +886,13 @@ pub trait ClientApi: Sync {
     fn api_connect(
         &self,
         command: ApiConnect,
-    ) -> impl Future<Output = Result<ApiConnectResponses, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<ApiConnectResponse, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiConnectResponse::SentConfirmation(resp) => {
-                    Ok(ApiConnectResponses::SentConfirmation(Arc::new(resp)))
-                }
-                ApiConnectResponse::ContactAlreadyExists(resp) => {
-                    Ok(ApiConnectResponses::ContactAlreadyExists(Arc::new(resp)))
-                }
-                ApiConnectResponse::SentInvitation(resp) => {
-                    Ok(ApiConnectResponses::SentInvitation(Arc::new(resp)))
-                }
-                ApiConnectResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiConnectResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiConnectResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response)
         }
     }
 
@@ -1133,28 +914,13 @@ pub trait ClientApi: Sync {
     fn connect(
         &self,
         command: Connect,
-    ) -> impl Future<Output = Result<ConnectResponses, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<ConnectResponse, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ConnectResponse::SentConfirmation(resp) => {
-                    Ok(ConnectResponses::SentConfirmation(Arc::new(resp)))
-                }
-                ConnectResponse::ContactAlreadyExists(resp) => {
-                    Ok(ConnectResponses::ContactAlreadyExists(Arc::new(resp)))
-                }
-                ConnectResponse::SentInvitation(resp) => {
-                    Ok(ConnectResponses::SentInvitation(Arc::new(resp)))
-                }
-                ConnectResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ConnectResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ConnectResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response)
         }
     }
 
@@ -1180,18 +946,11 @@ pub trait ClientApi: Sync {
     {
         async move {
             let command = ApiAcceptContact { contact_req_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiAcceptContactResponse::AcceptingContactRequest(resp) => Ok(Arc::new(resp)),
-                ApiAcceptContactResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiAcceptContactResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiAcceptContactResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1216,18 +975,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<ContactRequestRejectedResponse>, Self::Error>> + Send {
         async move {
             let command = ApiRejectContact { contact_req_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiRejectContactResponse::ContactRequestRejected(resp) => Ok(Arc::new(resp)),
-                ApiRejectContactResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiRejectContactResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiRejectContactResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1252,18 +1004,11 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<ContactsListResponse>, Self::Error>> + Send {
         async move {
             let command = ApiListContacts { user_id };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiListContactsResponse::ContactsList(resp) => Ok(Arc::new(resp)),
-                ApiListContactsResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiListContactsResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiListContactsResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1287,18 +1032,11 @@ pub trait ClientApi: Sync {
         command: ApiListGroups,
     ) -> impl Future<Output = Result<Arc<GroupsListResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiListGroupsResponse::GroupsList(resp) => Ok(Arc::new(resp)),
-                ApiListGroupsResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiListGroupsResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiListGroupsResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1321,32 +1059,101 @@ pub trait ClientApi: Sync {
         &self,
         chat_ref: ChatRef,
         chat_delete_mode: ChatDeleteMode,
-    ) -> impl Future<Output = Result<ApiDeleteChatResponses, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<ApiDeleteChatResponse, Self::Error>> + Send {
         async move {
             let command = ApiDeleteChat {
                 chat_ref,
                 chat_delete_mode,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiDeleteChatResponse::ContactDeleted(resp) => {
-                    Ok(ApiDeleteChatResponses::ContactDeleted(Arc::new(resp)))
-                }
-                ApiDeleteChatResponse::ContactConnectionDeleted(resp) => Ok(
-                    ApiDeleteChatResponses::ContactConnectionDeleted(Arc::new(resp)),
-                ),
-                ApiDeleteChatResponse::GroupDeletedUser(resp) => {
-                    Ok(ApiDeleteChatResponses::GroupDeletedUser(Arc::new(resp)))
-                }
-                ApiDeleteChatResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiDeleteChatResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiDeleteChatResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response)
+        }
+    }
+
+    /// ### Chat commands
+    ///
+    /// Commands to list and delete conversations.
+    ///
+    /// ----
+    ///
+    /// Set group custom data.
+    ///
+    /// *Network usage*: no.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_set custom #<groupId>[ <json(customData)>]
+    /// ```
+    fn api_set_group_custom_data(
+        &self,
+        command: ApiSetGroupCustomData,
+    ) -> impl Future<Output = Result<Arc<CmdOkResponse>, Self::Error>> + Send {
+        async move {
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiSetGroupCustomDataResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
+        }
+    }
+
+    /// ### Chat commands
+    ///
+    /// Commands to list and delete conversations.
+    ///
+    /// ----
+    ///
+    /// Set contact custom data.
+    ///
+    /// *Network usage*: no.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_set custom @<contactId>[ <json(customData)>]
+    /// ```
+    fn api_set_contact_custom_data(
+        &self,
+        command: ApiSetContactCustomData,
+    ) -> impl Future<Output = Result<Arc<CmdOkResponse>, Self::Error>> + Send {
+        async move {
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiSetContactCustomDataResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
+        }
+    }
+
+    /// ### Chat commands
+    ///
+    /// Commands to list and delete conversations.
+    ///
+    /// ----
+    ///
+    /// Set auto-accept member contacts.
+    ///
+    /// *Network usage*: no.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_set accept member contacts <userId> on|off
+    /// ```
+    fn api_set_user_auto_accept_member_contacts(
+        &self,
+        command: ApiSetUserAutoAcceptMemberContacts,
+    ) -> impl Future<Output = Result<Arc<CmdOkResponse>, Self::Error>> + Send {
+        async move {
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiSetUserAutoAcceptMemberContactsResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1356,7 +1163,7 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
-    /// Get active user profile
+    /// Get active user profile.
     ///
     /// *Network usage*: no.
     ///
@@ -1365,21 +1172,16 @@ pub trait ClientApi: Sync {
     /// ```
     /// /user
     /// ```
-    fn show_active_user(&self) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
+    fn show_active_user(
+        &self,
+    ) -> impl Future<Output = Result<Arc<ActiveUserResponse>, Self::Error>> + Send {
         async move {
             let command = ShowActiveUser {};
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ShowActiveUserResponse::ActiveUser(resp) => Ok(Arc::new(resp.user)),
-                ShowActiveUserResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ShowActiveUserResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ShowActiveUserResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1389,7 +1191,7 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
-    /// Create new user profile
+    /// Create new user profile.
     ///
     /// *Network usage*: no.
     ///
@@ -1401,21 +1203,14 @@ pub trait ClientApi: Sync {
     fn create_active_user(
         &self,
         new_user: NewUser,
-    ) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<Arc<ActiveUserResponse>, Self::Error>> + Send {
         async move {
             let command = CreateActiveUser { new_user };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                CreateActiveUserResponse::ActiveUser(resp) => Ok(Arc::new(resp.user)),
-                CreateActiveUserResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                CreateActiveUserResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<CreateActiveUserResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1425,7 +1220,7 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
-    /// Get all user profiles
+    /// Get all user profiles.
     ///
     /// *Network usage*: no.
     ///
@@ -1434,21 +1229,16 @@ pub trait ClientApi: Sync {
     /// ```
     /// /users
     /// ```
-    fn list_users(&self) -> impl Future<Output = Result<Arc<Vec<UserInfo>>, Self::Error>> + Send {
+    fn list_users(
+        &self,
+    ) -> impl Future<Output = Result<Arc<UsersListResponse>, Self::Error>> + Send {
         async move {
             let command = ListUsers {};
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ListUsersResponse::UsersList(resp) => Ok(Arc::new(resp.users)),
-                ListUsersResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ListUsersResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ListUsersResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1458,7 +1248,7 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
-    /// Set active user profile
+    /// Set active user profile.
     ///
     /// *Network usage*: no.
     ///
@@ -1470,20 +1260,13 @@ pub trait ClientApi: Sync {
     fn api_set_active_user(
         &self,
         command: ApiSetActiveUser,
-    ) -> impl Future<Output = Result<Arc<User>, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<Arc<ActiveUserResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiSetActiveUserResponse::ActiveUser(resp) => Ok(Arc::new(resp.user)),
-                ApiSetActiveUserResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiSetActiveUserResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiSetActiveUserResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1505,20 +1288,13 @@ pub trait ClientApi: Sync {
     fn api_delete_user(
         &self,
         command: ApiDeleteUser,
-    ) -> impl Future<Output = Result<Arc<Option<User>>, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<Arc<CmdOkResponse>, Self::Error>> + Send {
         async move {
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiDeleteUserResponse::CmdOk(resp) => Ok(Arc::new(resp.user)),
-                ApiDeleteUserResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiDeleteUserResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiDeleteUserResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 
@@ -1541,26 +1317,14 @@ pub trait ClientApi: Sync {
         &self,
         user_id: i64,
         profile: Profile,
-    ) -> impl Future<Output = Result<ApiUpdateProfileResponses, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, Self::Error>> + Send {
         async move {
             let command = ApiUpdateProfile { user_id, profile };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiUpdateProfileResponse::UserProfileUpdated(resp) => Ok(
-                    ApiUpdateProfileResponses::UserProfileUpdated(Arc::new(resp)),
-                ),
-                ApiUpdateProfileResponse::UserProfileNoChange(resp) => Ok(
-                    ApiUpdateProfileResponses::UserProfileNoChange(Arc::new(resp.user)),
-                ),
-                ApiUpdateProfileResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiUpdateProfileResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiUpdateProfileResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response)
         }
     }
 
@@ -1589,279 +1353,158 @@ pub trait ClientApi: Sync {
                 contact_id,
                 preferences,
             };
-            let json = self.send_raw(command.to_command_string()).await?;
-            // Safe to unwrap because unrecognized JSON goes to undocumented variant
-            let response = serde_json::from_value(json).unwrap();
-            match response {
-                ApiSetContactPrefsResponse::ContactPrefsUpdated(resp) => Ok(Arc::new(resp)),
-                ApiSetContactPrefsResponse::ChatCmdError(resp) => {
-                    Err(BadResponseError::ChatCmdError(Arc::new(resp.chat_error)).into())
-                }
-                ApiSetContactPrefsResponse::Undocumented(resp) => {
-                    Err(BadResponseError::Undocumented(resp).into())
-                }
-            }
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiSetContactPrefsResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
+        }
+    }
+
+    /// ### Chat management
+    ///
+    /// These commands should not be used with CLI-based bots
+    ///
+    /// ----
+    ///
+    /// Start chat controller.
+    ///
+    /// *Network usage*: no.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_start
+    /// ```
+    fn start_chat(
+        &self,
+        command: StartChat,
+    ) -> impl Future<Output = Result<StartChatResponse, Self::Error>> + Send {
+        async move {
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<StartChatResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response)
+        }
+    }
+
+    /// ### Chat management
+    ///
+    /// These commands should not be used with CLI-based bots
+    ///
+    /// ----
+    ///
+    /// Stop chat controller.
+    ///
+    /// *Network usage*: no.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_stop
+    /// ```
+    fn api_stop_chat(
+        &self,
+    ) -> impl Future<Output = Result<Arc<ChatStoppedResponse>, Self::Error>> + Send {
+        async move {
+            let command = ApiStopChat {};
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiStopChatResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ApiUpdateChatItemResponses {
-    /// ChatItemUpdated: Message updated.
-    #[serde(rename = "chatItemUpdated")]
-    ChatItemUpdated(Arc<ChatItemUpdatedResponse>),
-    /// ChatItemNotChanged: Message not changed.
-    #[serde(rename = "chatItemNotChanged")]
-    ChatItemNotChanged(Arc<ChatItemNotChangedResponse>),
+/// Use this as [`ClientApi::ResponseShape`] to extract web socket responses
+#[derive(Serialize, Deserialize)]
+pub struct WebSocketResponseShape<T> {
+    pub resp: WebSocketResponseShapeInner<T>,
 }
 
-impl ApiUpdateChatItemResponses {
-    pub fn chat_item_updated(&self) -> Option<&ChatItemUpdatedResponse> {
-        if let Self::ChatItemUpdated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum WebSocketResponseShapeInner<T> {
+    Response(T),
+    Error(ChatCmdError),
+    Undocumented(JsonObject),
+}
 
-    pub fn chat_item_not_changed(&self) -> Option<&ChatItemNotChangedResponse> {
-        if let Self::ChatItemNotChanged(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
+impl<T> ExtractResponse<T> for WebSocketResponseShape<T>
+where
+    T: DeserializeOwned,
+{
+    fn extract_response(self) -> Result<T, BadResponseError> {
+        self.resp.extract_response()
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ReceiveFileResponses {
-    /// RcvFileAccepted: File accepted to be received.
-    #[serde(rename = "rcvFileAccepted")]
-    RcvFileAccepted(Arc<RcvFileAcceptedResponse>),
-    /// RcvFileAcceptedSndCancelled: File accepted, but no longer sent.
-    #[serde(rename = "rcvFileAcceptedSndCancelled")]
-    RcvFileAcceptedSndCancelled(Arc<RcvFileAcceptedSndCancelledResponse>),
-}
-
-impl ReceiveFileResponses {
-    pub fn rcv_file_accepted(&self) -> Option<&RcvFileAcceptedResponse> {
-        if let Self::RcvFileAccepted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn rcv_file_accepted_snd_cancelled(&self) -> Option<&RcvFileAcceptedSndCancelledResponse> {
-        if let Self::RcvFileAcceptedSndCancelled(ret) = self {
-            Some(ret)
-        } else {
-            None
+impl<T> ExtractResponse<T> for WebSocketResponseShapeInner<T>
+where
+    T: DeserializeOwned,
+{
+    fn extract_response(self) -> Result<T, BadResponseError> {
+        match self {
+            Self::Response(resp) => Ok(resp),
+            Self::Error(err) => Err(BadResponseError::ChatError(
+                err.into_inner().chat_error.clone(),
+            )),
+            Self::Undocumented(json) => Err(BadResponseError::Undocumented(json)),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum CancelFileResponses {
-    /// SndFileCancelled: Cancelled sending file.
-    #[serde(rename = "sndFileCancelled")]
-    SndFileCancelled(Arc<SndFileCancelledResponse>),
-    /// RcvFileCancelled: Cancelled receiving file.
-    #[serde(rename = "rcvFileCancelled")]
-    RcvFileCancelled(Arc<RcvFileCancelledResponse>),
+/// Use this as [`ClientApi::ResponseShape`] to extract FFI responses
+#[derive(Serialize, Deserialize)]
+pub enum FfiResponseShape<T> {
+    #[serde(rename = "result")]
+    Result(T),
+
+    #[serde(rename = "error")]
+    Error(Arc<ChatError>),
+
+    #[serde(untagged)]
+    Undocumented(JsonObject),
 }
 
-impl CancelFileResponses {
-    pub fn snd_file_cancelled(&self) -> Option<&SndFileCancelledResponse> {
-        if let Self::SndFileCancelled(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn rcv_file_cancelled(&self) -> Option<&RcvFileCancelledResponse> {
-        if let Self::RcvFileCancelled(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ApiConnectResponses {
-    /// SentConfirmation: Confirmation sent to one-time invitation.
-    #[serde(rename = "sentConfirmation")]
-    SentConfirmation(Arc<SentConfirmationResponse>),
-    /// ContactAlreadyExists: Contact already exists.
-    #[serde(rename = "contactAlreadyExists")]
-    ContactAlreadyExists(Arc<ContactAlreadyExistsResponse>),
-    /// SentInvitation: Invitation sent to contact address.
-    #[serde(rename = "sentInvitation")]
-    SentInvitation(Arc<SentInvitationResponse>),
-}
-
-impl ApiConnectResponses {
-    pub fn sent_confirmation(&self) -> Option<&SentConfirmationResponse> {
-        if let Self::SentConfirmation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn contact_already_exists(&self) -> Option<&ContactAlreadyExistsResponse> {
-        if let Self::ContactAlreadyExists(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn sent_invitation(&self) -> Option<&SentInvitationResponse> {
-        if let Self::SentInvitation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ConnectResponses {
-    /// SentConfirmation: Confirmation sent to one-time invitation.
-    #[serde(rename = "sentConfirmation")]
-    SentConfirmation(Arc<SentConfirmationResponse>),
-    /// ContactAlreadyExists: Contact already exists.
-    #[serde(rename = "contactAlreadyExists")]
-    ContactAlreadyExists(Arc<ContactAlreadyExistsResponse>),
-    /// SentInvitation: Invitation sent to contact address.
-    #[serde(rename = "sentInvitation")]
-    SentInvitation(Arc<SentInvitationResponse>),
-}
-
-impl ConnectResponses {
-    pub fn sent_confirmation(&self) -> Option<&SentConfirmationResponse> {
-        if let Self::SentConfirmation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn contact_already_exists(&self) -> Option<&ContactAlreadyExistsResponse> {
-        if let Self::ContactAlreadyExists(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn sent_invitation(&self) -> Option<&SentInvitationResponse> {
-        if let Self::SentInvitation(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ApiDeleteChatResponses {
-    /// ContactDeleted: Contact deleted.
-    #[serde(rename = "contactDeleted")]
-    ContactDeleted(Arc<ContactDeletedResponse>),
-    /// ContactConnectionDeleted: Connection deleted.
-    #[serde(rename = "contactConnectionDeleted")]
-    ContactConnectionDeleted(Arc<ContactConnectionDeletedResponse>),
-    /// GroupDeletedUser: User deleted group.
-    #[serde(rename = "groupDeletedUser")]
-    GroupDeletedUser(Arc<GroupDeletedUserResponse>),
-}
-
-impl ApiDeleteChatResponses {
-    pub fn contact_deleted(&self) -> Option<&ContactDeletedResponse> {
-        if let Self::ContactDeleted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn contact_connection_deleted(&self) -> Option<&ContactConnectionDeletedResponse> {
-        if let Self::ContactConnectionDeleted(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn group_deleted_user(&self) -> Option<&GroupDeletedUserResponse> {
-        if let Self::GroupDeletedUser(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ApiUpdateProfileResponses {
-    /// UserProfileUpdated: User profile updated.
-    #[serde(rename = "userProfileUpdated")]
-    UserProfileUpdated(Arc<UserProfileUpdatedResponse>),
-    /// UserProfileNoChange: User profile was not changed.
-    #[serde(rename = "userProfileNoChange")]
-    UserProfileNoChange(Arc<User>),
-}
-
-impl ApiUpdateProfileResponses {
-    pub fn user_profile_updated(&self) -> Option<&UserProfileUpdatedResponse> {
-        if let Self::UserProfileUpdated(ret) = self {
-            Some(ret)
-        } else {
-            None
-        }
-    }
-
-    pub fn user_profile_no_change(&self) -> Option<&User> {
-        if let Self::UserProfileNoChange(ret) = self {
-            Some(ret)
-        } else {
-            None
+impl<T> ExtractResponse<T> for FfiResponseShape<T>
+where
+    T: DeserializeOwned,
+{
+    fn extract_response(self) -> Result<T, BadResponseError> {
+        match self {
+            Self::Result(resp) => Ok(resp),
+            Self::Error(err) => Err(BadResponseError::ChatError(err)),
+            Self::Undocumented(json) => Err(BadResponseError::Undocumented(json)),
         }
     }
 }
 
 #[derive(Debug)]
 pub enum BadResponseError {
-    ChatCmdError(Arc<ChatError>),
+    ChatError(Arc<ChatError>),
+    InvalidJson(serde_json::Error),
     Undocumented(JsonObject),
 }
 
-impl std::error::Error for BadResponseError {}
+impl std::error::Error for BadResponseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::ChatError(error) => Some(error.as_ref()),
+            Self::InvalidJson(error) => Some(error),
+            Self::Undocumented(_) => None,
+        }
+    }
+}
 
 impl std::fmt::Display for BadResponseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ChatCmdError(resp) => writeln!(
-                f,
-                "Bad server response:\n{}",
-                serde_json::to_string_pretty(resp).unwrap()
-            ),
-            Self::Undocumented(resp) => writeln!(
-                f,
-                "Unexpected server response:\n{}",
-                serde_json::to_string_pretty(resp).unwrap()
-            ),
+            Self::ChatError(resp) => writeln!(f, "Bad response:\n{resp:#}"),
+            Self::Undocumented(resp) => writeln!(f, "Unexpected response:\n{resp:#}"),
+            Self::InvalidJson(err) => writeln!(f, "Invalid JSON:\n{err:#}"),
         }
     }
 }

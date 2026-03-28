@@ -4,7 +4,7 @@ use std::{collections::btree_map::Entry, io::Write as _};
 
 use convert_case::{Case, Casing};
 use simploxide_bindgen::{
-    commands::{self, CommandFmt, CommandResponse, CommandResponseTraitMethod, ResponseWrapperFmt},
+    commands::{self, CommandFmt, CommandResponse, CommandResponseTraitMethod, ResponseFmt},
     events,
     syntax::Interpretable,
     types::{
@@ -171,6 +171,16 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
                             field.typ.insert_str(typ_start, "errors::");
                         }
                     }
+                } else if part.record.name == "SubscriptionStatus" {
+                    // FIXME: RESOLVE THE MARKDOWN TYPE LINKS GOD DAMN IT!
+                    if let Some(external) = part
+                        .record
+                        .fields
+                        .iter_mut()
+                        .find(|x| x.typ == "SubscriptionStatus")
+                    {
+                        external.typ = format!("crate::{}", external.typ);
+                    }
                 }
 
                 part
@@ -213,6 +223,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     writeln!(responses_rs, "use super::{{*, errors::*}};")?;
     writeln!(responses_rs)?;
 
+    writeln!(client_api_rs, "use serde::de::DeserializeOwned;")?;
     writeln!(
         client_api_rs,
         "use crate::{{*, responses::*, commands::*, utils::CommandSyntax}};"
@@ -221,25 +232,28 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     writeln!(client_api_rs, "use std::sync::Arc;")?;
     writeln!(commands_rs, "use std::fmt::Write;")?;
     writeln!(client_api_rs)?;
-    writeln!(client_api_rs, "{}\n", CLIENT_API_ERROR_TRAIT)?;
+    writeln!(client_api_rs, "{}\n", CLIENT_API_TRAITS)?;
 
     writeln!(client_api_rs, "pub trait ClientApi: Sync {{")?;
+    writeln!(
+        client_api_rs,
+        "    type ResponseShape<T>: ExtractResponse<T> where T: for<'de> Deserialize<'de>;"
+    )?;
     writeln!(client_api_rs, "    type Error: ClientApiError;")?;
     writeln!(client_api_rs)?;
     writeln!(
         client_api_rs,
-        "    fn send_raw(&self, command: String) -> impl Future<Output = Result<JsonObject, Self::Error>> + Send;"
+        "    fn send_raw(&self, command: String) -> impl Future<Output = Result<String, Self::Error>> + Send;"
     )?;
     writeln!(client_api_rs)?;
 
     let mut unique_response_shapes: BTreeMap<String, RecordType> = BTreeMap::new();
-    let mut helper_api_wrappers: Vec<ResponseWrapperFmt> = Vec::with_capacity(40);
 
     let chat_cmd_error = DiscriminatedUnionVariant::from_api_name(
         "chatCmdError".to_owned(),
         vec![Field::from_api_name(
             "chatError".to_owned(),
-            "ChatError".to_owned(),
+            "Arc<ChatError>".to_owned(),
         )],
     );
 
@@ -259,13 +273,9 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
         writeln!(commands_rs, "{syntax_interpreter}\n")?;
 
         // ========== Process response ==============
-        if !response
+        response
             .variants
-            .iter()
-            .any(|v| v.api_name == chat_cmd_error.api_name)
-        {
-            response.variants.push(chat_cmd_error.clone());
-        }
+            .retain(|v| v.api_name != chat_cmd_error.api_name);
 
         let (mut response, shapes) = response.disjoin();
 
@@ -291,15 +301,27 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
             var.fields[0].typ.push_str("Response");
         }
 
-        writeln!(responses_rs, "{response}\n")?;
+        writeln!(responses_rs, "{}\n", ResponseFmt(&response))?;
 
         // ========== Process trait method ==============
         let method = CommandResponseTraitMethod::new(&command, &response, &shapes);
         writeln!(client_api_rs, "{method}\n")?;
+    }
 
-        if let Some(wrapper) = method.response_wrapper() {
-            helper_api_wrappers.push(wrapper);
-        }
+    // ========== Process chat cmd error==============
+    let mut error_response =
+        DiscriminatedUnionType::new("ChatCmdError".to_owned(), vec![chat_cmd_error]);
+
+    for var in error_response.variants.iter_mut() {
+        var.rust_name.push_str("Response");
+    }
+
+    let (response, shapes) = error_response.disjoin();
+
+    writeln!(responses_rs, "{}\n", ResponseFmt(&response))?;
+
+    for shape in shapes {
+        writeln!(responses_rs, "{shape}")?;
     }
 
     // ========== Process response structs ==============
@@ -310,9 +332,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     // ========== Process helper API types ==============
     writeln!(client_api_rs, "}}\n")?;
 
-    for wrapper in helper_api_wrappers {
-        writeln!(client_api_rs, "{wrapper}")?;
-    }
+    writeln!(client_api_rs, "{}", RESPONSE_EXTRACTORS)?;
 
     writeln!(client_api_rs, "{}", BAD_RESPONSE_SHENINGANS)?;
 
@@ -421,31 +441,116 @@ impl<T: CommandSyntax> CommandSyntax for Option<T> {
 }
 "#;
 
-const BAD_RESPONSE_SHENINGANS: &str = r#"
-#[derive(Debug)]
-pub enum BadResponseError {
-    ChatCmdError(Arc<ChatError>),
+const CLIENT_API_TRAITS: &str = r#"
+/// A helper trait to handle different response wrappers
+pub trait ExtractResponse<T>: DeserializeOwned {
+    fn extract_response(self) -> Result<T, BadResponseError>;
+}
+
+
+pub trait ClientApiError: From<BadResponseError> + std::error::Error {
+    /// If current error is a bad response error return a mut reference to it!
+    ///
+    /// Required for [`AllowUndocumentedResponses`] impl.
+    fn bad_response_mut(&mut self) -> Option<&mut BadResponseError>;
+}
+"#;
+
+const RESPONSE_EXTRACTORS: &str = r#"
+/// Use this as [`ClientApi::ResponseShape`] to extract web socket responses
+#[derive(Serialize, Deserialize)]
+pub struct WebSocketResponseShape<T> {
+    pub resp: WebSocketResponseShapeInner<T>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum WebSocketResponseShapeInner<T> {
+    Response(T),
+    Error(ChatCmdError),
     Undocumented(JsonObject),
 }
 
-impl std::error::Error for BadResponseError {}
+impl<T> ExtractResponse<T> for WebSocketResponseShape<T>
+where
+    T: DeserializeOwned,
+{
+    fn extract_response(self) -> Result<T, BadResponseError> {
+        self.resp.extract_response()
+    }
+}
+
+impl<T> ExtractResponse<T> for WebSocketResponseShapeInner<T>
+where
+    T: DeserializeOwned,
+{
+    fn extract_response(self) -> Result<T, BadResponseError> {
+        match self {
+            Self::Response(resp) => Ok(resp),
+            Self::Error(err) => Err(BadResponseError::ChatError(
+                err.into_inner().chat_error.clone(),
+            )),
+            Self::Undocumented(json) => Err(BadResponseError::Undocumented(json)),
+        }
+    }
+}
+
+
+/// Use this as [`ClientApi::ResponseShape`] to extract FFI responses
+#[derive(Serialize, Deserialize)]
+pub enum FfiResponseShape<T> {
+    #[serde(rename = "result")]
+    Result(T),
+
+    #[serde(rename = "error")]
+    Error(Arc<ChatError>),
+
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl<T> ExtractResponse<T> for FfiResponseShape<T>
+where
+    T: DeserializeOwned
+{
+    fn extract_response(self) -> Result<T, BadResponseError> {
+        match self {
+            Self::Result(resp) => Ok(resp),
+            Self::Error(err) => Err(BadResponseError::ChatError(err)),
+            Self::Undocumented(json) => Err(BadResponseError::Undocumented(json)),
+        }
+    }
+}
+"#;
+
+const BAD_RESPONSE_SHENINGANS: &str = r#"
+#[derive(Debug)]
+pub enum BadResponseError {
+    ChatError(Arc<ChatError>),
+    InvalidJson(serde_json::Error),
+    Undocumented(JsonObject),
+}
+
+impl std::error::Error for BadResponseError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::ChatError(error) => Some(error.as_ref()),
+            Self::InvalidJson(error) => Some(error),
+            Self::Undocumented(_) => None,
+        }
+    }
+}
 
 impl std::fmt::Display for BadResponseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ChatCmdError(resp) => writeln!(
-                f,
-                "Bad server response:\n{}",
-                serde_json::to_string_pretty(resp).unwrap()
-            ),
-            Self::Undocumented(resp) => writeln!(
-                f,
-                "Unexpected server response:\n{}",
-                serde_json::to_string_pretty(resp).unwrap()
-            ),
+            Self::ChatError(resp) => writeln!(f, "Bad response:\n{resp:#}"),
+            Self::Undocumented(resp) => writeln!(f, "Unexpected response:\n{resp:#}"),
+            Self::InvalidJson(err) => writeln!(f, "Invalid JSON:\n{err:#}"),
         }
     }
 }
+
 
 pub enum UndocumentedResponse<T> {
     Documented(T),
@@ -491,15 +596,6 @@ where
             },
         }
     }
-}
-"#;
-
-const CLIENT_API_ERROR_TRAIT: &str = r#"
-pub trait ClientApiError: From<BadResponseError> + std::error::Error {
-    /// If current error is a bad response error return a mut reference to it!
-    ///
-    /// Required for [`AllowUndocumentedResponses`] impl.
-    fn bad_response_mut(&mut self) -> Option<&mut BadResponseError>;
 }
 "#;
 

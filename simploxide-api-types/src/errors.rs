@@ -126,6 +126,20 @@ pub enum AgentErrorType {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "NOTICE")]
+    Notice {
+        #[serde(rename = "server")]
+        server: String,
+
+        #[serde(rename = "preset", default)]
+        preset: bool,
+
+        #[serde(rename = "expiresAt", skip_serializing_if = "Option::is_none")]
+        expires_at: Option<UtcTime>,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(rename = "INTERNAL")]
     Internal {
         #[serde(rename = "internalErr")]
@@ -136,7 +150,7 @@ pub enum AgentErrorType {
     },
     #[serde(rename = "CRITICAL")]
     Critical {
-        #[serde(rename = "offerRestart")]
+        #[serde(rename = "offerRestart", default)]
         offer_restart: bool,
 
         #[serde(rename = "criticalErr")]
@@ -213,6 +227,9 @@ pub enum ChatError {
     ErrorAgent {
         #[serde(rename = "agentError")]
         agent_error: AgentErrorType,
+
+        #[serde(rename = "agentConnId")]
+        agent_conn_id: String,
 
         #[serde(rename = "connectionEntity_", skip_serializing_if = "Option::is_none")]
         connection_entity: Option<ConnectionEntity>,
@@ -464,7 +481,7 @@ pub enum ChatErrorType {
         #[serde(rename = "member")]
         member: GroupMember,
 
-        #[serde(rename = "setShowMessages")]
+        #[serde(rename = "setShowMessages", default)]
         set_show_messages: bool,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
@@ -540,17 +557,6 @@ pub enum ChatErrorType {
     FileAlreadyExists {
         #[serde(rename = "filePath")]
         file_path: String,
-
-        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
-        undocumented: JsonObject,
-    },
-    #[serde(rename = "fileRead")]
-    FileRead {
-        #[serde(rename = "filePath")]
-        file_path: String,
-
-        #[serde(rename = "message")]
-        message: String,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
@@ -1451,6 +1457,28 @@ pub enum StoreError {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "groupMemberNotFoundByIndex")]
+    GroupMemberNotFoundByIndex {
+        #[serde(
+            rename = "groupMemberIndex",
+            deserialize_with = "deserialize_number_from_string"
+        )]
+        group_member_index: i64,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "memberRelationsVectorNotFound")]
+    MemberRelationsVectorNotFound {
+        #[serde(
+            rename = "groupMemberId",
+            deserialize_with = "deserialize_number_from_string"
+        )]
+        group_member_id: i64,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(rename = "groupHostMemberNotFound")]
     GroupHostMemberNotFound {
         #[serde(
@@ -1481,6 +1509,8 @@ pub enum StoreError {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "invalidMemberRelationUpdate")]
+    InvalidMemberRelationUpdate,
     #[serde(rename = "groupWithoutUser")]
     GroupWithoutUser,
     #[serde(rename = "duplicateGroupMember")]
@@ -1638,8 +1668,6 @@ pub enum StoreError {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
-    #[serde(rename = "introNotFound")]
-    IntroNotFound,
     #[serde(rename = "uniqueID")]
     UniqueId,
     #[serde(rename = "largeMsg")]
@@ -1882,6 +1910,46 @@ pub enum StoreError {
     InvalidQuote,
     #[serde(rename = "invalidMention")]
     InvalidMention,
+    #[serde(rename = "invalidDeliveryTask")]
+    InvalidDeliveryTask {
+        #[serde(rename = "taskId", deserialize_with = "deserialize_number_from_string")]
+        task_id: i64,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "deliveryTaskNotFound")]
+    DeliveryTaskNotFound {
+        #[serde(rename = "taskId", deserialize_with = "deserialize_number_from_string")]
+        task_id: i64,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "invalidDeliveryJob")]
+    InvalidDeliveryJob {
+        #[serde(rename = "jobId", deserialize_with = "deserialize_number_from_string")]
+        job_id: i64,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "deliveryJobNotFound")]
+    DeliveryJobNotFound {
+        #[serde(rename = "jobId", deserialize_with = "deserialize_number_from_string")]
+        job_id: i64,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "workItemError")]
+    WorkItemError {
+        #[serde(rename = "errContext")]
+        err_context: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(untagged)]
     Undocumented(JsonObject),
 }

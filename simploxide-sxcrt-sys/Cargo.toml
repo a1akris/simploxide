@@ -1,0 +1,19 @@
+[package]
+name = "simploxide-sxcrt-sys"
+version = "0.1.0"
+edition = "2024"
+authors = ["a1akris <alkrivitskiy@pm.me>"]
+license = "AGPL-3.0"
+exclude = ["sxcrt", "test_db"]
+
+description = "SimpleX-Chat FFI bindings"
+readme = "README.md"
+repository = "https://github.com/a1akris/simploxide"
+documentation = "https://docs.rs/simploxide-sxcrt-sys"
+categories = ["development-tools", "api-bindings"]
+keywords = ["simplex", "chat", "ffi"]
+
+[dependencies]
+libc = "0.2.183"
+serde.workspace = true
+serde_json.workspace = true
