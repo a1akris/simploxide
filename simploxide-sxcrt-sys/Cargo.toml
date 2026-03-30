@@ -4,16 +4,33 @@ version = "0.1.0"
 edition = "2024"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 license = "AGPL-3.0"
-exclude = ["sxcrt", "test_db"]
-
+exclude = [
+    "sxcrt",
+    "test_db",
+    "simplex-static/cabal-store",
+    "simplex-static/dist-newstyle",
+    "simplex-static/libsimplex.a",
+    "simplex-static/cabal.project.local",
+    "simplex-static/.sqlcipher_linkage",
+]
+links = "simplex"
 description = "SimpleX-Chat FFI bindings"
 readme = "README.md"
 repository = "https://github.com/a1akris/simploxide"
 documentation = "https://docs.rs/simploxide-sxcrt-sys"
 categories = ["development-tools", "api-bindings"]
-keywords = ["simplex", "chat", "ffi"]
+keywords = ["simplex-chat", "ffi"]
+
+[features]
+# Build libsimplex.a from source (requires GHC in PATH, takes a long time).
+# Disabled by default. Set SXCRT env variable to use pre-built .so files from the SimpleX-Chat team instead.
+build-sxcrt = []
+# embed SQLCipher statically into libsimplex.a. Only meaningful with build-sxcrt.
+# By default system libsqlcipher is used.
+embed-sqlcipher = ["build-sxcrt"]
 
 [dependencies]
-libc = "0.2.183"
-serde.workspace = true
-serde_json.workspace = true
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"

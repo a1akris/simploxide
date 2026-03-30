@@ -25,12 +25,9 @@ impl SimpleXChat {
         HASKELL_RUNTIME.call_once(haskell_init);
 
         let mut handle: Handle = std::ptr::null_mut();
-        let string = Self::init_raw(
-            CString::new(db_path).map_err(CallError::NullByteInput)?,
-            CString::new(db_key).map_err(CallError::NullByteInput)?,
-            migration.as_cstr(),
-            &mut handle,
-        )?;
+        let db_path = CString::new(db_path).map_err(CallError::NullByteInput)?;
+        let db_key = CString::new(db_key).map_err(CallError::NullByteInput)?;
+        let string = Self::init_raw(&db_path, &db_key, migration.as_cstr(), &mut handle)?;
 
         #[derive(Deserialize)]
         struct Response<'a> {
@@ -52,6 +49,7 @@ impl SimpleXChat {
     pub fn send_cmd(&mut self, cmd: String) -> Result<String, CallError> {
         let ccmd = CString::new(cmd)?;
         let mut c_res = unsafe { bindings::chat_send_cmd(self.0, ccmd.as_ptr()) };
+        drop(ccmd);
         c_res_to_string(&mut c_res)
     }
 
@@ -66,8 +64,8 @@ impl SimpleXChat {
     }
 
     fn init_raw(
-        db_path: CString,
-        db_key: CString,
+        db_path: &CStr,
+        db_key: &CStr,
         migration: &'static CStr,
         handle: &mut Handle,
     ) -> Result<String, CallError> {
@@ -113,17 +111,17 @@ impl MigrationConfirmation {
 
 fn haskell_init() {
     #[cfg(target_os = "windows")]
-    let mut args = [
+    let args = Box::new([
         c"simplex".as_ptr() as *mut c_char,
         c"+RTS".as_ptr() as *mut c_char,
         c"-A64m".as_ptr() as *mut c_char,
         c"-H64m".as_ptr() as *mut c_char,
         c"--install-signal-handlers=no".as_ptr() as *mut c_char,
         std::ptr::null_mut(),
-    ];
+    ]);
 
     #[cfg(not(target_os = "windows"))]
-    let mut args = [
+    let args = Box::new([
         c"simplex".as_ptr() as *mut c_char,
         c"+RTS".as_ptr() as *mut c_char,
         c"-A64m".as_ptr() as *mut c_char,
@@ -131,10 +129,10 @@ fn haskell_init() {
         c"-xn".as_ptr() as *mut c_char,
         c"--install-signal-handlers=no".as_ptr() as *mut c_char,
         std::ptr::null_mut(),
-    ];
+    ]);
 
     let mut argc: c_int = (args.len() - 1) as c_int;
-    let mut pargv: *mut *mut c_char = args.as_mut_ptr();
+    let mut pargv: *mut *mut c_char = Box::leak(args).as_mut_ptr();
 
     unsafe {
         bindings::hs_init_with_rtsopts(&mut argc, &mut pargv);
@@ -149,8 +147,9 @@ fn c_res_to_string(c_res: &mut *mut c_char) -> Result<String, CallError> {
 
         // SAFETY:
         // * SimpleX-Core-FFI functions should return valid null-terminated C strings
-        // * c_res is not null(checked above)
-        // * c_res memory is not mutating and hold exclusively while CStr::from_ptr borrow is hold
+        // * c_res ptr is not null(checked above)
+        // * c_res memory is not mutating and is hold exclusively while CStr::from_ptr borrow is
+        //   active(ensured by &mut in the outer method)
         let string = unsafe { CStr::from_ptr(c_res).to_str()?.to_owned() };
         Ok(string)
     }
