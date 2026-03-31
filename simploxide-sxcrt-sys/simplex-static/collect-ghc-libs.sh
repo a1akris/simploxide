@@ -4,6 +4,11 @@
 # Copies the GHC boot .so files required at runtime by libsimplex.a into <dest-dir>.
 # The selected set mirrors the needed_ghc_lib() filter in build.rs exactly.
 #
+# Also copies libsqlcipher.so (built by build-sqlcipher.sh / make sqlcipher) if it
+# exists next to this script.  Shipping our own libsqlcipher.so in sxcrt/ ensures
+# that consumers load the exact SQLCipher version that simplex-chat was compiled
+# against, regardless of what the system has installed.
+#
 # By default the source dir is auto-detected via `ghc --print-libdir`.
 # Set GHC_LIBS to override.
 
@@ -69,7 +74,7 @@ needed_ghc_lib() {
         "HSexceptions-"
         "HSfilepath-"
         "HSghc-bignum-"
-        "HSghc-boot-th"
+        "HSghc-boot-th-"
         "HSghc-prim-"
         "HSinteger-gmp-"
         "HSmtl-"
@@ -104,4 +109,4 @@ for filepath in "$GHC_LIB_DIR"/lib*.so; do
     fi
 done
 
-echo "Collected $count .so files into $DEST"
+echo "Collected $count GHC boot .so files into $DEST"

@@ -19,8 +19,6 @@ bon = ["simploxide-api-types/bon"]
 cli = ["websocket", "simploxide-ws-core/cli"]
 ffi = ["dep:simploxide-ffi-core"]
 websocket = ["dep:simploxide-ws-core"]
-build-sxcrt = ["ffi", "simploxide-ffi-core/build-sxcrt"]
-embed-sqlcipher = ["ffi", "simploxide-ffi-core/embed-sqlcipher"]
 
 [dependencies]
 futures.workspace = true

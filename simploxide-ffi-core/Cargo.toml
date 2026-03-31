@@ -3,10 +3,6 @@ name = "simploxide-ffi-core"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-build-sxcrt = ["simploxide-sxcrt-sys/build-sxcrt"]
-embed-sqlcipher = ["simploxide-sxcrt-sys/embed-sqlcipher"]
-
 [dependencies]
 tokio = { workspace = true }
 serde_json.workspace = true
