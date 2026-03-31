@@ -1,12 +1,12 @@
 source-repository-package
     type: git
     location: https://github.com/simplex-chat/simplex-chat
-    tag: f4e2ccc9dcb3ed198645db7be50858695946665a
+    tag: 580e781a66ad16b11b67c9dc7296b18111aa2bc2
 
 source-repository-package
     type: git
     location: https://github.com/simplex-chat/simplexmq.git
-    tag: 782cacfb3cc57883465eecc0b9b30662daf2b81f
+    tag: 50b71d3e569c85e788609f921ec1ae389c15abd3
 
 source-repository-package
     type: git
@@ -58,14 +58,16 @@ source-repository-package
     tag: 2f6e5aa5f05ba9140ac99e195ee647b4f7d926b0
     subdir: warp
 
+constraints: zip +disable-bzip2 +disable-zstd
+
 package *
   ghc-options: -split-sections -fPIC -fexternal-dynamic-refs -optc-fPIC
 
 package simplex-chat
   flags: +client_library
 
-package direct-sqlcipher
-  flags: +systemlib +openssl
-
 package cryptostore
-    flags: +use_crypton
+  flags: +use_crypton
+
+package direct-sqlcipher
+  flags: +openssl

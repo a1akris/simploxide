@@ -1,1 +1,9 @@
 /test_db
+simplex-static/libsimplex.a
+simplex-static/libsqlcipher.so
+simplex-static/libsqlite3.so
+simplex-static/sqlite3.h
+simplex-static/cabal.project.local
+simplex-static/.simplex-symbols.txt
+simplex-static/dist-newstyle
+simplex-static/cabal-store

@@ -43,16 +43,7 @@ echo "Stripping unneeded symbols..."
 strip --strip-unneeded "$OUT"
 
 echo ""
-echo "=== Verifying FFI exports ==="
-nm "$OUT" 2>/dev/null | grep -E "T (hs_init_with_rtsopts|chat_migrate_init|chat_send_cmd)" \
-    || echo "WARNING: expected symbols not found"
-
-echo ""
 echo "Done: $OUT ($(du -sh "$OUT" | cut -f1))"
 echo ""
-if [ "${SQLCIPHER_LINKAGE:-static}" = "dynamic" ]; then
-    echo "Consumers must link with: -lsqlcipher -lcrypto -lssl -lffi -lgmp -lpthread -lm"
-else
-    echo "Consumers must link with: -lcrypto -lssl -lffi -lgmp -lpthread -lm"
-fi
+
 echo "GHC boot libs must be linked dynamically from: \$(ghc --print-libdir)"

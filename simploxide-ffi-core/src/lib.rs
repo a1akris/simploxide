@@ -151,12 +151,12 @@ fn chat_init(default_user: DefaultUser, db_opts: DbOpts) -> Result<SimpleXChat, 
 
 fn chat_worker(mut chat: SimpleXChat, rx: ChatWorkerReceiver, ev_tx: EventTransmitter) {
     // TODO: Make it configurable
-    const MAX_LATENCY: std::time::Duration = std::time::Duration::from_millis(50);
+    const POLL_LATENCY: std::time::Duration = std::time::Duration::from_millis(250);
 
     let mut msg_wait_error = false;
     'outer: loop {
         loop {
-            match chat.recv_msg_wait(MAX_LATENCY) {
+            match chat.recv_msg_wait(POLL_LATENCY) {
                 Ok(event) if event.is_empty() => break,
                 Ok(event) => {
                     let _ = ev_tx.send(Ok(event));
@@ -170,7 +170,7 @@ fn chat_worker(mut chat: SimpleXChat, rx: ChatWorkerReceiver, ev_tx: EventTransm
         }
 
         loop {
-            match rx.recv_timeout(MAX_LATENCY) {
+            match rx.recv_timeout(POLL_LATENCY) {
                 Ok(ChatWorkerCommand::Execute(command, responder)) => {
                     let output = chat.send_cmd(command);
                     let _ = responder.send(output);
@@ -184,7 +184,7 @@ fn chat_worker(mut chat: SimpleXChat, rx: ChatWorkerReceiver, ev_tx: EventTransm
     }
 
     loop {
-        match rx.recv_timeout(MAX_LATENCY) {
+        match rx.recv_timeout(POLL_LATENCY) {
             Ok(ChatWorkerCommand::Execute(_, responder)) => {
                 let _ = responder.send(Err(CallError::Failure));
             }
@@ -197,7 +197,7 @@ fn chat_worker(mut chat: SimpleXChat, rx: ChatWorkerReceiver, ev_tx: EventTransm
 
     if !msg_wait_error {
         loop {
-            match chat.recv_msg_wait(MAX_LATENCY) {
+            match chat.recv_msg_wait(POLL_LATENCY) {
                 Ok(event) if event.is_empty() => break,
                 Ok(event) => {
                     if ev_tx.send(Ok(event)).is_err() {

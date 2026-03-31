@@ -24,21 +24,9 @@ fn main() -> BuildResult {
                 .map_err(|_| format!("SIMPLEX_STATIC_DIR not found: {dir}"))?;
             link_with_static_lib(dir)
         }
-        // Static path: copy embedded simplex-static into OUT_DIR and build there
-        (Err(_), Err(_)) => {
-            if std::env::var("CARGO_FEATURE_BUILD_SXCRT").is_err() {
-                return Err("set SXCRT to a directory with pre-built SimpleX .so files, or enable the build-sxcrt feature to build libsimplex.a from source".into());
-            }
-            let out_dir = std::env::var("OUT_DIR")?;
-            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")?;
-            let src = std::path::PathBuf::from(manifest_dir).join("simplex-static");
-            let build_dir = std::path::PathBuf::from(out_dir).join("simplex-static");
-            std::fs::create_dir_all(&build_dir)?;
-            for file in &["Makefile", "bundle.sh", "cabal.project"] {
-                std::fs::copy(src.join(file), build_dir.join(file))?;
-            }
-            link_with_static_lib(build_dir)
-        }
+        (Err(_), Err(_)) => Err("set SXCRT to use a pre-built SimpleX .so bundle, \
+             or set SIMPLEX_STATIC_DIR to build libsimplex.a from source"
+            .into()),
     }
 }
 
@@ -86,7 +74,6 @@ fn link_with_sxcrt(runtime_dir: String) -> BuildResult {
 //
 // Environment variables:
 //   SIMPLEX_STATIC_DIR  path to a simplex-static project dir overriding the embedded one
-//   SQLCIPHER_LINKAGE   passed through to make: "dyanmic" (default) or "static"
 //   GHC_LIBS            dir containing GHC boot .so files
 //                       (default: auto-detected via `ghc --print-libdir`)
 fn link_with_static_lib(dir: std::path::PathBuf) -> BuildResult {
@@ -101,12 +88,7 @@ fn link_with_static_lib(dir: std::path::PathBuf) -> BuildResult {
     println!("cargo:rustc-link-search=native={}", dir.display());
     println!("cargo:rustc-link-lib=static=simplex");
 
-    // C dependencies of simplex-chat
-    let embed_sqlcipher = std::env::var("CARGO_FEATURE_EMBED_SQLCIPHER").is_ok();
-    if !embed_sqlcipher {
-        println!("cargo:rustc-link-lib=sqlcipher");
-    }
-    for lib in &["crypto", "ssl", "ffi", "gmp", "z", "bz2", "pthread", "m"] {
+    for lib in &["crypto", "ssl", "z", "ffi", "gmp", "pthread", "m"] {
         println!("cargo:rustc-link-lib={lib}");
     }
 
@@ -114,15 +96,16 @@ fn link_with_static_lib(dir: std::path::PathBuf) -> BuildResult {
     // Both link-time and runtime paths must point to the same directory.
     let ghc_libs = ghc_libs_dir()?;
     println!("cargo:rustc-link-search=native={}", ghc_libs.display());
+    // set -rpath for local tests
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}", ghc_libs.display());
 
     println!("cargo:rustc-link-arg=-Wl,--start-group");
     for entry in std::fs::read_dir(&ghc_libs)? {
         let path = entry?.path();
-        if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-            if let Some(lib_name) = needed_ghc_lib(filename) {
-                println!("cargo:rustc-link-lib=dylib={lib_name}");
-            }
+        if let Some(filename) = path.file_name().and_then(|n| n.to_str())
+            && let Some(lib_name) = needed_ghc_lib(filename)
+        {
+            println!("cargo:rustc-link-lib=dylib={lib_name}");
         }
     }
     println!("cargo:rustc-link-arg=-Wl,--end-group");
@@ -131,19 +114,14 @@ fn link_with_static_lib(dir: std::path::PathBuf) -> BuildResult {
 }
 
 fn build_libsimplex(dir: &std::path::Path) -> BuildResult {
-    let sqlcipher_linkage = if std::env::var("CARGO_FEATURE_EMBED_SQLCIPHER").is_ok() {
-        "static"
-    } else {
-        "dynamic"
-    };
     let status = std::process::Command::new("make")
-        .arg("bundle")
-        .arg(format!("SQLCIPHER_LINKAGE={sqlcipher_linkage}"))
         .current_dir(dir)
         .status()?;
+
     if !status.success() {
         return Err(format!("make bundle failed in {}", dir.display()).into());
     }
+
     Ok(())
 }
 
@@ -202,8 +180,8 @@ fn needed_ghc_lib(filename: &str) -> Option<&str> {
         "HSdirectory-",
         "HSexceptions-",
         "HSfilepath-",
-        "HSghc-boot-th-",
         "HSghc-bignum-",
+        "HSghc-boot-th-",
         "HSghc-prim-",
         "HSinteger-gmp-",
         "HSmtl-",

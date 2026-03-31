@@ -18,17 +18,28 @@ pub async fn init(
     db_opts: DbOpts,
 ) -> Result<(Client, EventStream), InitError> {
     let (raw_client, raw_event_queue) = simploxide_ffi_core::init(default_user, db_opts).await?;
-    Ok((Client::new(raw_client), EventStream::from(raw_event_queue)))
+    Ok((Client::from(raw_client), EventStream::from(raw_event_queue)))
 }
 
+/// A cheaply clonable high-level FFI client implementing [`ClientApi`]
 #[derive(Clone)]
 pub struct Client {
     inner: RawClient,
 }
 
+impl From<RawClient> for Client {
+    fn from(inner: RawClient) -> Self {
+        Self { inner }
+    }
+}
+
+/// A high level SimpleX-Chat client which provides typed API methods with automatic command
+/// serialization and response deserialization.
 impl Client {
-    fn new(raw_client: RawClient) -> Self {
-        Self { inner: raw_client }
+    /// Initiates a graceful shutdown for the underlying web socket connection. See
+    /// [`simploxide_core::RawClient::disconnect`] for details.
+    pub fn disconnect(self) {
+        self.inner.disconnect();
     }
 }
 
@@ -121,4 +132,3 @@ impl ClientApiError for ClientError {
         }
     }
 }
-
