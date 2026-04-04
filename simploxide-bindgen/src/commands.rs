@@ -196,7 +196,47 @@ impl std::fmt::Display for CommandFmt<'_> {
             writeln!(f, "    pub {}: {},", field.rust_name, field.typ)?;
         }
 
-        writeln!(f, "}}")
+        writeln!(f, "}}")?;
+
+        if self.0.fields.iter().any(|f| f.is_optional() || f.is_bool()) {
+            writeln!(f)?;
+            writeln!(f, "impl {} {{", self.0.name)?;
+            writeln!(
+                f,
+                "    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false"
+            )?;
+            write!(f, "    pub fn new(")?;
+
+            for (i, field) in self
+                .0
+                .fields
+                .iter()
+                .filter(|f| !f.is_optional() && !f.is_bool())
+                .enumerate()
+            {
+                if i > 0 {
+                    write!(f, ", ")?;
+                }
+                write!(f, "{}: {}", field.rust_name, field.typ)?;
+            }
+            writeln!(f, ") -> Self {{")?;
+
+            writeln!(f, "        Self {{")?;
+            for field in self.0.fields.iter() {
+                if field.is_optional() {
+                    writeln!(f, "            {}: None,", field.rust_name)?;
+                } else if field.is_bool() {
+                    writeln!(f, "            {}: false,", field.rust_name)?;
+                } else {
+                    writeln!(f, "            {},", field.rust_name)?;
+                }
+            }
+            writeln!(f, "        }}")?;
+            writeln!(f, "    }}")?;
+            writeln!(f, "}}")?;
+        }
+
+        Ok(())
     }
 }
 

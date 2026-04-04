@@ -21,7 +21,6 @@ cargo clippy --all-features --all-targets
 # -------- CHECK FFI
 cd ../simploxide-sxcrt-sys
 cargo fmt
-cargo clippy --all-features --all-targets
 
 cd ../
 

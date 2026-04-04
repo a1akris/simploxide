@@ -114,6 +114,16 @@ pub struct ApiSetProfileAddress {
     pub enable: bool,
 }
 
+impl ApiSetProfileAddress {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64) -> Self {
+        Self {
+            user_id,
+            enable: false,
+        }
+    }
+}
+
 impl CommandSyntax for ApiSetProfileAddress {
     const COMMAND_BUF_SIZE: usize = 64;
 
@@ -189,6 +199,18 @@ pub struct ApiSendMessages {
     pub composed_messages: Vec<ComposedMessage>,
 }
 
+impl ApiSendMessages {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(send_ref: ChatRef, composed_messages: Vec<ComposedMessage>) -> Self {
+        Self {
+            send_ref,
+            live_message: false,
+            ttl: None,
+            composed_messages,
+        }
+    }
+}
+
 impl CommandSyntax for ApiSendMessages {
     const COMMAND_BUF_SIZE: usize = 1024;
 
@@ -236,6 +258,18 @@ pub struct ApiUpdateChatItem {
     pub chat_item_id: i64,
     pub live_message: bool,
     pub updated_message: UpdatedMessage,
+}
+
+impl ApiUpdateChatItem {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(chat_ref: ChatRef, chat_item_id: i64, updated_message: UpdatedMessage) -> Self {
+        Self {
+            chat_ref,
+            chat_item_id,
+            live_message: false,
+            updated_message,
+        }
+    }
 }
 
 impl CommandSyntax for ApiUpdateChatItem {
@@ -382,6 +416,18 @@ pub struct ApiChatItemReaction {
     pub reaction: MsgReaction,
 }
 
+impl ApiChatItemReaction {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(chat_ref: ChatRef, chat_item_id: i64, reaction: MsgReaction) -> Self {
+        Self {
+            chat_ref,
+            chat_item_id,
+            add: false,
+            reaction,
+        }
+    }
+}
+
 impl CommandSyntax for ApiChatItemReaction {
     const COMMAND_BUF_SIZE: usize = 1024;
 
@@ -427,6 +473,19 @@ pub struct ReceiveFile {
     pub store_encrypted: Option<bool>,
     pub file_inline: Option<bool>,
     pub file_path: Option<String>,
+}
+
+impl ReceiveFile {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(file_id: i64) -> Self {
+        Self {
+            file_id,
+            user_approved_relays: false,
+            store_encrypted: None,
+            file_inline: None,
+            file_path: None,
+        }
+    }
 }
 
 impl CommandSyntax for ReceiveFile {
@@ -726,6 +785,17 @@ pub struct ApiBlockMembersForAll {
     pub blocked: bool,
 }
 
+impl ApiBlockMembersForAll {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(group_id: i64, group_member_ids: Vec<i64>) -> Self {
+        Self {
+            group_id,
+            group_member_ids,
+            blocked: false,
+        }
+    }
+}
+
 impl CommandSyntax for ApiBlockMembersForAll {
     const COMMAND_BUF_SIZE: usize = 256;
 
@@ -773,6 +843,17 @@ pub struct ApiRemoveMembers {
     pub group_id: i64,
     pub group_member_ids: Vec<i64>,
     pub with_messages: bool,
+}
+
+impl ApiRemoveMembers {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(group_id: i64, group_member_ids: Vec<i64>) -> Self {
+        Self {
+            group_id,
+            group_member_ids,
+            with_messages: false,
+        }
+    }
 }
 
 impl CommandSyntax for ApiRemoveMembers {
@@ -882,6 +963,17 @@ pub struct ApiNewGroup {
     pub user_id: i64,
     pub incognito: bool,
     pub group_profile: GroupProfile,
+}
+
+impl ApiNewGroup {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64, group_profile: GroupProfile) -> Self {
+        Self {
+            user_id,
+            incognito: false,
+            group_profile,
+        }
+    }
 }
 
 impl CommandSyntax for ApiNewGroup {
@@ -1135,6 +1227,16 @@ pub struct ApiAddContact {
     pub incognito: bool,
 }
 
+impl ApiAddContact {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64) -> Self {
+        Self {
+            user_id,
+            incognito: false,
+        }
+    }
+}
+
 impl CommandSyntax for ApiAddContact {
     const COMMAND_BUF_SIZE: usize = 64;
 
@@ -1169,6 +1271,16 @@ impl CommandSyntax for ApiAddContact {
 pub struct ApiConnectPlan {
     pub user_id: i64,
     pub connection_link: Option<String>,
+}
+
+impl ApiConnectPlan {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64) -> Self {
+        Self {
+            user_id,
+            connection_link: None,
+        }
+    }
 }
 
 impl CommandSyntax for ApiConnectPlan {
@@ -1211,6 +1323,17 @@ pub struct ApiConnect {
     pub prepared_link: Option<CreatedConnLink>,
 }
 
+impl ApiConnect {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64) -> Self {
+        Self {
+            user_id,
+            incognito: false,
+            prepared_link: None,
+        }
+    }
+}
+
 impl CommandSyntax for ApiConnect {
     const COMMAND_BUF_SIZE: usize = 256;
 
@@ -1244,6 +1367,16 @@ impl CommandSyntax for ApiConnect {
 pub struct Connect {
     pub incognito: bool,
     pub conn_link: Option<String>,
+}
+
+impl Connect {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new() -> Self {
+        Self {
+            incognito: false,
+            conn_link: None,
+        }
+    }
 }
 
 impl CommandSyntax for Connect {
@@ -1371,6 +1504,17 @@ pub struct ApiListGroups {
     pub search: Option<String>,
 }
 
+impl ApiListGroups {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64) -> Self {
+        Self {
+            user_id,
+            contact_id: None,
+            search: None,
+        }
+    }
+}
+
 impl CommandSyntax for ApiListGroups {
     const COMMAND_BUF_SIZE: usize = 256;
 
@@ -1444,6 +1588,16 @@ pub struct ApiSetGroupCustomData {
     pub custom_data: Option<JsonObject>,
 }
 
+impl ApiSetGroupCustomData {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(group_id: i64) -> Self {
+        Self {
+            group_id,
+            custom_data: None,
+        }
+    }
+}
+
 impl CommandSyntax for ApiSetGroupCustomData {
     const COMMAND_BUF_SIZE: usize = 1024;
 
@@ -1484,6 +1638,16 @@ pub struct ApiSetContactCustomData {
     pub custom_data: Option<JsonObject>,
 }
 
+impl ApiSetContactCustomData {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(contact_id: i64) -> Self {
+        Self {
+            contact_id,
+            custom_data: None,
+        }
+    }
+}
+
 impl CommandSyntax for ApiSetContactCustomData {
     const COMMAND_BUF_SIZE: usize = 1024;
 
@@ -1522,6 +1686,16 @@ impl CommandSyntax for ApiSetContactCustomData {
 pub struct ApiSetUserAutoAcceptMemberContacts {
     pub user_id: i64,
     pub on_off: bool,
+}
+
+impl ApiSetUserAutoAcceptMemberContacts {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64) -> Self {
+        Self {
+            user_id,
+            on_off: false,
+        }
+    }
 }
 
 impl CommandSyntax for ApiSetUserAutoAcceptMemberContacts {
@@ -1652,6 +1826,16 @@ pub struct ApiSetActiveUser {
     pub view_pwd: Option<String>,
 }
 
+impl ApiSetActiveUser {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64) -> Self {
+        Self {
+            user_id,
+            view_pwd: None,
+        }
+    }
+}
+
 impl CommandSyntax for ApiSetActiveUser {
     const COMMAND_BUF_SIZE: usize = 1024;
 
@@ -1689,6 +1873,17 @@ pub struct ApiDeleteUser {
     pub user_id: i64,
     pub del_smp_queues: bool,
     pub view_pwd: Option<String>,
+}
+
+impl ApiDeleteUser {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64) -> Self {
+        Self {
+            user_id,
+            del_smp_queues: false,
+            view_pwd: None,
+        }
+    }
 }
 
 impl CommandSyntax for ApiDeleteUser {
@@ -1809,6 +2004,16 @@ impl CommandSyntax for ApiSetContactPrefs {
 pub struct StartChat {
     pub main_app: bool,
     pub enable_snd_files: bool,
+}
+
+impl StartChat {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new() -> Self {
+        Self {
+            main_app: false,
+            enable_snd_files: false,
+        }
+    }
 }
 
 impl CommandSyntax for StartChat {
