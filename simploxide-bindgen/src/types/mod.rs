@@ -139,11 +139,22 @@ impl std::fmt::Display for ApiType {
     }
 }
 
+/// The source file a compound field type is defined in.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Source {
+    Types,
+    Commands,
+    Events,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
     pub api_name: String,
     pub rust_name: String,
     pub typ: String,
+    /// The source file of the compound type, parsed from the markdown link.
+    /// `None` for primitive types and same-file anchor links (`#anchor`).
+    pub source: Option<Source>,
 }
 
 impl Field {
@@ -152,6 +163,7 @@ impl Field {
             api_name: api_name.clone(),
             rust_name: api_name.remove_empty().to_case(Case::Snake),
             typ,
+            source: None,
         }
     }
     pub fn is_optional(&self) -> bool {
@@ -182,10 +194,47 @@ impl Field {
         is_compound_type(self.typ.as_str())
     }
 
+    /// The field represents some error type
+    pub fn is_error(&self) -> bool {
+        self.typ.contains("Error")
+    }
+
     /// Retrieves the inner type of Option<_> or Vec<_>
-    /// Returns None if the field type is not Option or Vec.
+    /// Retrieves the value type of `BTreeMap<Key, Value>`
+    /// Returns None if the field type is not Option, Vec or BTreeMap.
     pub fn inner_type(&self) -> Option<&str> {
         inner_type(self.typ.as_str())
+    }
+
+    /// Like [`inner_type`] but returns an offset to the inner type in cthe original type string
+    pub fn inner_type_offset(&self) -> Option<usize> {
+        inner_type_offset(self.typ.as_str())
+    }
+
+    /// Returns a base type(a type with all container types unwrapped)
+    /// E.g.
+    /// `Message -> Message`
+    /// `Option<Message> -> Message`
+    /// `BTreeMap<i64, Option<Vec<Message>>> -> Message`
+    pub fn base_type(&self) -> &str {
+        let mut ret = self.typ.as_str();
+
+        while let Some(inner) = inner_type(ret) {
+            ret = inner
+        }
+
+        ret
+    }
+
+    /// Like a [`base_type`] but returns an offset to the base type in the original type string
+    pub fn base_type_offset(&self) -> usize {
+        let mut ret = 0;
+
+        while let Some(offset) = inner_type_offset(&self.typ[ret..]) {
+            ret += offset;
+        }
+
+        ret
     }
 }
 
@@ -200,12 +249,15 @@ impl FromStr for Field {
 
         let api_name = name.trim().to_owned();
         let rust_name = api_name.remove_empty().to_case(Case::Snake);
-        let typ = resolve_type(typ.trim())?;
+        let raw_typ = typ.trim();
+        let typ = resolve_type(raw_typ)?;
+        let source = parse_field_source(raw_typ);
 
         Ok(Field {
             api_name,
             rust_name,
             typ,
+            source,
         })
     }
 }
@@ -248,15 +300,45 @@ pub fn is_compound_type(typ: &str) -> bool {
         && !is_string_type(typ)
 }
 
-/// Retrieves the inner type of Option<_> or Vec<_>
-/// Returns None if the field type is not Option or Vec.
+/// Retrieves the inner type of `Option<_>` or `Vec<_>`
+/// Retrieve the value type of `BTreeMap<Key, Value>`
+/// Returns None if the field type is not Option Vec or BTreeMap.
 pub fn inner_type(typ: &str) -> Option<&str> {
-    if let Some(opt) = typ.strip_prefix("Option<") {
-        let end = opt.rfind('>').unwrap();
-        Some(&opt[..end])
-    } else if let Some(vec) = typ.strip_prefix("Vec<") {
-        let end = vec.rfind('>').unwrap();
-        Some(&vec[..end])
+    let start = inner_type_offset(typ)?;
+    let end = typ.rfind('>')?;
+    Some(&typ[start..end])
+}
+
+pub fn inner_type_offset(typ: &str) -> Option<usize> {
+    if typ.strip_prefix("Option<").is_some() {
+        Some("Option<".len())
+    } else if typ.strip_prefix("Vec<").is_some() {
+        Some("Vec<".len())
+    } else if let Some(s) = typ.strip_prefix("BTreeMap<") {
+        let mut total_offset = s.find(',').unwrap();
+        total_offset += s[total_offset..].find(char::is_alphabetic).unwrap();
+        Some("BTreeMap<".len() + total_offset)
+    } else {
+        None
+    }
+}
+
+/// Extracts the source file from a markdown link embedded in a raw type string.
+///
+/// Handles cross-file links like `[TypeName](./TYPES.md#typename)` and returns `None`
+/// for primitives, same-file anchor links (`[TypeName](#anchor)`), or unlinked types.
+fn parse_field_source(raw_typ: &str) -> Option<Source> {
+    const LINK_START: &str = "](";
+    let url_start = raw_typ.find(LINK_START)?;
+    let rest = &raw_typ[url_start + LINK_START.len()..];
+    let url_end = rest.find(')')?;
+    let url = &rest[..url_end];
+    if url.contains("TYPES.md") {
+        Some(Source::Types)
+    } else if url.contains("COMMANDS.md") {
+        Some(Source::Commands)
+    } else if url.contains("EVENTS.md") {
+        Some(Source::Events)
     } else {
         None
     }
@@ -395,5 +477,36 @@ pub(crate) trait TopLevelDocs {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inner_type_test() {
+        let option = "Option<String>";
+        let vec = "Vec<i64>";
+        let map = "BTreeMap<i64, Option<Vec<JsonObject>>>";
+        let regular = "String";
+
+        assert_eq!(inner_type(option), Some("String"));
+        assert_eq!(inner_type(vec), Some("i64"));
+        let map_value = inner_type(map).unwrap();
+        assert_eq!(map_value, "Option<Vec<JsonObject>>");
+        let inner_vec = inner_type(map_value).unwrap();
+        assert_eq!(inner_vec, "Vec<JsonObject>");
+        let json = inner_type(inner_vec).unwrap();
+        assert_eq!(json, "JsonObject");
+
+        assert_eq!(inner_type(json), None);
+        assert_eq!(inner_type(regular), None);
+
+        let mut option = String::from(option);
+        let offset = inner_type_offset(&option).unwrap();
+        option.insert_str(offset, "NotA");
+
+        assert_eq!(option, "Option<NotAString>");
     }
 }

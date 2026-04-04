@@ -291,6 +291,8 @@ pub enum ChatErrorType {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "chatRelayExists")]
+    ChatRelayExists,
     #[serde(rename = "differentActiveUser")]
     DifferentActiveUser {
         #[serde(
@@ -722,6 +724,14 @@ pub enum ChatErrorType {
     ConnectionUserChangeProhibited,
     #[serde(rename = "peerChatVRangeIncompatible")]
     PeerChatVRangeIncompatible,
+    #[serde(rename = "relayTestError")]
+    RelayTestError {
+        #[serde(rename = "message")]
+        message: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(rename = "internalError")]
     InternalError {
         #[serde(rename = "message")]
@@ -1290,6 +1300,8 @@ pub enum StoreError {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "relayUserNotFound")]
+    RelayUserNotFound,
     #[serde(rename = "userNotFoundByName")]
     UserNotFoundByName {
         #[serde(rename = "contactName")]
@@ -1515,6 +1527,8 @@ pub enum StoreError {
     GroupWithoutUser,
     #[serde(rename = "duplicateGroupMember")]
     DuplicateGroupMember,
+    #[serde(rename = "duplicateMemberId")]
+    DuplicateMemberId,
     #[serde(rename = "groupAlreadyJoined")]
     GroupAlreadyJoined,
     #[serde(rename = "groupInvitationNotFound")]
@@ -1906,6 +1920,39 @@ pub enum StoreError {
     },
     #[serde(rename = "usageConditionsNotFound")]
     UsageConditionsNotFound,
+    #[serde(rename = "userChatRelayNotFound")]
+    UserChatRelayNotFound {
+        #[serde(
+            rename = "chatRelayId",
+            deserialize_with = "deserialize_number_from_string"
+        )]
+        chat_relay_id: i64,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "groupRelayNotFound")]
+    GroupRelayNotFound {
+        #[serde(
+            rename = "groupRelayId",
+            deserialize_with = "deserialize_number_from_string"
+        )]
+        group_relay_id: i64,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "groupRelayNotFoundByMemberId")]
+    GroupRelayNotFoundByMemberId {
+        #[serde(
+            rename = "groupMemberId",
+            deserialize_with = "deserialize_number_from_string"
+        )]
+        group_member_id: i64,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(rename = "invalidQuote")]
     InvalidQuote,
     #[serde(rename = "invalidMention")]

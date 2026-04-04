@@ -391,7 +391,7 @@ pub trait ClientApi: Sync {
     /// *Syntax:*
     ///
     /// ```
-    /// /_add #<groupId> <contactId> observer|author|member|moderator|admin|owner
+    /// /_add #<groupId> <contactId> relay|observer|author|member|moderator|admin|owner
     /// ```
     fn api_add_member(
         &self,
@@ -455,7 +455,7 @@ pub trait ClientApi: Sync {
     /// *Syntax:*
     ///
     /// ```
-    /// /_accept member #<groupId> <groupMemberId> observer|author|member|moderator|admin|owner
+    /// /_accept member #<groupId> <groupMemberId> relay|observer|author|member|moderator|admin|owner
     /// ```
     fn api_accept_member(
         &self,
@@ -490,7 +490,7 @@ pub trait ClientApi: Sync {
     /// *Syntax:*
     ///
     /// ```
-    /// /_member role #<groupId> <groupMemberIds[0]>[,<groupMemberIds[1]>...] observer|author|member|moderator|admin|owner
+    /// /_member role #<groupId> <groupMemberIds[0]>[,<groupMemberIds[1]>...] relay|observer|author|member|moderator|admin|owner
     /// ```
     fn api_members_role(
         &self,
@@ -661,6 +661,63 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
+    /// Create public group.
+    ///
+    /// *Network usage*: interactive.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_public group <userId>[ incognito=on] <relayIds[0]>[,<relayIds[1]>...] <json(groupProfile)>
+    /// ```
+    fn api_new_public_group(
+        &self,
+        command: ApiNewPublicGroup,
+    ) -> impl Future<Output = Result<Arc<PublicGroupCreatedResponse>, Self::Error>> + Send {
+        async move {
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiNewPublicGroupResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
+        }
+    }
+
+    /// ### Group commands
+    ///
+    /// Commands to manage and moderate groups. These commands can be used with business chats as well - they are groups. E.g., a common scenario would be to add human agents to business chat with the customer who connected via business address.
+    ///
+    /// ----
+    ///
+    /// Get group relays.
+    ///
+    /// *Network usage*: no.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_get relays #<groupId>
+    /// ```
+    fn api_get_group_relays(
+        &self,
+        group_id: i64,
+    ) -> impl Future<Output = Result<Arc<GroupRelaysResponse>, Self::Error>> + Send {
+        async move {
+            let command = ApiGetGroupRelays { group_id };
+            let raw = self.send_raw(command.to_command_string()).await?;
+            let response_shape: Self::ResponseShape<ApiGetGroupRelaysResponse> =
+                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response = response_shape.extract_response()?;
+            Ok(response.into_inner())
+        }
+    }
+
+    /// ### Group commands
+    ///
+    /// Commands to manage and moderate groups. These commands can be used with business chats as well - they are groups. E.g., a common scenario would be to add human agents to business chat with the customer who connected via business address.
+    ///
+    /// ----
+    ///
     /// Update group profile.
     ///
     /// *Network usage*: background.
@@ -701,7 +758,7 @@ pub trait ClientApi: Sync {
     /// *Syntax:*
     ///
     /// ```
-    /// /_create link #<groupId> observer|author|member|moderator|admin|owner
+    /// /_create link #<groupId> relay|observer|author|member|moderator|admin|owner
     /// ```
     fn api_create_group_link(
         &self,
@@ -734,7 +791,7 @@ pub trait ClientApi: Sync {
     /// *Syntax:*
     ///
     /// ```
-    /// /_set link role #<groupId> observer|author|member|moderator|admin|owner
+    /// /_set link role #<groupId> relay|observer|author|member|moderator|admin|owner
     /// ```
     fn api_group_link_member_role(
         &self,

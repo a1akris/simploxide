@@ -1,4 +1,4 @@
-use crate::{errors::*, *};
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -79,6 +79,12 @@ pub enum Event {
     /// Group events
     #[serde(rename = "groupMemberUpdated")]
     GroupMemberUpdated(Arc<GroupMemberUpdated>),
+    /// Group events
+    #[serde(rename = "groupLinkDataUpdated")]
+    GroupLinkDataUpdated(Arc<GroupLinkDataUpdated>),
+    /// Group events
+    #[serde(rename = "groupRelayUpdated")]
+    GroupRelayUpdated(Arc<GroupRelayUpdated>),
     /// File events
     #[serde(rename = "rcvFileDescrReady")]
     RcvFileDescrReady(Arc<RcvFileDescrReady>),
@@ -171,13 +177,13 @@ pub enum Event {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ContactConnected {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "contact")]
-    pub contact: Contact,
+    pub contact: crate::Contact,
 
     #[serde(rename = "userCustomProfile", skip_serializing_if = "Option::is_none")]
-    pub user_custom_profile: Option<Profile>,
+    pub user_custom_profile: Option<crate::Profile>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -203,13 +209,13 @@ pub struct ContactConnected {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ContactUpdated {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "fromContact")]
-    pub from_contact: Contact,
+    pub from_contact: crate::Contact,
 
     #[serde(rename = "toContact")]
-    pub to_contact: Contact,
+    pub to_contact: crate::Contact,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -235,10 +241,10 @@ pub struct ContactUpdated {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ContactDeletedByContact {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "contact")]
-    pub contact: Contact,
+    pub contact: crate::Contact,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -268,13 +274,13 @@ pub struct ContactDeletedByContact {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ReceivedContactRequest {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "contactRequest")]
-    pub contact_request: UserContactRequest,
+    pub contact_request: crate::UserContactRequest,
 
     #[serde(rename = "chat_", skip_serializing_if = "Option::is_none")]
-    pub chat: Option<AChat>,
+    pub chat: Option<crate::AChat>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -302,16 +308,16 @@ pub struct ReceivedContactRequest {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct NewMemberContactReceivedInv {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "contact")]
-    pub contact: Contact,
+    pub contact: crate::Contact,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -339,10 +345,10 @@ pub struct NewMemberContactReceivedInv {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ContactSndReady {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "contact")]
-    pub contact: Contact,
+    pub contact: crate::Contact,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -361,10 +367,10 @@ pub struct ContactSndReady {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct NewChatItems {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItems")]
-    pub chat_items: Vec<AChatItem>,
+    pub chat_items: Vec<crate::AChatItem>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -383,13 +389,13 @@ pub struct NewChatItems {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ChatItemReaction {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "added", default)]
     pub added: bool,
 
     #[serde(rename = "reaction")]
-    pub reaction: ACIReaction,
+    pub reaction: crate::ACIReaction,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -408,10 +414,10 @@ pub struct ChatItemReaction {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ChatItemsDeleted {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItemDeletions")]
-    pub chat_item_deletions: Vec<ChatItemDeletion>,
+    pub chat_item_deletions: Vec<crate::ChatItemDeletion>,
 
     #[serde(rename = "byUser", default)]
     pub by_user: bool,
@@ -436,10 +442,10 @@ pub struct ChatItemsDeleted {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ChatItemUpdated {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem")]
-    pub chat_item: AChatItem,
+    pub chat_item: crate::AChatItem,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -458,10 +464,10 @@ pub struct ChatItemUpdated {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct GroupChatItemsDeleted {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "chatItemIDs")]
     pub chat_item_i_ds: Vec<i64>,
@@ -470,7 +476,7 @@ pub struct GroupChatItemsDeleted {
     pub by_user: bool,
 
     #[serde(rename = "member_", skip_serializing_if = "Option::is_none")]
-    pub member: Option<GroupMember>,
+    pub member: Option<crate::GroupMember>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -489,10 +495,10 @@ pub struct GroupChatItemsDeleted {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ChatItemsStatusesUpdated {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItems")]
-    pub chat_items: Vec<AChatItem>,
+    pub chat_items: Vec<crate::AChatItem>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -513,19 +519,19 @@ pub struct ChatItemsStatusesUpdated {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ReceivedGroupInvitation {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "contact")]
-    pub contact: Contact,
+    pub contact: crate::Contact,
 
     #[serde(rename = "fromMemberRole")]
-    pub from_member_role: GroupMemberRole,
+    pub from_member_role: crate::GroupMemberRole,
 
     #[serde(rename = "memberRole")]
-    pub member_role: GroupMemberRole,
+    pub member_role: crate::GroupMemberRole,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -546,13 +552,13 @@ pub struct ReceivedGroupInvitation {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct UserJoinedGroup {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "hostMember")]
-    pub host_member: GroupMember,
+    pub host_member: crate::GroupMember,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -573,16 +579,19 @@ pub struct UserJoinedGroup {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct GroupUpdated {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "fromGroup")]
-    pub from_group: GroupInfo,
+    pub from_group: crate::GroupInfo,
 
     #[serde(rename = "toGroup")]
-    pub to_group: GroupInfo,
+    pub to_group: crate::GroupInfo,
 
     #[serde(rename = "member_", skip_serializing_if = "Option::is_none")]
-    pub member: Option<GroupMember>,
+    pub member: Option<crate::GroupMember>,
+
+    #[serde(rename = "msgSigned", skip_serializing_if = "Option::is_none")]
+    pub msg_signed: Option<crate::MsgSigStatus>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -603,13 +612,13 @@ pub struct GroupUpdated {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct JoinedGroupMember {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -630,22 +639,25 @@ pub struct JoinedGroupMember {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct MemberRole {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "byMember")]
-    pub by_member: GroupMember,
+    pub by_member: crate::GroupMember,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
 
     #[serde(rename = "fromRole")]
-    pub from_role: GroupMemberRole,
+    pub from_role: crate::GroupMemberRole,
 
     #[serde(rename = "toRole")]
-    pub to_role: GroupMemberRole,
+    pub to_role: crate::GroupMemberRole,
+
+    #[serde(rename = "msgSigned", skip_serializing_if = "Option::is_none")]
+    pub msg_signed: Option<crate::MsgSigStatus>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -666,19 +678,22 @@ pub struct MemberRole {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct DeletedMember {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "byMember")]
-    pub by_member: GroupMember,
+    pub by_member: crate::GroupMember,
 
     #[serde(rename = "deletedMember")]
-    pub deleted_member: GroupMember,
+    pub deleted_member: crate::GroupMember,
 
     #[serde(rename = "withMessages", default)]
     pub with_messages: bool,
+
+    #[serde(rename = "msgSigned", skip_serializing_if = "Option::is_none")]
+    pub msg_signed: Option<crate::MsgSigStatus>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -699,13 +714,16 @@ pub struct DeletedMember {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct LeftMember {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
+
+    #[serde(rename = "msgSigned", skip_serializing_if = "Option::is_none")]
+    pub msg_signed: Option<crate::MsgSigStatus>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -726,16 +744,19 @@ pub struct LeftMember {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct DeletedMemberUser {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
 
     #[serde(rename = "withMessages", default)]
     pub with_messages: bool,
+
+    #[serde(rename = "msgSigned", skip_serializing_if = "Option::is_none")]
+    pub msg_signed: Option<crate::MsgSigStatus>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -756,13 +777,16 @@ pub struct DeletedMemberUser {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct GroupDeleted {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
+
+    #[serde(rename = "msgSigned", skip_serializing_if = "Option::is_none")]
+    pub msg_signed: Option<crate::MsgSigStatus>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -783,16 +807,16 @@ pub struct GroupDeleted {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ConnectedToGroupMember {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
 
     #[serde(rename = "memberContact", skip_serializing_if = "Option::is_none")]
-    pub member_contact: Option<Contact>,
+    pub member_contact: Option<crate::Contact>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -813,16 +837,16 @@ pub struct ConnectedToGroupMember {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct MemberAcceptedByOther {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "acceptingMember")]
-    pub accepting_member: GroupMember,
+    pub accepting_member: crate::GroupMember,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -843,19 +867,22 @@ pub struct MemberAcceptedByOther {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct MemberBlockedForAll {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "byMember")]
-    pub by_member: GroupMember,
+    pub by_member: crate::GroupMember,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
 
     #[serde(rename = "blocked", default)]
     pub blocked: bool,
+
+    #[serde(rename = "msgSigned", skip_serializing_if = "Option::is_none")]
+    pub msg_signed: Option<crate::MsgSigStatus>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -876,16 +903,79 @@ pub struct MemberBlockedForAll {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct GroupMemberUpdated {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "fromMember")]
-    pub from_member: GroupMember,
+    pub from_member: crate::GroupMember,
 
     #[serde(rename = "toMember")]
-    pub to_member: GroupMember,
+    pub to_member: crate::GroupMember,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+/// ### Group events
+///
+/// Bots may use these events to manage users' groups and business address groups.
+///
+/// *Please note*: programming groups is more complex than programming direct connections
+///
+/// ----
+///
+/// Group link data updated.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupLinkDataUpdated {
+    #[serde(rename = "user")]
+    pub user: crate::User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: crate::GroupInfo,
+
+    #[serde(rename = "groupLink")]
+    pub group_link: crate::GroupLink,
+
+    #[serde(rename = "groupRelays")]
+    pub group_relays: Vec<crate::GroupRelay>,
+
+    #[serde(rename = "relaysChanged", default)]
+    pub relays_changed: bool,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+/// ### Group events
+///
+/// Bots may use these events to manage users' groups and business address groups.
+///
+/// *Please note*: programming groups is more complex than programming direct connections
+///
+/// ----
+///
+/// Group relay member updated.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupRelayUpdated {
+    #[serde(rename = "user")]
+    pub user: crate::User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: crate::GroupInfo,
+
+    #[serde(rename = "member")]
+    pub member: crate::GroupMember,
+
+    #[serde(rename = "groupRelay")]
+    pub group_relay: crate::GroupRelay,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -912,16 +1002,16 @@ pub struct GroupMemberUpdated {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct RcvFileDescrReady {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem")]
-    pub chat_item: AChatItem,
+    pub chat_item: crate::AChatItem,
 
     #[serde(rename = "rcvFileTransfer")]
-    pub rcv_file_transfer: RcvFileTransfer,
+    pub rcv_file_transfer: crate::RcvFileTransfer,
 
     #[serde(rename = "rcvFileDescr")]
-    pub rcv_file_descr: RcvFileDescr,
+    pub rcv_file_descr: crate::RcvFileDescr,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -944,10 +1034,10 @@ pub struct RcvFileDescrReady {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct RcvFileComplete {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem")]
-    pub chat_item: AChatItem,
+    pub chat_item: crate::AChatItem,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -970,13 +1060,13 @@ pub struct RcvFileComplete {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct SndFileCompleteXftp {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem")]
-    pub chat_item: AChatItem,
+    pub chat_item: crate::AChatItem,
 
     #[serde(rename = "fileTransferMeta")]
-    pub file_transfer_meta: FileTransferMeta,
+    pub file_transfer_meta: crate::FileTransferMeta,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -999,10 +1089,10 @@ pub struct SndFileCompleteXftp {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct RcvFileStart {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem")]
-    pub chat_item: AChatItem,
+    pub chat_item: crate::AChatItem,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1025,13 +1115,13 @@ pub struct RcvFileStart {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct RcvFileSndCancelled {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem")]
-    pub chat_item: AChatItem,
+    pub chat_item: crate::AChatItem,
 
     #[serde(rename = "rcvFileTransfer")]
-    pub rcv_file_transfer: RcvFileTransfer,
+    pub rcv_file_transfer: crate::RcvFileTransfer,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1054,10 +1144,10 @@ pub struct RcvFileSndCancelled {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct RcvFileAccepted {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem")]
-    pub chat_item: AChatItem,
+    pub chat_item: crate::AChatItem,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1080,16 +1170,16 @@ pub struct RcvFileAccepted {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct RcvFileError {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem_", skip_serializing_if = "Option::is_none")]
-    pub chat_item: Option<AChatItem>,
+    pub chat_item: Option<crate::AChatItem>,
 
     #[serde(rename = "agentError")]
     pub agent_error: errors::AgentErrorType,
 
     #[serde(rename = "rcvFileTransfer")]
-    pub rcv_file_transfer: RcvFileTransfer,
+    pub rcv_file_transfer: crate::RcvFileTransfer,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1112,16 +1202,16 @@ pub struct RcvFileError {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct RcvFileWarning {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem_", skip_serializing_if = "Option::is_none")]
-    pub chat_item: Option<AChatItem>,
+    pub chat_item: Option<crate::AChatItem>,
 
     #[serde(rename = "agentError")]
-    pub agent_error: AgentErrorType,
+    pub agent_error: errors::AgentErrorType,
 
     #[serde(rename = "rcvFileTransfer")]
-    pub rcv_file_transfer: RcvFileTransfer,
+    pub rcv_file_transfer: crate::RcvFileTransfer,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1144,13 +1234,13 @@ pub struct RcvFileWarning {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct SndFileError {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem_", skip_serializing_if = "Option::is_none")]
-    pub chat_item: Option<AChatItem>,
+    pub chat_item: Option<crate::AChatItem>,
 
     #[serde(rename = "fileTransferMeta")]
-    pub file_transfer_meta: FileTransferMeta,
+    pub file_transfer_meta: crate::FileTransferMeta,
 
     #[serde(rename = "errorMessage")]
     pub error_message: String,
@@ -1176,13 +1266,13 @@ pub struct SndFileError {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct SndFileWarning {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "chatItem_", skip_serializing_if = "Option::is_none")]
-    pub chat_item: Option<AChatItem>,
+    pub chat_item: Option<crate::AChatItem>,
 
     #[serde(rename = "fileTransferMeta")]
-    pub file_transfer_meta: FileTransferMeta,
+    pub file_transfer_meta: crate::FileTransferMeta,
 
     #[serde(rename = "errorMessage")]
     pub error_message: String,
@@ -1204,10 +1294,10 @@ pub struct SndFileWarning {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct AcceptingContactRequest {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "contact")]
-    pub contact: Contact,
+    pub contact: crate::Contact,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1226,10 +1316,10 @@ pub struct AcceptingContactRequest {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct AcceptingBusinessRequest {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1250,10 +1340,10 @@ pub struct AcceptingBusinessRequest {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ContactConnecting {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "contact")]
-    pub contact: Contact,
+    pub contact: crate::Contact,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1274,16 +1364,16 @@ pub struct ContactConnecting {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct BusinessLinkConnecting {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "hostMember")]
-    pub host_member: GroupMember,
+    pub host_member: crate::GroupMember,
 
     #[serde(rename = "fromContact")]
-    pub from_contact: Contact,
+    pub from_contact: crate::Contact,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1302,16 +1392,16 @@ pub struct BusinessLinkConnecting {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct JoinedGroupMemberConnecting {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "hostMember")]
-    pub host_member: GroupMember,
+    pub host_member: crate::GroupMember,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1330,16 +1420,16 @@ pub struct JoinedGroupMemberConnecting {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct SentGroupInvitation {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "contact")]
-    pub contact: Contact,
+    pub contact: crate::Contact,
 
     #[serde(rename = "member")]
-    pub member: GroupMember,
+    pub member: crate::GroupMember,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1358,13 +1448,13 @@ pub struct SentGroupInvitation {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct GroupLinkConnecting {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "groupInfo")]
-    pub group_info: GroupInfo,
+    pub group_info: crate::GroupInfo,
 
     #[serde(rename = "hostMember")]
-    pub host_member: GroupMember,
+    pub host_member: crate::GroupMember,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1449,7 +1539,7 @@ pub struct SubscriptionStatus {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct MessageError {
     #[serde(rename = "user")]
-    pub user: User,
+    pub user: crate::User,
 
     #[serde(rename = "severity")]
     pub severity: String,

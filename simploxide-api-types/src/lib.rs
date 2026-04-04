@@ -870,6 +870,8 @@ pub enum CIDirection {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "channelRcv")]
+    ChannelRcv,
     #[serde(rename = "localSnd")]
     LocalSnd,
     #[serde(rename = "localRcv")]
@@ -896,6 +898,10 @@ impl CIDirection {
             group_member,
             undocumented: Default::default(),
         }
+    }
+
+    pub fn channel_rcv() -> Self {
+        Self::ChannelRcv
     }
 
     pub fn local_snd() -> Self {
@@ -1362,6 +1368,9 @@ pub struct CIMeta {
 
     #[serde(rename = "showGroupAsSender", default)]
     pub show_group_as_sender: bool,
+
+    #[serde(rename = "msgSigned", skip_serializing_if = "Option::is_none")]
+    pub msg_signed: Option<MsgSigStatus>,
 
     #[serde(rename = "createdAt")]
     pub created_at: UtcTime,
@@ -3404,6 +3413,9 @@ pub struct GroupInfo {
     #[serde(rename = "useRelays", default)]
     pub use_relays: bool,
 
+    #[serde(rename = "relayOwnStatus", skip_serializing_if = "Option::is_none")]
+    pub relay_own_status: Option<RelayStatus>,
+
     #[serde(rename = "localDisplayName")]
     pub local_display_name: String,
 
@@ -3472,6 +3484,27 @@ pub struct GroupInfo {
     #[serde(rename = "viaGroupLinkUri", skip_serializing_if = "Option::is_none")]
     pub via_group_link_uri: Option<String>,
 
+    #[serde(rename = "groupKeys", skip_serializing_if = "Option::is_none")]
+    pub group_keys: Option<GroupKeys>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupKeys {
+    #[serde(rename = "publicGroupId")]
+    pub public_group_id: String,
+
+    #[serde(rename = "groupRootKey")]
+    pub group_root_key: GroupRootKey,
+
+    #[serde(rename = "memberPrivKey")]
+    pub member_priv_key: String,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -3513,6 +3546,9 @@ pub struct GroupLink {
 pub enum GroupLinkPlan {
     #[serde(rename = "ok")]
     Ok {
+        #[serde(rename = "groupSLinkInfo_", skip_serializing_if = "Option::is_none")]
+        group_s_link_info: Option<GroupShortLinkInfo>,
+
         #[serde(rename = "groupSLinkData_", skip_serializing_if = "Option::is_none")]
         group_s_link_data: Option<GroupShortLinkData>,
 
@@ -3550,8 +3586,12 @@ pub enum GroupLinkPlan {
 }
 
 impl GroupLinkPlan {
-    pub fn ok(group_s_link_data: Option<GroupShortLinkData>) -> Self {
+    pub fn ok(
+        group_s_link_info: Option<GroupShortLinkInfo>,
+        group_s_link_data: Option<GroupShortLinkData>,
+    ) -> Self {
         Self::Ok {
+            group_s_link_info,
             group_s_link_data,
             undocumented: Default::default(),
         }
@@ -3669,6 +3709,12 @@ pub struct GroupMember {
     #[serde(rename = "supportChat", skip_serializing_if = "Option::is_none")]
     pub support_chat: Option<GroupSupportChat>,
 
+    #[serde(rename = "memberPubKey", skip_serializing_if = "Option::is_none")]
+    pub member_pub_key: Option<String>,
+
+    #[serde(rename = "relayLink", skip_serializing_if = "Option::is_none")]
+    pub relay_link: Option<String>,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -3724,6 +3770,8 @@ pub struct GroupMemberRef {
 #[non_exhaustive]
 pub enum GroupMemberRole {
     #[default]
+    #[serde(rename = "relay")]
+    Relay,
     #[serde(rename = "observer")]
     Observer,
     #[serde(rename = "author")]
@@ -3859,6 +3907,9 @@ pub struct GroupProfile {
     #[serde(rename = "image", skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
 
+    #[serde(rename = "publicGroup", skip_serializing_if = "Option::is_none")]
+    pub public_group: Option<PublicGroupProfile>,
+
     #[serde(rename = "groupPreferences", skip_serializing_if = "Option::is_none")]
     pub group_preferences: Option<GroupPreferences>,
 
@@ -3873,9 +3924,100 @@ pub struct GroupProfile {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupRelay {
+    #[serde(
+        rename = "groupRelayId",
+        deserialize_with = "deserialize_number_from_string"
+    )]
+    pub group_relay_id: i64,
+
+    #[serde(
+        rename = "groupMemberId",
+        deserialize_with = "deserialize_number_from_string"
+    )]
+    pub group_member_id: i64,
+
+    #[serde(rename = "userChatRelay")]
+    pub user_chat_relay: UserChatRelay,
+
+    #[serde(rename = "relayStatus")]
+    pub relay_status: RelayStatus,
+
+    #[serde(rename = "relayLink", skip_serializing_if = "Option::is_none")]
+    pub relay_link: Option<String>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
+pub enum GroupRootKey {
+    #[serde(rename = "private")]
+    Private {
+        #[serde(rename = "rootPrivKey")]
+        root_priv_key: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "public")]
+    Public {
+        #[serde(rename = "rootPubKey")]
+        root_pub_key: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl GroupRootKey {
+    pub fn private(root_priv_key: String) -> Self {
+        Self::Private {
+            root_priv_key,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn public(root_pub_key: String) -> Self {
+        Self::Public {
+            root_pub_key,
+            undocumented: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct GroupShortLinkData {
     #[serde(rename = "groupProfile")]
     pub group_profile: GroupProfile,
+
+    #[serde(rename = "publicGroupData", skip_serializing_if = "Option::is_none")]
+    pub public_group_data: Option<PublicGroupData>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupShortLinkInfo {
+    #[serde(rename = "direct", default)]
+    pub direct: bool,
+
+    #[serde(rename = "groupRelays")]
+    pub group_relays: Vec<String>,
+
+    #[serde(rename = "publicGroupId", skip_serializing_if = "Option::is_none")]
+    pub public_group_id: Option<String>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -3891,6 +4033,14 @@ pub struct GroupSummary {
         deserialize_with = "deserialize_number_from_string"
     )]
     pub current_members: i64,
+
+    #[serde(
+        rename = "publicMemberCount",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_option_number_from_string",
+        default
+    )]
+    pub public_member_count: Option<i64>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -3928,6 +4078,14 @@ pub struct GroupSupportChat {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum GroupType {
+    #[default]
+    #[serde(rename = "channel")]
+    Channel,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -4508,6 +4666,16 @@ pub enum MsgReceiptStatus {
     BadMsgHash,
 }
 
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum MsgSigStatus {
+    #[default]
+    #[serde(rename = "verified")]
+    Verified,
+    #[serde(rename = "signedNoKey")]
+    SignedNoKey,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
@@ -4517,6 +4685,9 @@ pub struct NewUser {
 
     #[serde(rename = "pastTimestamp", default)]
     pub past_timestamp: bool,
+
+    #[serde(rename = "userChatRelay", default)]
+    pub user_chat_relay: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -4728,6 +4899,39 @@ pub struct Profile {
 
     #[serde(rename = "peerType", skip_serializing_if = "Option::is_none")]
     pub peer_type: Option<ChatPeerType>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct PublicGroupData {
+    #[serde(
+        rename = "publicMemberCount",
+        deserialize_with = "deserialize_number_from_string"
+    )]
+    pub public_member_count: i64,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct PublicGroupProfile {
+    #[serde(rename = "groupType")]
+    pub group_type: GroupType,
+
+    #[serde(rename = "groupLink")]
+    pub group_link: String,
+
+    #[serde(rename = "publicGroupId")]
+    pub public_group_id: String,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -5134,6 +5338,8 @@ pub enum RcvGroupEvent {
     },
     #[serde(rename = "newMemberPendingReview")]
     NewMemberPendingReview,
+    #[serde(rename = "msgBadSignature")]
+    MsgBadSignature,
     #[serde(untagged)]
     Undocumented(JsonObject),
 }
@@ -5234,6 +5440,45 @@ impl RcvGroupEvent {
     pub fn new_member_pending_review() -> Self {
         Self::NewMemberPendingReview
     }
+
+    pub fn msg_bad_signature() -> Self {
+        Self::MsgBadSignature
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct RelayProfile {
+    #[serde(rename = "displayName")]
+    pub display_name: String,
+
+    #[serde(rename = "fullName")]
+    pub full_name: String,
+
+    #[serde(rename = "shortDescr", skip_serializing_if = "Option::is_none")]
+    pub short_descr: Option<String>,
+
+    #[serde(rename = "image", skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum RelayStatus {
+    #[default]
+    #[serde(rename = "new")]
+    New,
+    #[serde(rename = "invited")]
+    Invited,
+    #[serde(rename = "accepted")]
+    Accepted,
+    #[serde(rename = "active")]
+    Active,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -5852,6 +6097,45 @@ pub struct User {
 
     #[serde(rename = "uiThemes", skip_serializing_if = "Option::is_none")]
     pub ui_themes: Option<UIThemeEntityOverrides>,
+
+    #[serde(rename = "userChatRelay", default)]
+    pub user_chat_relay: bool,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct UserChatRelay {
+    #[serde(
+        rename = "chatRelayId",
+        deserialize_with = "deserialize_number_from_string"
+    )]
+    pub chat_relay_id: i64,
+
+    #[serde(rename = "address")]
+    pub address: String,
+
+    #[serde(rename = "relayProfile")]
+    pub relay_profile: RelayProfile,
+
+    #[serde(rename = "domains")]
+    pub domains: Vec<String>,
+
+    #[serde(rename = "preset", default)]
+    pub preset: bool,
+
+    #[serde(rename = "tested", skip_serializing_if = "Option::is_none")]
+    pub tested: Option<bool>,
+
+    #[serde(rename = "enabled", default)]
+    pub enabled: bool,
+
+    #[serde(rename = "deleted", default)]
+    pub deleted: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
