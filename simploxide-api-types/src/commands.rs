@@ -1,5 +1,4 @@
-use super::*;
-use crate::utils::CommandSyntax;
+use {crate::utils::CommandSyntax, crate::*};
 
 use std::fmt::Write;
 /// ### Address commands
@@ -567,7 +566,7 @@ impl CommandSyntax for CancelFile {
 /// *Syntax:*
 ///
 /// ```
-/// /_add #<groupId> <contactId> observer|author|member|moderator|admin|owner
+/// /_add #<groupId> <contactId> relay|observer|author|member|moderator|admin|owner
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
@@ -588,6 +587,9 @@ impl CommandSyntax for ApiAddMember {
         write!(buf, "{}", self.contact_id).unwrap();
         buf.push(' ');
         match self.member_role {
+            GroupMemberRole::Relay => {
+                buf.push_str("relay");
+            }
             GroupMemberRole::Observer => {
                 buf.push_str("observer");
             }
@@ -654,7 +656,7 @@ impl CommandSyntax for ApiJoinGroup {
 /// *Syntax:*
 ///
 /// ```
-/// /_accept member #<groupId> <groupMemberId> observer|author|member|moderator|admin|owner
+/// /_accept member #<groupId> <groupMemberId> relay|observer|author|member|moderator|admin|owner
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
@@ -676,6 +678,9 @@ impl CommandSyntax for ApiAcceptMember {
         write!(buf, "{}", self.group_member_id).unwrap();
         buf.push(' ');
         match self.member_role {
+            GroupMemberRole::Relay => {
+                buf.push_str("relay");
+            }
             GroupMemberRole::Observer => {
                 buf.push_str("observer");
             }
@@ -711,7 +716,7 @@ impl CommandSyntax for ApiAcceptMember {
 /// *Syntax:*
 ///
 /// ```
-/// /_member role #<groupId> <groupMemberIds[0]>[,<groupMemberIds[1]>...] observer|author|member|moderator|admin|owner
+/// /_member role #<groupId> <groupMemberIds[0]>[,<groupMemberIds[1]>...] relay|observer|author|member|moderator|admin|owner
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
@@ -740,6 +745,9 @@ impl CommandSyntax for ApiMembersRole {
         }
         buf.push(' ');
         match self.member_role {
+            GroupMemberRole::Relay => {
+                buf.push_str("relay");
+            }
             GroupMemberRole::Observer => {
                 buf.push_str("observer");
             }
@@ -1001,6 +1009,103 @@ impl CommandSyntax for ApiNewGroup {
 ///
 /// ----
 ///
+/// Create public group.
+///
+/// *Network usage*: interactive.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_public group <userId>[ incognito=on] <relayIds[0]>[,<relayIds[1]>...] <json(groupProfile)>
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct ApiNewPublicGroup {
+    pub user_id: i64,
+    pub incognito: bool,
+    pub relay_ids: Vec<i64>,
+    pub group_profile: GroupProfile,
+}
+
+impl ApiNewPublicGroup {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64, relay_ids: Vec<i64>, group_profile: GroupProfile) -> Self {
+        Self {
+            user_id,
+            incognito: false,
+            relay_ids,
+            group_profile,
+        }
+    }
+}
+
+impl CommandSyntax for ApiNewPublicGroup {
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_public ");
+        buf.push_str("group ");
+        write!(buf, "{}", self.user_id).unwrap();
+        if self.incognito {
+            buf.push(' ');
+            buf.push_str("incognito=");
+            buf.push_str("on");
+        }
+        buf.push(' ');
+        let mut iter = self.relay_ids.iter();
+        if let Some(el) = iter.next() {
+            write!(buf, "{el}").unwrap();
+        }
+        for el in iter {
+            buf.push(',');
+            write!(buf, "{el}").unwrap();
+        }
+        buf.push(' ');
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.group_profile).unwrap();
+        }
+    }
+}
+
+/// ### Group commands
+///
+/// Commands to manage and moderate groups. These commands can be used with business chats as well - they are groups. E.g., a common scenario would be to add human agents to business chat with the customer who connected via business address.
+///
+/// ----
+///
+/// Get group relays.
+///
+/// *Network usage*: no.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_get relays #<groupId>
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct ApiGetGroupRelays {
+    pub group_id: i64,
+}
+
+impl CommandSyntax for ApiGetGroupRelays {
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_get ");
+        buf.push_str("relays ");
+        buf.push('#');
+        write!(buf, "{}", self.group_id).unwrap();
+    }
+}
+
+/// ### Group commands
+///
+/// Commands to manage and moderate groups. These commands can be used with business chats as well - they are groups. E.g., a common scenario would be to add human agents to business chat with the customer who connected via business address.
+///
+/// ----
+///
 /// Update group profile.
 ///
 /// *Network usage*: background.
@@ -1045,7 +1150,7 @@ impl CommandSyntax for ApiUpdateGroupProfile {
 /// *Syntax:*
 ///
 /// ```
-/// /_create link #<groupId> observer|author|member|moderator|admin|owner
+/// /_create link #<groupId> relay|observer|author|member|moderator|admin|owner
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
@@ -1064,6 +1169,9 @@ impl CommandSyntax for ApiCreateGroupLink {
         write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
         match self.member_role {
+            GroupMemberRole::Relay => {
+                buf.push_str("relay");
+            }
             GroupMemberRole::Observer => {
                 buf.push_str("observer");
             }
@@ -1099,7 +1207,7 @@ impl CommandSyntax for ApiCreateGroupLink {
 /// *Syntax:*
 ///
 /// ```
-/// /_set link role #<groupId> observer|author|member|moderator|admin|owner
+/// /_set link role #<groupId> relay|observer|author|member|moderator|admin|owner
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
@@ -1119,6 +1227,9 @@ impl CommandSyntax for ApiGroupLinkMemberRole {
         write!(buf, "{}", self.group_id).unwrap();
         buf.push(' ');
         match self.member_role {
+            GroupMemberRole::Relay => {
+                buf.push_str("relay");
+            }
             GroupMemberRole::Observer => {
                 buf.push_str("observer");
             }

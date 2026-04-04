@@ -1,4 +1,4 @@
-use super::{errors::*, *};
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -371,6 +371,38 @@ impl ApiNewGroupResponse {
     pub fn into_inner(self) -> Arc<GroupCreatedResponse> {
         match self {
             Self::GroupCreated(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ApiNewPublicGroupResponse {
+    /// PublicGroupCreated: Public group created.
+    #[serde(rename = "publicGroupCreated")]
+    PublicGroupCreated(Arc<PublicGroupCreatedResponse>),
+}
+
+impl ApiNewPublicGroupResponse {
+    pub fn into_inner(self) -> Arc<PublicGroupCreatedResponse> {
+        match self {
+            Self::PublicGroupCreated(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ApiGetGroupRelaysResponse {
+    /// GroupRelays: Group relays.
+    #[serde(rename = "groupRelays")]
+    GroupRelays(Arc<GroupRelaysResponse>),
+}
+
+impl ApiGetGroupRelaysResponse {
+    pub fn into_inner(self) -> Arc<GroupRelaysResponse> {
+        match self {
+            Self::GroupRelays(inner) => inner,
         }
     }
 }
@@ -909,7 +941,7 @@ impl ChatCmdError {
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ChatCmdErrorResponse {
     #[serde(rename = "chatError")]
-    pub chat_error: Arc<ChatError>,
+    pub chat_error: Arc<errors::ChatError>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1190,6 +1222,9 @@ pub struct GroupDeletedUserResponse {
     #[serde(rename = "groupInfo")]
     pub group_info: GroupInfo,
 
+    #[serde(rename = "msgSigned", default)]
+    pub msg_signed: bool,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -1264,6 +1299,24 @@ pub struct GroupMembersResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupRelaysResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(rename = "groupRelays")]
+    pub group_relays: Vec<GroupRelay>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct GroupUpdatedResponse {
     #[serde(rename = "user")]
     pub user: User,
@@ -1276,6 +1329,9 @@ pub struct GroupUpdatedResponse {
 
     #[serde(rename = "member_", skip_serializing_if = "Option::is_none")]
     pub member: Option<GroupMember>,
+
+    #[serde(rename = "msgSigned", default)]
+    pub msg_signed: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1364,6 +1420,9 @@ pub struct MembersBlockedForAllUserResponse {
     #[serde(rename = "blocked", default)]
     pub blocked: bool,
 
+    #[serde(rename = "msgSigned", default)]
+    pub msg_signed: bool,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -1385,6 +1444,9 @@ pub struct MembersRoleUserResponse {
     #[serde(rename = "toRole")]
     pub to_role: GroupMemberRole,
 
+    #[serde(rename = "msgSigned", default)]
+    pub msg_signed: bool,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -1399,6 +1461,27 @@ pub struct NewChatItemsResponse {
 
     #[serde(rename = "chatItems")]
     pub chat_items: Vec<AChatItem>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct PublicGroupCreatedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(rename = "groupLink")]
+    pub group_link: GroupLink,
+
+    #[serde(rename = "groupRelays")]
+    pub group_relays: Vec<GroupRelay>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1621,6 +1704,9 @@ pub struct UserDeletedMembersResponse {
 
     #[serde(rename = "withMessages", default)]
     pub with_messages: bool,
+
+    #[serde(rename = "msgSigned", default)]
+    pub msg_signed: bool,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]

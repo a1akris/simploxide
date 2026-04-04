@@ -123,6 +123,7 @@ impl DiscriminatedUnionVariant {
                 api_name: "".to_owned(),
                 rust_name: "".to_owned(),
                 typ: record_name.clone(),
+                source: None,
             }],
         );
 

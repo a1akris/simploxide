@@ -9,7 +9,7 @@ use simploxide_bindgen::{
     syntax::Interpretable,
     types::{
         self, ApiType, DiscriminatedUnionType, DisjointedDiscriminatedUnion, Field, RecordType,
-        discriminated_union_type::DiscriminatedUnionVariant,
+        Source, discriminated_union_type::DiscriminatedUnionVariant,
     },
 };
 
@@ -153,33 +153,14 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
     let discriminated_records: DisjointedDiscriminatedUnion = events::parse(events_md)
         .map(|result| {
             result.map(|mut part| {
-                if part.record.is_error() {
-                    // Use errors from `errors` module for nested error types
-                    //
-                    // FIXME: The markdown type links should be properly parsed and resolved
-                    // someday in the future.
-                    for field in &mut part.record.fields {
-                        if let Some(ix) = field.typ.find("Error") {
-                            let typ_start = field.typ[..ix]
-                                .char_indices()
-                                .rev()
-                                .take_while(|(_, ch)| ch.is_alphanumeric())
-                                .map(|(ix, _)| ix)
-                                .last()
-                                .unwrap_or(0);
-
-                            field.typ.insert_str(typ_start, "errors::");
-                        }
-                    }
-                } else if part.record.name == "SubscriptionStatus" {
-                    // FIXME: RESOLVE THE MARKDOWN TYPE LINKS GOD DAMN IT!
-                    if let Some(external) = part
-                        .record
-                        .fields
-                        .iter_mut()
-                        .find(|x| x.typ == "SubscriptionStatus")
-                    {
-                        external.typ = format!("crate::{}", external.typ);
+                for field in &mut part.record.fields {
+                    if field.source == Some(Source::Types) {
+                        let prefix = if field.is_error() {
+                            "errors::"
+                        } else {
+                            "crate::"
+                        };
+                        field.typ.insert_str(field.base_type_offset(), prefix);
                     }
                 }
 
@@ -199,7 +180,7 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
         field.typ = format!("Arc<{}>", field.typ);
     }
 
-    writeln!(events_rs, "use crate::{{*, errors::*}};")?;
+    writeln!(events_rs, "use crate::*;")?;
     writeln!(events_rs)?;
 
     writeln!(events_rs, "{top_level_enum}\n")?;
@@ -216,11 +197,13 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     let mut responses_rs = std::fs::File::create(RESPONSES_RS)?;
     let mut client_api_rs = std::fs::File::create(CLIENT_API_RS)?;
 
-    writeln!(commands_rs, "use super::*;")?;
-    writeln!(commands_rs, "use crate::utils::CommandSyntax;")?;
+    writeln!(
+        commands_rs,
+        "use {{crate::*, crate::utils::CommandSyntax}};"
+    )?;
     writeln!(commands_rs)?;
 
-    writeln!(responses_rs, "use super::{{*, errors::*}};")?;
+    writeln!(responses_rs, "use crate::*;")?;
     writeln!(responses_rs)?;
 
     writeln!(client_api_rs, "use serde::de::DeserializeOwned;")?;
@@ -253,7 +236,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
         "chatCmdError".to_owned(),
         vec![Field::from_api_name(
             "chatError".to_owned(),
-            "Arc<ChatError>".to_owned(),
+            "Arc<errors::ChatError>".to_owned(),
         )],
     );
 
@@ -281,6 +264,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
 
         for mut shape in shapes.iter().cloned() {
             shape.name.push_str("Response");
+
             match unique_response_shapes.entry(shape.name.clone()) {
                 Entry::Occupied(occupied) => {
                     if *occupied.get() != shape {
