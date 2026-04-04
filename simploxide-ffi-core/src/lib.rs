@@ -1,5 +1,8 @@
-use simploxide_sxcrt_sys::SimpleXChat;
+pub use simploxide_core::SimplexVersion;
 pub use simploxide_sxcrt_sys::{CallError, InitError, MigrationConfirmation};
+
+use serde::Deserialize;
+use simploxide_sxcrt_sys::SimpleXChat;
 
 use std::{path::Path, sync::mpsc::RecvTimeoutError};
 
@@ -50,6 +53,41 @@ impl RawClient {
             .map_err(|_| CallError::Failure)?;
 
         response.await.map_err(|_| CallError::Failure)?
+    }
+
+    /// Returns version of underlying SimpleX runtime
+    pub async fn version(&self) -> Result<SimplexVersion, VersionError> {
+        #[derive(Deserialize)]
+        struct VersionResult<'a> {
+            #[serde(borrow)]
+            result: VersionInfo<'a>,
+        }
+
+        #[derive(Deserialize)]
+        struct VersionInfo<'a> {
+            #[serde(borrow, rename = "versionInfo")]
+            version_info: VersionData<'a>,
+        }
+
+        #[derive(Deserialize)]
+        struct VersionData<'a> {
+            #[serde(borrow)]
+            version: &'a str,
+        }
+
+        let output = self.send("/v".to_owned()).await?;
+
+        let response = serde_json::from_str::<VersionResult>(&output)
+            .map_err(CallError::InvalidJson)?
+            .result
+            .version_info
+            .version;
+
+        let version = response
+            .parse()
+            .map_err(|_| VersionError::ParseError(response.to_owned()))?;
+
+        Ok(version)
     }
 
     pub fn disconnect(self) {
@@ -116,6 +154,41 @@ impl DbOpts {
             prefix: prefix.as_ref().display().to_string(),
             key: Some(key.into()),
             migration: MigrationConfirmation::YesUp,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum VersionError {
+    Ffi(CallError),
+    ParseError(String),
+}
+
+impl From<CallError> for VersionError {
+    fn from(value: CallError) -> Self {
+        Self::Ffi(value)
+    }
+}
+
+impl std::fmt::Display for VersionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Ffi(e) => e.fmt(f),
+            Self::ParseError(s) => {
+                write!(
+                    f,
+                    "Cannot parse version, expected format: '<major>.<minor>.<patch>.<hotfix>', got {s:?}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for VersionError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Ffi(e) => Some(e),
+            Self::ParseError(_) => None,
         }
     }
 }

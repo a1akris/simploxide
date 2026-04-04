@@ -14,7 +14,7 @@ categories = ["network-programming", "asynchronous", "web-programming::websocket
 keywords = ["simplex-chat", "websocket", "client"]
 
 [features]
-cli = []
+cli = ["tokio/process", "dep:simploxide-core"]
 
 [dependencies]
 futures.workspace = true
@@ -26,3 +26,4 @@ tokio = { workspace = true, features = ["rt", "macros"] }
 tokio-tungstenite = { version = "0.29", default-features = false, features = ["connect"] }
 tokio-util = "0.7"
 tokio-stream = "0.1"
+simploxide-core = { version = "0.4", path = "../simploxide-core", optional=true }

@@ -19,11 +19,7 @@ fn main() -> BuildResult {
         // Dynamic path: pre-built .so bundle from SimpleX-Chat team (or custom dir)
         (Ok(runtime_dir), Err(_)) => link_with_sxcrt(runtime_dir),
         // Static path: user-provided simplex-static dir, build artifacts stay there
-        (Err(_), Ok(dir)) => {
-            let dir = std::fs::canonicalize(&dir)
-                .map_err(|_| format!("SIMPLEX_STATIC_DIR not found: {dir}"))?;
-            link_with_static_lib(dir)
-        }
+        (Err(_), Ok(dir)) => link_with_static_lib(dir),
         (Err(_), Err(_)) => Err("set SXCRT to use a pre-built SimpleX .so bundle, \
              or set SIMPLEX_STATIC_DIR to build libsimplex.a from source"
             .into()),
@@ -33,7 +29,9 @@ fn main() -> BuildResult {
 // SXCRT must point to a directory with libsimplex.so and all Haskell .so dependencies.
 // Use SimpleX-Chat team so distributions or custo prebuilt ones
 fn link_with_sxcrt(runtime_dir: String) -> BuildResult {
-    let runtime_path = std::fs::canonicalize(runtime_dir)?;
+    let runtime_path = std::fs::canonicalize(&runtime_dir)
+        .map_err(|_| format!("SXCRT not found: {runtime_dir}"))?;
+
     let libsimplex_path = runtime_path.join("libsimplex.so");
 
     if !libsimplex_path.exists() {
@@ -76,16 +74,19 @@ fn link_with_sxcrt(runtime_dir: String) -> BuildResult {
 //   SIMPLEX_STATIC_DIR  path to a simplex-static project dir overriding the embedded one
 //   GHC_LIBS            dir containing GHC boot .so files
 //                       (default: auto-detected via `ghc --print-libdir`)
-fn link_with_static_lib(dir: std::path::PathBuf) -> BuildResult {
-    let libsimplex = dir.join("libsimplex.a");
+fn link_with_static_lib(dir: String) -> BuildResult {
+    let dir_path =
+        std::fs::canonicalize(&dir).map_err(|_| format!("SIMPLEX_STATIC_DIR not found: {dir}"))?;
+
+    let libsimplex = dir_path.join("libsimplex.a");
 
     // Build only if libsimplex.a is absent. Delete it to force a rebuild.
     if !libsimplex.exists() {
-        build_libsimplex(&dir)?;
+        build_libsimplex(&dir_path)?;
     }
 
     // Link libsimplex.a statically
-    println!("cargo:rustc-link-search=native={}", dir.display());
+    println!("cargo:rustc-link-search=native={}", dir_path.display());
     println!("cargo:rustc-link-lib=static=simplex");
 
     for lib in &["crypto", "ssl", "z", "ffi", "gmp", "pthread", "m"] {
