@@ -253,7 +253,7 @@ impl std::fmt::Display for ResponseFmt<'_> {
 
         for variant in &self.0.variants {
             for comment_line in &variant.doc_comments {
-                writeln!(f, "    /// {}", comment_line)?;
+                writeln!(f, "    /// {}", crate::types::convert_doc_links(comment_line))?;
             }
             writeln!(f, "    #[serde(rename = \"{}\")]", variant.api_name)?;
             writeln!(

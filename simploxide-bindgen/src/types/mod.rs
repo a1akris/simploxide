@@ -453,6 +453,42 @@ impl<'a> std::fmt::Display for FieldFmt<'a> {
     }
 }
 
+/// Converts markdown-style API doc links in a doc comment line to Rust intra-doc links. HTTP/HTTPS
+/// links are left unchanged.
+pub(crate) fn convert_doc_links(line: &str) -> std::borrow::Cow<'_, str> {
+    if !line.contains("](") {
+        return std::borrow::Cow::Borrowed(line);
+    }
+
+    let mut result = String::with_capacity(line.len());
+    let mut remaining = line;
+
+    while let Some(bracket_pos) = remaining.find('[') {
+        let after_open = &remaining[bracket_pos + '['.len_utf8()..];
+        if let Some(close_bracket) = after_open.find("](") {
+            let display = &after_open[..close_bracket];
+            let after_close = &after_open[close_bracket + "](".len()..];
+            if let Some(paren_close) = after_close.find(')') {
+                let url = &after_close[..paren_close];
+                if url.starts_with('#') || url.contains(".md") {
+                    result.push_str(&remaining[..bracket_pos]);
+                    result.push('[');
+                    result.push_str(&display.remove_empty().to_case(Case::Pascal));
+                    result.push(']');
+                    remaining = &after_close[paren_close + ')'.len_utf8()..];
+                    continue;
+                }
+            }
+        }
+        // Not a convertible link; advance past this `[`
+        result.push_str(&remaining[..bracket_pos + '['.len_utf8()]);
+        remaining = &remaining[bracket_pos + '['.len_utf8()..];
+    }
+
+    result.push_str(remaining);
+    std::borrow::Cow::Owned(result)
+}
+
 /// A common impl for outer docs rendering shared by all type kinds.
 pub(crate) trait TopLevelDocs {
     fn doc_lines(&self) -> &Vec<String>;
@@ -461,7 +497,7 @@ pub(crate) trait TopLevelDocs {
 
     fn write_docs_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for line in self.doc_lines() {
-            writeln!(f, "/// {line}")?;
+            writeln!(f, "/// {}", convert_doc_links(line))?;
         }
 
         if !self.syntax().is_empty() {

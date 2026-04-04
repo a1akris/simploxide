@@ -181,6 +181,9 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
     }
 
     writeln!(events_rs, "use crate::*;")?;
+    // Needed to resolve intra-doc links to command types in doc comments
+    writeln!(events_rs, "#[allow(unused_imports)]")?;
+    writeln!(events_rs, "use crate::commands::*;")?;
     writeln!(events_rs)?;
 
     writeln!(events_rs, "{top_level_enum}\n")?;
