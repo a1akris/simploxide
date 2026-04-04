@@ -1,173 +1,197 @@
+pub use simploxide_core::SimplexVersion;
+
+use tokio::process::{Child, Command};
+
 use std::{
+    ffi::OsString,
     io,
-    process::{Child, Command, Stdio},
-    str::FromStr,
+    iter::{Chain, Empty, Once},
+    process::Stdio,
 };
 
+/// An instance representing the running SimpleX CLI. Ensure to call [`SimplexCli::kill`] manually
+/// to avoid zombie processes on Linux. The Drop impl tries its best to reap the process if it
+/// wasn't killed by the user but it is not guarnteed to succeed.
 pub struct SimplexCli {
     handle: Option<Child>,
     port: u16,
+    version: SimplexVersion,
 }
 
 impl SimplexCli {
-    const MIN_SUPPORTED_VERSION: SimplexCliVersion = SimplexCliVersion::new(6, 4, 5, 0);
-    const MAX_SUPPORTED_VERSION: SimplexCliVersion = SimplexCliVersion::new(6, 4, 10, 0);
+    const MIN_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 0, 10);
+    const MAX_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 1, 0);
+
+    /// Begin building a [`SimplexCli`] that will spawn a `simplex-chat` process.
+    ///
+    /// Call [`SimplexCliBuilder::spawn`] to launch the process after configuring the builder.
+    pub fn new(default_bot_name: impl Into<String>, port: u16) -> SimplexCliBuilder {
+        SimplexCliBuilder {
+            port,
+            default_bot_name: default_bot_name.into(),
+            db_path: "bot".into(),
+            db_key: None,
+            extra_args: std::iter::empty(),
+        }
+    }
 
     pub fn port(&self) -> u16 {
         self.port
     }
 
-    pub fn kill(&mut self) -> io::Result<()> {
+    pub fn version(&self) -> &SimplexVersion {
+        &self.version
+    }
+
+    /// Kills the child process and waits for it to exit.
+    pub async fn kill(&mut self) -> io::Result<()> {
         if let Some(mut handle) = self.handle.take() {
-            handle.kill()?;
-            handle.wait()?;
+            handle.kill().await?;
         }
 
         Ok(())
     }
+}
 
-    pub fn external(port: u16) -> Self {
-        Self { handle: None, port }
+impl Drop for SimplexCli {
+    fn drop(&mut self) {
+        if let Some(ref mut handle) = self.handle {
+            // Reap the process if it has already exited to avoid a zombie.
+            // If it is still running, send SIGKILL and attempt an immediate reap
+            // on the happy path where the process exits quickly after the signal.
+            if handle.try_wait().ok().flatten().is_none() {
+                let _ = handle.start_kill();
+                let _ = handle.try_wait();
+            }
+        }
+    }
+}
+
+/// Builder for [`SimplexCli`].
+///
+/// Obtained via [`SimplexCli::new`].
+///
+/// # Example
+/// ```ignore
+/// let cli = SimplexCli::new("Bot", 5225)
+///     .db_path("/var/db/simplex")
+///     .db_key(secret)
+///     .arg("--smp-servers=smp://example.com")
+///     .spawn()
+///     .await?;
+/// ```
+pub struct SimplexCliBuilder<I = Empty<OsString>> {
+    port: u16,
+    default_bot_name: String,
+    db_path: String,
+    db_key: Option<String>,
+    extra_args: I,
+}
+
+impl<I> SimplexCliBuilder<I>
+where
+    I: Iterator<Item = OsString>,
+{
+    /// Sets the path to the SimpleX database directory (defaults to `"."`).
+    pub fn db_path(mut self, path: impl Into<String>) -> Self {
+        self.db_path = path.into();
+        self
     }
 
-    pub fn spawn(args: SimplexCliArgs) -> io::Result<Self> {
+    /// Passes a database encryption key via the `-k` flag.
+    pub fn db_key(mut self, key: impl Into<String>) -> Self {
+        self.db_key = Some(key.into());
+        self
+    }
+
+    /// Adds an extra command argument
+    pub fn arg(self, arg: impl Into<OsString>) -> SimplexCliBuilder<Chain<I, Once<OsString>>> {
+        SimplexCliBuilder {
+            port: self.port,
+            default_bot_name: self.default_bot_name,
+            db_path: self.db_path,
+            db_key: self.db_key,
+            extra_args: self.extra_args.chain(std::iter::once(arg.into())),
+        }
+    }
+
+    /// Adds multiple extra command arguments
+    pub fn args<J>(self, args: J) -> SimplexCliBuilder<Chain<I, J::IntoIter>>
+    where
+        J: IntoIterator<Item = OsString>,
+    {
+        SimplexCliBuilder {
+            port: self.port,
+            default_bot_name: self.default_bot_name,
+            db_path: self.db_path,
+            db_key: self.db_key,
+            extra_args: self.extra_args.chain(args.into_iter()),
+        }
+    }
+
+    /// Spawns the `simplex-chat` process and returns a [`SimplexCli`] handle.
+    ///
+    /// Checks the installed CLI version against the supported range before spawning.
+    pub async fn spawn(self) -> io::Result<SimplexCli> {
         let sxc_cmd = if std::path::Path::new("./simplex-chat").exists() {
             "./simplex-chat"
         } else {
             "simplex-chat"
         };
 
-        let cli_version = SimplexCliVersion::read(sxc_cmd)?;
+        let version_output = Command::new(sxc_cmd).arg("--version").output().await?;
 
-        if cli_version < Self::MIN_SUPPORTED_VERSION || cli_version > Self::MAX_SUPPORTED_VERSION {
+        let output_str = String::from_utf8(version_output.stdout)
+            .map_err(|_| io::Error::other("simplex-chat --version returned invalid string"))?;
+
+        let version_str = output_str
+            .lines()
+            .next()
+            .and_then(|line| line.trim().strip_prefix("SimpleX Chat v"))
+            .ok_or_else(|| {
+                io::Error::other(format!("Cannot parse SimpleX Chat version: {output_str:?}"))
+            })?;
+
+        let version: SimplexVersion = version_str.parse().map_err(|_| {
+            io::Error::other(format!(
+                "Cannot parse SimpleX Chat version: {version_str:?}"
+            ))
+        })?;
+
+        if version < SimplexCli::MIN_SUPPORTED_VERSION
+            || version > SimplexCli::MAX_SUPPORTED_VERSION
+        {
             return Err(io::Error::other(format!(
-                "The Simplex CLI {cli_version} is incompatible with current simploxide version\n\
+                "The Simplex CLI {version} is incompatible with current simploxide version\n\
                 Supported CLI versions: {}...{}",
-                Self::MIN_SUPPORTED_VERSION,
-                Self::MAX_SUPPORTED_VERSION
+                SimplexCli::MIN_SUPPORTED_VERSION,
+                SimplexCli::MAX_SUPPORTED_VERSION
             )));
         }
 
-        let handle = Command::new(sxc_cmd)
-            .stdin(Stdio::null())
+        let mut cmd = Command::new(sxc_cmd);
+        cmd.stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .arg("-d")
-            .arg(args.db_path)
+            .arg(&self.db_path)
             .arg("-p")
-            .arg(args.port.to_string())
+            .arg(self.port.to_string())
             .arg("--create-bot-display-name")
-            .arg(args.default_bot_name)
-            .spawn()?;
+            .arg(&self.default_bot_name);
 
-        Ok(Self {
+        if let Some(ref key) = self.db_key {
+            cmd.arg("-k").arg(key);
+        }
+
+        cmd.args(self.extra_args);
+
+        let handle = cmd.spawn()?;
+
+        Ok(SimplexCli {
             handle: Some(handle),
-            port: args.port,
+            port: self.port,
+            version,
         })
-    }
-}
-
-impl Drop for SimplexCli {
-    fn drop(&mut self) {
-        let _ = self.kill();
-    }
-}
-
-pub struct SimplexCliArgs {
-    pub db_path: String,
-    pub default_bot_name: String,
-    pub db_key: Option<String>,
-    pub port: u16,
-}
-
-#[derive(PartialOrd, Ord, PartialEq, Eq)]
-struct SimplexCliVersion {
-    major: u8,
-    minor: u8,
-    patch: u8,
-    hotfix: u8,
-}
-
-impl SimplexCliVersion {
-    const fn new(major: u8, minor: u8, patch: u8, hotfix: u8) -> Self {
-        Self {
-            major,
-            minor,
-            patch,
-            hotfix,
-        }
-    }
-
-    fn read(sxc_cmd: &str) -> io::Result<Self> {
-        let handle = Command::new(sxc_cmd).arg("--version").output()?;
-        let output: String = handle
-            .stdout
-            .try_into()
-            .map_err(|_| io::Error::other("simplex-chat --version returned invalid string"))?;
-
-        let version = output
-            .parse()
-            .map_err(|_| io::Error::other("Cannot parse SimpleX Chat version: {output:?}"))?;
-
-        Ok(version)
-    }
-}
-
-impl FromStr for SimplexCliVersion {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let first_line = s.lines().next().map(|line| line.trim()).ok_or(())?;
-        let version_str = first_line.strip_prefix("SimpleX Chat v").ok_or(())?;
-
-        let mut num_iter = version_str.split('.');
-
-        fn get_num<'a, 'b>(iter: &'a mut impl Iterator<Item = &'b str>) -> Result<u8, ()> {
-            iter.next()
-                .ok_or(())
-                .and_then(|s| s.parse().map_err(|_| ()))
-        }
-
-        Ok(Self {
-            major: get_num(&mut num_iter)?,
-            minor: get_num(&mut num_iter)?,
-            patch: get_num(&mut num_iter)?,
-            hotfix: get_num(&mut num_iter)?,
-        })
-    }
-}
-
-impl std::fmt::Display for SimplexCliVersion {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "v{}.{}.{}.{}",
-            self.major, self.minor, self.patch, self.hotfix
-        )
-    }
-}
-
-impl std::fmt::Debug for SimplexCliVersion {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SimplexCliVersion(")?;
-        write!(f, "{self}")?;
-        write!(f, ")")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::SimplexCliVersion;
-
-    #[test]
-    fn simplex_cli_version() {
-        let current: SimplexCliVersion = "SimpleX Chat v6.4.9.0".parse().unwrap();
-        let old: SimplexCliVersion = "SimpleX Chat v6.3.2.8".parse().unwrap();
-
-        let min_supported = SimplexCliVersion::new(6, 4, 5, 2);
-        let max_supported = SimplexCliVersion::new(6, 4, 10, 0);
-
-        assert!(current >= min_supported && current <= max_supported);
-        assert!(!(old >= min_supported && old <= max_supported));
     }
 }

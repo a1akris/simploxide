@@ -187,7 +187,14 @@ impl std::fmt::Display for InitError {
     }
 }
 
-impl std::error::Error for InitError {}
+impl std::error::Error for InitError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::CallError(call_error) => Some(call_error),
+            Self::DbError(_) => None,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum CallError {

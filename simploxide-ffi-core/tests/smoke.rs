@@ -1,4 +1,4 @@
-use simploxide_ffi_core::{DbOpts, DefaultUser};
+use simploxide_ffi_core::{DbOpts, DefaultUser, SimplexVersion};
 
 #[tokio::test]
 async fn smoke() {
@@ -26,6 +26,9 @@ async fn smoke() {
 
         assert!(events_count > 0);
     });
+
+    let version = client.version().await.unwrap();
+    assert_eq!(version, SimplexVersion::new(6, 5, 0, 11));
 
     let output = client.send("/users".to_owned()).await.unwrap();
     let json: serde_json::Value = serde_json::from_str(&output).unwrap();
