@@ -1,3 +1,5 @@
+#[allow(unused_imports)]
+use crate::commands::*;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -165,9 +167,9 @@ pub enum Event {
 /// Most bots enable auto-accept and don't need to accept connections via commands.
 ///
 /// You may create bot SimpleX address manually via CLI or desktop app or from bot code with these commands:
-/// - [APIShowMyAddress](./COMMANDS.md#apishowmyaddress) to check if address exists,
-/// - [APICreateMyAddress](./COMMANDS.md#apicreatemyaddress) to create address,
-/// - [APISetAddressSettings](./COMMANDS.md#apisetaddresssettings) to enable auto-access.
+/// - [ApiShowMyAddress] to check if address exists,
+/// - [ApiCreateMyAddress] to create address,
+/// - [ApiSetAddressSettings] to enable auto-access.
 ///
 /// ----
 ///
@@ -197,9 +199,9 @@ pub struct ContactConnected {
 /// Most bots enable auto-accept and don't need to accept connections via commands.
 ///
 /// You may create bot SimpleX address manually via CLI or desktop app or from bot code with these commands:
-/// - [APIShowMyAddress](./COMMANDS.md#apishowmyaddress) to check if address exists,
-/// - [APICreateMyAddress](./COMMANDS.md#apicreatemyaddress) to create address,
-/// - [APISetAddressSettings](./COMMANDS.md#apisetaddresssettings) to enable auto-access.
+/// - [ApiShowMyAddress] to check if address exists,
+/// - [ApiCreateMyAddress] to create address,
+/// - [ApiSetAddressSettings] to enable auto-access.
 ///
 /// ----
 ///
@@ -229,9 +231,9 @@ pub struct ContactUpdated {
 /// Most bots enable auto-accept and don't need to accept connections via commands.
 ///
 /// You may create bot SimpleX address manually via CLI or desktop app or from bot code with these commands:
-/// - [APIShowMyAddress](./COMMANDS.md#apishowmyaddress) to check if address exists,
-/// - [APICreateMyAddress](./COMMANDS.md#apicreatemyaddress) to create address,
-/// - [APISetAddressSettings](./COMMANDS.md#apisetaddresssettings) to enable auto-access.
+/// - [ApiShowMyAddress] to check if address exists,
+/// - [ApiCreateMyAddress] to create address,
+/// - [ApiSetAddressSettings] to enable auto-access.
 ///
 /// ----
 ///
@@ -258,9 +260,9 @@ pub struct ContactDeletedByContact {
 /// Most bots enable auto-accept and don't need to accept connections via commands.
 ///
 /// You may create bot SimpleX address manually via CLI or desktop app or from bot code with these commands:
-/// - [APIShowMyAddress](./COMMANDS.md#apishowmyaddress) to check if address exists,
-/// - [APICreateMyAddress](./COMMANDS.md#apicreatemyaddress) to create address,
-/// - [APISetAddressSettings](./COMMANDS.md#apisetaddresssettings) to enable auto-access.
+/// - [ApiShowMyAddress] to check if address exists,
+/// - [ApiCreateMyAddress] to create address,
+/// - [ApiSetAddressSettings] to enable auto-access.
 ///
 /// ----
 ///
@@ -268,7 +270,7 @@ pub struct ContactDeletedByContact {
 ///
 /// This event is only sent when auto-accept is disabled.
 ///
-/// The request needs to be accepted using [APIAcceptContact](./COMMANDS.md#apiacceptcontact) command
+/// The request needs to be accepted using [ApiAcceptContact] command
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
@@ -294,9 +296,9 @@ pub struct ReceivedContactRequest {
 /// Most bots enable auto-accept and don't need to accept connections via commands.
 ///
 /// You may create bot SimpleX address manually via CLI or desktop app or from bot code with these commands:
-/// - [APIShowMyAddress](./COMMANDS.md#apishowmyaddress) to check if address exists,
-/// - [APICreateMyAddress](./COMMANDS.md#apicreatemyaddress) to create address,
-/// - [APISetAddressSettings](./COMMANDS.md#apisetaddresssettings) to enable auto-access.
+/// - [ApiShowMyAddress] to check if address exists,
+/// - [ApiCreateMyAddress] to create address,
+/// - [ApiSetAddressSettings] to enable auto-access.
 ///
 /// ----
 ///
@@ -331,9 +333,9 @@ pub struct NewMemberContactReceivedInv {
 /// Most bots enable auto-accept and don't need to accept connections via commands.
 ///
 /// You may create bot SimpleX address manually via CLI or desktop app or from bot code with these commands:
-/// - [APIShowMyAddress](./COMMANDS.md#apishowmyaddress) to check if address exists,
-/// - [APICreateMyAddress](./COMMANDS.md#apicreatemyaddress) to create address,
-/// - [APISetAddressSettings](./COMMANDS.md#apisetaddresssettings) to enable auto-access.
+/// - [ApiShowMyAddress] to check if address exists,
+/// - [ApiCreateMyAddress] to create address,
+/// - [ApiSetAddressSettings] to enable auto-access.
 ///
 /// ----
 ///
@@ -986,9 +988,9 @@ pub struct GroupRelayUpdated {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///
@@ -996,7 +998,7 @@ pub struct GroupRelayUpdated {
 ///
 /// This event is useful for processing sender file servers and monitoring file reception progress.
 ///
-/// [ReceiveFile](./COMMANDS.md#receivefile) command can be used before this event.
+/// [ReceiveFile] command can be used before this event.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
@@ -1022,9 +1024,9 @@ pub struct RcvFileDescrReady {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///
@@ -1048,9 +1050,9 @@ pub struct RcvFileComplete {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///
@@ -1077,13 +1079,13 @@ pub struct SndFileCompleteXftp {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///
-/// File reception started. This event will be sent after [CEvtRcvFileDescrReady](#rcvfiledescrready) event.
+/// File reception started. This event will be sent after [CEvtRcvFileDescrReady] event.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
@@ -1103,13 +1105,13 @@ pub struct RcvFileStart {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///
-/// File was cancelled by the sender. This event may be sent instead of [CEvtRcvFileDescrReady](#rcvfiledescrready) event.
+/// File was cancelled by the sender. This event may be sent instead of [CEvtRcvFileDescrReady] event.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
@@ -1132,9 +1134,9 @@ pub struct RcvFileSndCancelled {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///
@@ -1158,9 +1160,9 @@ pub struct RcvFileAccepted {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///
@@ -1190,9 +1192,9 @@ pub struct RcvFileError {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///
@@ -1222,9 +1224,9 @@ pub struct RcvFileWarning {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///
@@ -1254,9 +1256,9 @@ pub struct SndFileError {
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
 ///
-/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile](./COMMANDS.md#receivefile) or [APIDeleteMemberChatItem](./COMMANDS.md#apideletememberchatitem)) when processing [NewChatItems](#newchatitems) event.
+/// Bots that need to receive or moderate files (e.g., based on name, size or extension), can use relevant commands (e.g., [ReceiveFile] or [ApiDeleteMemberChatItem]) when processing [NewChatItems] event.
 ///
-/// Bots that need to send files should use [APISendMessages](./COMMANDS.md#apisendmessages) command.
+/// Bots that need to send files should use [ApiSendMessages] command.
 ///
 /// ----
 ///

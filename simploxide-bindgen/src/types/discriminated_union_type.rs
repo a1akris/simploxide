@@ -54,7 +54,7 @@ impl std::fmt::Display for DiscriminatedUnionType {
 
         for variant in &self.variants {
             for comment_line in &variant.doc_comments {
-                writeln!(f, "    /// {}", comment_line)?;
+                writeln!(f, "    /// {}", super::convert_doc_links(comment_line))?;
             }
 
             writeln!(f, "    #[serde(rename = \"{}\")]", variant.api_name)?;
