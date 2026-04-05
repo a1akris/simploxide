@@ -187,6 +187,7 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
     writeln!(events_rs)?;
 
     writeln!(events_rs, "{top_level_enum}\n")?;
+    writeln!(events_rs, "{}\n", EventKindFmt(&top_level_enum))?;
 
     for record in records {
         writeln!(events_rs, "{record}\n")?;
@@ -585,6 +586,39 @@ where
     }
 }
 "#;
+
+struct EventKindFmt<'a>(&'a DiscriminatedUnionType);
+
+impl std::fmt::Display for EventKindFmt<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]")?;
+        writeln!(f, "#[non_exhaustive]")?;
+        writeln!(f, "pub enum EventKind {{")?;
+        for variant in &self.0.variants {
+            writeln!(f, "    {},", variant.rust_name)?;
+        }
+        writeln!(f, "    Undocumented,")?;
+        writeln!(f, "}}\n")?;
+
+        writeln!(f, "impl {} {{", self.0.name)?;
+        writeln!(f, "    pub fn kind(&self) -> EventKind {{")?;
+        writeln!(f, "        match self {{")?;
+        for variant in &self.0.variants {
+            writeln!(
+                f,
+                "            Self::{variant}(_) => EventKind::{variant},",
+                variant = variant.rust_name
+            )?;
+        }
+        writeln!(
+            f,
+            "            Self::Undocumented(_) => EventKind::Undocumented,"
+        )?;
+        writeln!(f, "        }}")?;
+        writeln!(f, "    }}")?;
+        writeln!(f, "}}")
+    }
+}
 
 struct DiscriminatedUnionConstructors<'a>(&'a DiscriminatedUnionType);
 
