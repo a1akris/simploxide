@@ -160,62 +160,6 @@ pub enum Event {
     Undocumented(JsonObject),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum EventKind {
-    ContactConnected,
-    ContactUpdated,
-    ContactDeletedByContact,
-    ReceivedContactRequest,
-    NewMemberContactReceivedInv,
-    ContactSndReady,
-    NewChatItems,
-    ChatItemReaction,
-    ChatItemsDeleted,
-    ChatItemUpdated,
-    GroupChatItemsDeleted,
-    ChatItemsStatusesUpdated,
-    ReceivedGroupInvitation,
-    UserJoinedGroup,
-    GroupUpdated,
-    JoinedGroupMember,
-    MemberRole,
-    DeletedMember,
-    LeftMember,
-    DeletedMemberUser,
-    GroupDeleted,
-    ConnectedToGroupMember,
-    MemberAcceptedByOther,
-    MemberBlockedForAll,
-    GroupMemberUpdated,
-    GroupLinkDataUpdated,
-    GroupRelayUpdated,
-    RcvFileDescrReady,
-    RcvFileComplete,
-    SndFileCompleteXftp,
-    RcvFileStart,
-    RcvFileSndCancelled,
-    RcvFileAccepted,
-    RcvFileError,
-    RcvFileWarning,
-    SndFileError,
-    SndFileWarning,
-    AcceptingContactRequest,
-    AcceptingBusinessRequest,
-    ContactConnecting,
-    BusinessLinkConnecting,
-    JoinedGroupMemberConnecting,
-    SentGroupInvitation,
-    GroupLinkConnecting,
-    HostConnected,
-    HostDisconnected,
-    SubscriptionStatus,
-    MessageError,
-    ChatError,
-    ChatErrors,
-    Undocumented,
-}
-
 impl Event {
     pub fn kind(&self) -> EventKind {
         match self {
@@ -273,6 +217,185 @@ impl Event {
         }
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum EventKind {
+    ContactConnected,
+    ContactUpdated,
+    ContactDeletedByContact,
+    ReceivedContactRequest,
+    NewMemberContactReceivedInv,
+    ContactSndReady,
+    NewChatItems,
+    ChatItemReaction,
+    ChatItemsDeleted,
+    ChatItemUpdated,
+    GroupChatItemsDeleted,
+    ChatItemsStatusesUpdated,
+    ReceivedGroupInvitation,
+    UserJoinedGroup,
+    GroupUpdated,
+    JoinedGroupMember,
+    MemberRole,
+    DeletedMember,
+    LeftMember,
+    DeletedMemberUser,
+    GroupDeleted,
+    ConnectedToGroupMember,
+    MemberAcceptedByOther,
+    MemberBlockedForAll,
+    GroupMemberUpdated,
+    GroupLinkDataUpdated,
+    GroupRelayUpdated,
+    RcvFileDescrReady,
+    RcvFileComplete,
+    SndFileCompleteXftp,
+    RcvFileStart,
+    RcvFileSndCancelled,
+    RcvFileAccepted,
+    RcvFileError,
+    RcvFileWarning,
+    SndFileError,
+    SndFileWarning,
+    AcceptingContactRequest,
+    AcceptingBusinessRequest,
+    ContactConnecting,
+    BusinessLinkConnecting,
+    JoinedGroupMemberConnecting,
+    SentGroupInvitation,
+    GroupLinkConnecting,
+    HostConnected,
+    HostDisconnected,
+    SubscriptionStatus,
+    MessageError,
+    ChatError,
+    ChatErrors,
+    Undocumented,
+}
+
+impl EventKind {
+    pub const COUNT: usize = 51;
+
+    pub fn as_usize(&self) -> usize {
+        match self {
+            Self::ContactConnected => 0,
+            Self::ContactUpdated => 1,
+            Self::ContactDeletedByContact => 2,
+            Self::ReceivedContactRequest => 3,
+            Self::NewMemberContactReceivedInv => 4,
+            Self::ContactSndReady => 5,
+            Self::NewChatItems => 6,
+            Self::ChatItemReaction => 7,
+            Self::ChatItemsDeleted => 8,
+            Self::ChatItemUpdated => 9,
+            Self::GroupChatItemsDeleted => 10,
+            Self::ChatItemsStatusesUpdated => 11,
+            Self::ReceivedGroupInvitation => 12,
+            Self::UserJoinedGroup => 13,
+            Self::GroupUpdated => 14,
+            Self::JoinedGroupMember => 15,
+            Self::MemberRole => 16,
+            Self::DeletedMember => 17,
+            Self::LeftMember => 18,
+            Self::DeletedMemberUser => 19,
+            Self::GroupDeleted => 20,
+            Self::ConnectedToGroupMember => 21,
+            Self::MemberAcceptedByOther => 22,
+            Self::MemberBlockedForAll => 23,
+            Self::GroupMemberUpdated => 24,
+            Self::GroupLinkDataUpdated => 25,
+            Self::GroupRelayUpdated => 26,
+            Self::RcvFileDescrReady => 27,
+            Self::RcvFileComplete => 28,
+            Self::SndFileCompleteXftp => 29,
+            Self::RcvFileStart => 30,
+            Self::RcvFileSndCancelled => 31,
+            Self::RcvFileAccepted => 32,
+            Self::RcvFileError => 33,
+            Self::RcvFileWarning => 34,
+            Self::SndFileError => 35,
+            Self::SndFileWarning => 36,
+            Self::AcceptingContactRequest => 37,
+            Self::AcceptingBusinessRequest => 38,
+            Self::ContactConnecting => 39,
+            Self::BusinessLinkConnecting => 40,
+            Self::JoinedGroupMemberConnecting => 41,
+            Self::SentGroupInvitation => 42,
+            Self::GroupLinkConnecting => 43,
+            Self::HostConnected => 44,
+            Self::HostDisconnected => 45,
+            Self::SubscriptionStatus => 46,
+            Self::MessageError => 47,
+            Self::ChatError => 48,
+            Self::ChatErrors => 49,
+            Self::Undocumented => 50,
+        }
+    }
+    pub fn from_type_str(type_str: &str) -> Self {
+        match type_str {
+            "contactConnected" => Self::ContactConnected,
+            "contactUpdated" => Self::ContactUpdated,
+            "contactDeletedByContact" => Self::ContactDeletedByContact,
+            "receivedContactRequest" => Self::ReceivedContactRequest,
+            "newMemberContactReceivedInv" => Self::NewMemberContactReceivedInv,
+            "contactSndReady" => Self::ContactSndReady,
+            "newChatItems" => Self::NewChatItems,
+            "chatItemReaction" => Self::ChatItemReaction,
+            "chatItemsDeleted" => Self::ChatItemsDeleted,
+            "chatItemUpdated" => Self::ChatItemUpdated,
+            "groupChatItemsDeleted" => Self::GroupChatItemsDeleted,
+            "chatItemsStatusesUpdated" => Self::ChatItemsStatusesUpdated,
+            "receivedGroupInvitation" => Self::ReceivedGroupInvitation,
+            "userJoinedGroup" => Self::UserJoinedGroup,
+            "groupUpdated" => Self::GroupUpdated,
+            "joinedGroupMember" => Self::JoinedGroupMember,
+            "memberRole" => Self::MemberRole,
+            "deletedMember" => Self::DeletedMember,
+            "leftMember" => Self::LeftMember,
+            "deletedMemberUser" => Self::DeletedMemberUser,
+            "groupDeleted" => Self::GroupDeleted,
+            "connectedToGroupMember" => Self::ConnectedToGroupMember,
+            "memberAcceptedByOther" => Self::MemberAcceptedByOther,
+            "memberBlockedForAll" => Self::MemberBlockedForAll,
+            "groupMemberUpdated" => Self::GroupMemberUpdated,
+            "groupLinkDataUpdated" => Self::GroupLinkDataUpdated,
+            "groupRelayUpdated" => Self::GroupRelayUpdated,
+            "rcvFileDescrReady" => Self::RcvFileDescrReady,
+            "rcvFileComplete" => Self::RcvFileComplete,
+            "sndFileCompleteXFTP" => Self::SndFileCompleteXftp,
+            "rcvFileStart" => Self::RcvFileStart,
+            "rcvFileSndCancelled" => Self::RcvFileSndCancelled,
+            "rcvFileAccepted" => Self::RcvFileAccepted,
+            "rcvFileError" => Self::RcvFileError,
+            "rcvFileWarning" => Self::RcvFileWarning,
+            "sndFileError" => Self::SndFileError,
+            "sndFileWarning" => Self::SndFileWarning,
+            "acceptingContactRequest" => Self::AcceptingContactRequest,
+            "acceptingBusinessRequest" => Self::AcceptingBusinessRequest,
+            "contactConnecting" => Self::ContactConnecting,
+            "businessLinkConnecting" => Self::BusinessLinkConnecting,
+            "joinedGroupMemberConnecting" => Self::JoinedGroupMemberConnecting,
+            "sentGroupInvitation" => Self::SentGroupInvitation,
+            "groupLinkConnecting" => Self::GroupLinkConnecting,
+            "hostConnected" => Self::HostConnected,
+            "hostDisconnected" => Self::HostDisconnected,
+            "subscriptionStatus" => Self::SubscriptionStatus,
+            "messageError" => Self::MessageError,
+            "chatError" => Self::ChatError,
+            "chatErrors" => Self::ChatErrors,
+            _ => Self::Undocumented,
+        }
+    }
+}
+
+/// Generalization of event data
+pub trait EventData {
+    const KIND: EventKind;
+
+    fn from_event(event: Event) -> Result<Arc<Self>, Event>;
+
+    fn into_event(self: Arc<Self>) -> Event;
+}
 
 /// ### Contact connection events
 ///
@@ -304,6 +427,20 @@ pub struct ContactConnected {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for ContactConnected {
+    const KIND: EventKind = EventKind::ContactConnected;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ContactConnected(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ContactConnected(self)
+    }
 }
 
 /// ### Contact connection events
@@ -338,6 +475,20 @@ pub struct ContactUpdated {
     pub undocumented: JsonObject,
 }
 
+impl EventData for ContactUpdated {
+    const KIND: EventKind = EventKind::ContactUpdated;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ContactUpdated(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ContactUpdated(self)
+    }
+}
+
 /// ### Contact connection events
 ///
 /// Bots must use these events to process connecting users.
@@ -365,6 +516,20 @@ pub struct ContactDeletedByContact {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for ContactDeletedByContact {
+    const KIND: EventKind = EventKind::ContactDeletedByContact;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ContactDeletedByContact(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ContactDeletedByContact(self)
+    }
 }
 
 /// ### Contact connection events
@@ -401,6 +566,20 @@ pub struct ReceivedContactRequest {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for ReceivedContactRequest {
+    const KIND: EventKind = EventKind::ReceivedContactRequest;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ReceivedContactRequest(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ReceivedContactRequest(self)
+    }
 }
 
 /// ### Contact connection events
@@ -440,6 +619,20 @@ pub struct NewMemberContactReceivedInv {
     pub undocumented: JsonObject,
 }
 
+impl EventData for NewMemberContactReceivedInv {
+    const KIND: EventKind = EventKind::NewMemberContactReceivedInv;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::NewMemberContactReceivedInv(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::NewMemberContactReceivedInv(self)
+    }
+}
+
 /// ### Contact connection events
 ///
 /// Bots must use these events to process connecting users.
@@ -471,6 +664,20 @@ pub struct ContactSndReady {
     pub undocumented: JsonObject,
 }
 
+impl EventData for ContactSndReady {
+    const KIND: EventKind = EventKind::ContactSndReady;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ContactSndReady(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ContactSndReady(self)
+    }
+}
+
 /// ### Message events
 ///
 /// Bots must use these events to process received messages.
@@ -491,6 +698,20 @@ pub struct NewChatItems {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for NewChatItems {
+    const KIND: EventKind = EventKind::NewChatItems;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::NewChatItems(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::NewChatItems(self)
+    }
 }
 
 /// ### Message events
@@ -516,6 +737,20 @@ pub struct ChatItemReaction {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for ChatItemReaction {
+    const KIND: EventKind = EventKind::ChatItemReaction;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ChatItemReaction(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ChatItemReaction(self)
+    }
 }
 
 /// ### Message events
@@ -546,6 +781,20 @@ pub struct ChatItemsDeleted {
     pub undocumented: JsonObject,
 }
 
+impl EventData for ChatItemsDeleted {
+    const KIND: EventKind = EventKind::ChatItemsDeleted;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ChatItemsDeleted(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ChatItemsDeleted(self)
+    }
+}
+
 /// ### Message events
 ///
 /// Bots must use these events to process received messages.
@@ -566,6 +815,20 @@ pub struct ChatItemUpdated {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for ChatItemUpdated {
+    const KIND: EventKind = EventKind::ChatItemUpdated;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ChatItemUpdated(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ChatItemUpdated(self)
+    }
 }
 
 /// ### Message events
@@ -599,6 +862,20 @@ pub struct GroupChatItemsDeleted {
     pub undocumented: JsonObject,
 }
 
+impl EventData for GroupChatItemsDeleted {
+    const KIND: EventKind = EventKind::GroupChatItemsDeleted;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::GroupChatItemsDeleted(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::GroupChatItemsDeleted(self)
+    }
+}
+
 /// ### Message events
 ///
 /// Bots must use these events to process received messages.
@@ -619,6 +896,20 @@ pub struct ChatItemsStatusesUpdated {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for ChatItemsStatusesUpdated {
+    const KIND: EventKind = EventKind::ChatItemsStatusesUpdated;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ChatItemsStatusesUpdated(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ChatItemsStatusesUpdated(self)
+    }
 }
 
 /// ### Group events
@@ -654,6 +945,20 @@ pub struct ReceivedGroupInvitation {
     pub undocumented: JsonObject,
 }
 
+impl EventData for ReceivedGroupInvitation {
+    const KIND: EventKind = EventKind::ReceivedGroupInvitation;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ReceivedGroupInvitation(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ReceivedGroupInvitation(self)
+    }
+}
+
 /// ### Group events
 ///
 /// Bots may use these events to manage users' groups and business address groups.
@@ -679,6 +984,20 @@ pub struct UserJoinedGroup {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for UserJoinedGroup {
+    const KIND: EventKind = EventKind::UserJoinedGroup;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::UserJoinedGroup(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::UserJoinedGroup(self)
+    }
 }
 
 /// ### Group events
@@ -714,6 +1033,20 @@ pub struct GroupUpdated {
     pub undocumented: JsonObject,
 }
 
+impl EventData for GroupUpdated {
+    const KIND: EventKind = EventKind::GroupUpdated;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::GroupUpdated(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::GroupUpdated(self)
+    }
+}
+
 /// ### Group events
 ///
 /// Bots may use these events to manage users' groups and business address groups.
@@ -739,6 +1072,20 @@ pub struct JoinedGroupMember {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for JoinedGroupMember {
+    const KIND: EventKind = EventKind::JoinedGroupMember;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::JoinedGroupMember(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::JoinedGroupMember(self)
+    }
 }
 
 /// ### Group events
@@ -780,6 +1127,20 @@ pub struct MemberRole {
     pub undocumented: JsonObject,
 }
 
+impl EventData for MemberRole {
+    const KIND: EventKind = EventKind::MemberRole;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::MemberRole(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::MemberRole(self)
+    }
+}
+
 /// ### Group events
 ///
 /// Bots may use these events to manage users' groups and business address groups.
@@ -816,6 +1177,20 @@ pub struct DeletedMember {
     pub undocumented: JsonObject,
 }
 
+impl EventData for DeletedMember {
+    const KIND: EventKind = EventKind::DeletedMember;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::DeletedMember(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::DeletedMember(self)
+    }
+}
+
 /// ### Group events
 ///
 /// Bots may use these events to manage users' groups and business address groups.
@@ -844,6 +1219,20 @@ pub struct LeftMember {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for LeftMember {
+    const KIND: EventKind = EventKind::LeftMember;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::LeftMember(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::LeftMember(self)
+    }
 }
 
 /// ### Group events
@@ -879,6 +1268,20 @@ pub struct DeletedMemberUser {
     pub undocumented: JsonObject,
 }
 
+impl EventData for DeletedMemberUser {
+    const KIND: EventKind = EventKind::DeletedMemberUser;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::DeletedMemberUser(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::DeletedMemberUser(self)
+    }
+}
+
 /// ### Group events
 ///
 /// Bots may use these events to manage users' groups and business address groups.
@@ -907,6 +1310,20 @@ pub struct GroupDeleted {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for GroupDeleted {
+    const KIND: EventKind = EventKind::GroupDeleted;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::GroupDeleted(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::GroupDeleted(self)
+    }
 }
 
 /// ### Group events
@@ -939,6 +1356,20 @@ pub struct ConnectedToGroupMember {
     pub undocumented: JsonObject,
 }
 
+impl EventData for ConnectedToGroupMember {
+    const KIND: EventKind = EventKind::ConnectedToGroupMember;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ConnectedToGroupMember(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ConnectedToGroupMember(self)
+    }
+}
+
 /// ### Group events
 ///
 /// Bots may use these events to manage users' groups and business address groups.
@@ -967,6 +1398,20 @@ pub struct MemberAcceptedByOther {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for MemberAcceptedByOther {
+    const KIND: EventKind = EventKind::MemberAcceptedByOther;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::MemberAcceptedByOther(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::MemberAcceptedByOther(self)
+    }
 }
 
 /// ### Group events
@@ -1005,6 +1450,20 @@ pub struct MemberBlockedForAll {
     pub undocumented: JsonObject,
 }
 
+impl EventData for MemberBlockedForAll {
+    const KIND: EventKind = EventKind::MemberBlockedForAll;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::MemberBlockedForAll(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::MemberBlockedForAll(self)
+    }
+}
+
 /// ### Group events
 ///
 /// Bots may use these events to manage users' groups and business address groups.
@@ -1033,6 +1492,20 @@ pub struct GroupMemberUpdated {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for GroupMemberUpdated {
+    const KIND: EventKind = EventKind::GroupMemberUpdated;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::GroupMemberUpdated(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::GroupMemberUpdated(self)
+    }
 }
 
 /// ### Group events
@@ -1068,6 +1541,20 @@ pub struct GroupLinkDataUpdated {
     pub undocumented: JsonObject,
 }
 
+impl EventData for GroupLinkDataUpdated {
+    const KIND: EventKind = EventKind::GroupLinkDataUpdated;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::GroupLinkDataUpdated(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::GroupLinkDataUpdated(self)
+    }
+}
+
 /// ### Group events
 ///
 /// Bots may use these events to manage users' groups and business address groups.
@@ -1096,6 +1583,20 @@ pub struct GroupRelayUpdated {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for GroupRelayUpdated {
+    const KIND: EventKind = EventKind::GroupRelayUpdated;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::GroupRelayUpdated(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::GroupRelayUpdated(self)
+    }
 }
 
 /// ### File events
@@ -1134,6 +1635,20 @@ pub struct RcvFileDescrReady {
     pub undocumented: JsonObject,
 }
 
+impl EventData for RcvFileDescrReady {
+    const KIND: EventKind = EventKind::RcvFileDescrReady;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::RcvFileDescrReady(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::RcvFileDescrReady(self)
+    }
+}
+
 /// ### File events
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
@@ -1158,6 +1673,20 @@ pub struct RcvFileComplete {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for RcvFileComplete {
+    const KIND: EventKind = EventKind::RcvFileComplete;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::RcvFileComplete(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::RcvFileComplete(self)
+    }
 }
 
 /// ### File events
@@ -1189,6 +1718,20 @@ pub struct SndFileCompleteXftp {
     pub undocumented: JsonObject,
 }
 
+impl EventData for SndFileCompleteXftp {
+    const KIND: EventKind = EventKind::SndFileCompleteXftp;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::SndFileCompleteXftp(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::SndFileCompleteXftp(self)
+    }
+}
+
 /// ### File events
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
@@ -1213,6 +1756,20 @@ pub struct RcvFileStart {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for RcvFileStart {
+    const KIND: EventKind = EventKind::RcvFileStart;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::RcvFileStart(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::RcvFileStart(self)
+    }
 }
 
 /// ### File events
@@ -1244,6 +1801,20 @@ pub struct RcvFileSndCancelled {
     pub undocumented: JsonObject,
 }
 
+impl EventData for RcvFileSndCancelled {
+    const KIND: EventKind = EventKind::RcvFileSndCancelled;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::RcvFileSndCancelled(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::RcvFileSndCancelled(self)
+    }
+}
+
 /// ### File events
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
@@ -1268,6 +1839,20 @@ pub struct RcvFileAccepted {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for RcvFileAccepted {
+    const KIND: EventKind = EventKind::RcvFileAccepted;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::RcvFileAccepted(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::RcvFileAccepted(self)
+    }
 }
 
 /// ### File events
@@ -1302,6 +1887,20 @@ pub struct RcvFileError {
     pub undocumented: JsonObject,
 }
 
+impl EventData for RcvFileError {
+    const KIND: EventKind = EventKind::RcvFileError;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::RcvFileError(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::RcvFileError(self)
+    }
+}
+
 /// ### File events
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
@@ -1332,6 +1931,20 @@ pub struct RcvFileWarning {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for RcvFileWarning {
+    const KIND: EventKind = EventKind::RcvFileWarning;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::RcvFileWarning(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::RcvFileWarning(self)
+    }
 }
 
 /// ### File events
@@ -1366,6 +1979,20 @@ pub struct SndFileError {
     pub undocumented: JsonObject,
 }
 
+impl EventData for SndFileError {
+    const KIND: EventKind = EventKind::SndFileError;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::SndFileError(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::SndFileError(self)
+    }
+}
+
 /// ### File events
 ///
 /// Bots that send or receive files may process these events to track delivery status and to process completion.
@@ -1398,6 +2025,20 @@ pub struct SndFileWarning {
     pub undocumented: JsonObject,
 }
 
+impl EventData for SndFileWarning {
+    const KIND: EventKind = EventKind::SndFileWarning;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::SndFileWarning(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::SndFileWarning(self)
+    }
+}
+
 /// ### Connection progress events
 ///
 /// Bots may use these events to track progress of connections for monitoring or debugging.
@@ -1418,6 +2059,20 @@ pub struct AcceptingContactRequest {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for AcceptingContactRequest {
+    const KIND: EventKind = EventKind::AcceptingContactRequest;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::AcceptingContactRequest(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::AcceptingContactRequest(self)
+    }
 }
 
 /// ### Connection progress events
@@ -1442,6 +2097,20 @@ pub struct AcceptingBusinessRequest {
     pub undocumented: JsonObject,
 }
 
+impl EventData for AcceptingBusinessRequest {
+    const KIND: EventKind = EventKind::AcceptingBusinessRequest;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::AcceptingBusinessRequest(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::AcceptingBusinessRequest(self)
+    }
+}
+
 /// ### Connection progress events
 ///
 /// Bots may use these events to track progress of connections for monitoring or debugging.
@@ -1464,6 +2133,20 @@ pub struct ContactConnecting {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for ContactConnecting {
+    const KIND: EventKind = EventKind::ContactConnecting;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ContactConnecting(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ContactConnecting(self)
+    }
 }
 
 /// ### Connection progress events
@@ -1496,6 +2179,20 @@ pub struct BusinessLinkConnecting {
     pub undocumented: JsonObject,
 }
 
+impl EventData for BusinessLinkConnecting {
+    const KIND: EventKind = EventKind::BusinessLinkConnecting;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::BusinessLinkConnecting(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::BusinessLinkConnecting(self)
+    }
+}
+
 /// ### Connection progress events
 ///
 /// Bots may use these events to track progress of connections for monitoring or debugging.
@@ -1522,6 +2219,20 @@ pub struct JoinedGroupMemberConnecting {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for JoinedGroupMemberConnecting {
+    const KIND: EventKind = EventKind::JoinedGroupMemberConnecting;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::JoinedGroupMemberConnecting(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::JoinedGroupMemberConnecting(self)
+    }
 }
 
 /// ### Connection progress events
@@ -1552,6 +2263,20 @@ pub struct SentGroupInvitation {
     pub undocumented: JsonObject,
 }
 
+impl EventData for SentGroupInvitation {
+    const KIND: EventKind = EventKind::SentGroupInvitation;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::SentGroupInvitation(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::SentGroupInvitation(self)
+    }
+}
+
 /// ### Connection progress events
 ///
 /// Bots may use these events to track progress of connections for monitoring or debugging.
@@ -1577,6 +2302,20 @@ pub struct GroupLinkConnecting {
     pub undocumented: JsonObject,
 }
 
+impl EventData for GroupLinkConnecting {
+    const KIND: EventKind = EventKind::GroupLinkConnecting;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::GroupLinkConnecting(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::GroupLinkConnecting(self)
+    }
+}
+
 /// ### Network connection events
 ///
 ///
@@ -1598,6 +2337,20 @@ pub struct HostConnected {
     pub undocumented: JsonObject,
 }
 
+impl EventData for HostConnected {
+    const KIND: EventKind = EventKind::HostConnected;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::HostConnected(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::HostConnected(self)
+    }
+}
+
 /// ### Network connection events
 ///
 ///
@@ -1617,6 +2370,20 @@ pub struct HostDisconnected {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for HostDisconnected {
+    const KIND: EventKind = EventKind::HostDisconnected;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::HostDisconnected(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::HostDisconnected(self)
+    }
 }
 
 /// ### Network connection events
@@ -1641,6 +2408,20 @@ pub struct SubscriptionStatus {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for SubscriptionStatus {
+    const KIND: EventKind = EventKind::SubscriptionStatus;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::SubscriptionStatus(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::SubscriptionStatus(self)
+    }
 }
 
 /// ### Error events
@@ -1668,6 +2449,20 @@ pub struct MessageError {
     pub undocumented: JsonObject,
 }
 
+impl EventData for MessageError {
+    const KIND: EventKind = EventKind::MessageError;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::MessageError(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::MessageError(self)
+    }
+}
+
 /// ### Error events
 ///
 /// Bots may log these events for debugging. There will be many error events - this does NOT indicate a malfunction - e.g., they may happen because of bad network connectivity, or because messages may be delivered to deleted chats for a short period of time (they will be ignored).
@@ -1687,6 +2482,20 @@ pub struct ChatError {
     pub undocumented: JsonObject,
 }
 
+impl EventData for ChatError {
+    const KIND: EventKind = EventKind::ChatError;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ChatError(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ChatError(self)
+    }
+}
+
 /// ### Error events
 ///
 /// Bots may log these events for debugging. There will be many error events - this does NOT indicate a malfunction - e.g., they may happen because of bad network connectivity, or because messages may be delivered to deleted chats for a short period of time (they will be ignored).
@@ -1704,4 +2513,18 @@ pub struct ChatErrors {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+impl EventData for ChatErrors {
+    const KIND: EventKind = EventKind::ChatErrors;
+    fn from_event(ev: Event) -> Result<Arc<Self>, Event> {
+        if let Event::ChatErrors(data) = ev {
+            Ok(data)
+        } else {
+            Err(ev)
+        }
+    }
+    fn into_event(self: Arc<Self>) -> Event {
+        Event::ChatErrors(self)
+    }
 }

@@ -1,24 +1,26 @@
-use futures::Stream;
-use simploxide_api_types::{
-    client_api::{ExtractResponse as _, FfiResponseShape},
-    events::Event,
-};
 pub use simploxide_ffi_core::{CallError, DbOpts, DefaultUser, InitError};
 
-use simploxide_ffi_core::{EventReceiver, RawClient, RawEventQueue};
+use simploxide_api_types::{
+    client_api::{ExtractResponse as _, FfiResponseShape},
+    events::{Event, EventKind},
+};
+use simploxide_ffi_core::{Event as CoreEvent, RawClient, Result as CoreResult};
 
-use std::task;
+use std::sync::Arc;
 
-use crate::{BadResponseError, ClientApi, ClientApiError};
+use crate::{BadResponseError, ClientApi, ClientApiError, EventParser, EventStream};
 
 pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
 
 pub async fn init(
     default_user: DefaultUser,
     db_opts: DbOpts,
-) -> Result<(Client, EventStream), InitError> {
+) -> Result<(Client, EventStream<CoreResult<CoreEvent>>), InitError> {
     let (raw_client, raw_event_queue) = simploxide_ffi_core::init(default_user, db_opts).await?;
-    Ok((Client::from(raw_client), EventStream::from(raw_event_queue)))
+    Ok((
+        Client::from(raw_client),
+        EventStream::from(raw_event_queue.into_receiver()),
+    ))
 }
 
 /// A cheaply clonable high-level FFI client implementing [`ClientApi`]
@@ -44,10 +46,10 @@ impl Client {
 }
 
 impl ClientApi for Client {
-    type ResponseShape<T>
+    type ResponseShape<'de, T>
         = FfiResponseShape<T>
     where
-        T: for<'de> serde::Deserialize<'de>;
+        T: 'de + serde::Deserialize<'de>;
 
     type Error = ClientError;
 
@@ -59,43 +61,51 @@ impl ClientApi for Client {
     }
 }
 
-pub struct EventStream(EventReceiver);
+impl EventParser for CoreResult<String> {
+    type Error = ClientError;
 
-impl From<RawEventQueue> for EventStream {
-    fn from(value: RawEventQueue) -> Self {
-        Self(value.into_receiver())
+    fn parse_kind(&self) -> Result<EventKind, Self::Error> {
+        #[derive(serde::Deserialize)]
+        struct TypeField<'a> {
+            #[serde(rename = "type", borrow)]
+            typ: &'a str,
+        }
+
+        match parse_data::<TypeField<'_>>(self) {
+            Ok(f) => Ok(EventKind::from_type_str(f.typ)),
+            Err(ClientError::BadResponse(BadResponseError::Undocumented(_))) => {
+                Ok(EventKind::Undocumented)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn parse_event(&self) -> Result<Event, Self::Error> {
+        parse_data(self)
     }
 }
 
-impl Stream for EventStream {
-    type Item = ClientResult<Event>;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut task::Context<'_>,
-    ) -> task::Poll<Option<Self::Item>> {
-        self.0.poll_recv(cx).map(|opt| {
-            opt.map(|res| {
-                res.map_err(ClientError::FfiFailure).and_then(|ev| {
-                    serde_json::from_str::<FfiResponseShape<Event>>(&ev)
-                        .map_err(BadResponseError::InvalidJson)
-                        .and_then(|shape| shape.extract_response())
-                        .map_err(ClientError::BadResponse)
-                })
-            })
+fn parse_data<'de, 'r: 'de, D: 'de + serde::Deserialize<'de>>(
+    result: &'r CoreResult<String>,
+) -> Result<D, ClientError> {
+    result
+        .as_ref()
+        .map_err(|e| ClientError::FfiFailure(e.clone()))
+        .and_then(|ev| {
+            serde_json::from_str::<FfiResponseShape<D>>(ev)
+                .map_err(BadResponseError::InvalidJson)
+                .and_then(|shape| shape.extract_response())
+                .map_err(ClientError::BadResponse)
         })
-    }
 }
 
-/// See [`crate::client_api::AllowUndocumentedResponses`] if you don't want to trigger an error when
-/// you receive undocumeted responses(you usually receive undocumented responses when your
-/// simplex-chat server version is not compatible with the simploxide-client version. Keep an eye
-/// on the
-/// [Version compatability table](https://github.com/a1akris/simploxide?tab=readme-ov-file#version-compatability-table)
-/// )
+/// See [`crate::client_api::AllowUndocumentedResponses`] if you don't want to trigger an error
+/// when you receive undocumeted responses(you usually receive undocumented responses when your
+/// simplex-chat version is not compatible with the current simploxide-client version. Keep an eye
+/// on the [Version compatability table](https://github.com/a1akris/simploxide?tab=readme-ov-file#version-compatability-table))
 #[derive(Debug)]
 pub enum ClientError {
-    FfiFailure(CallError),
+    FfiFailure(Arc<CallError>),
     BadResponse(BadResponseError),
 }
 
@@ -111,7 +121,7 @@ impl std::error::Error for ClientError {
 impl std::fmt::Display for ClientError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ClientError::FfiFailure(err) => writeln!(f, "FFI failure: {err}"),
+            ClientError::FfiFailure(err) => writeln!(f, "FFI error: {err}"),
             ClientError::BadResponse(err) => err.fmt(f),
         }
     }

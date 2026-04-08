@@ -1,25 +1,36 @@
-//! The example expects that the bot account was already pre-created via CLI by `/create bot
-//! <bot_name> <bot_fullname>` command.
+//! To compile this example pass the --features flag like this: `cargo run --example squaring_bot
+//! --features bon,cli`
 //!
-//! To compile this example pass the --all-features flag like this:
-//! `cargo run --example squaring_bot --all-features`
+//! The examples expects that SimpleX-CLI is installed locally on the system and is available via
+//! $PATH or at the `simploxide/simploxide-client` directory(you can symlink it there)
 //!
 //! ----
 //!
 //! A bot that receives a number and sends back its square.
 
-use futures::{TryFutureExt as _, TryStreamExt as _};
-use simploxide_client::{prelude::*, ws::ClientResult};
+use futures::TryFutureExt as _;
+use simploxide_client::{
+    StreamEvents,
+    prelude::*,
+    ws::{self, ClientResult},
+};
 use std::{error::Error, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    unsafe {
-        std::env::set_var("RUST_LOG", "debug");
-    }
+    println!(
+        "Current dir: {}",
+        std::env::current_dir().unwrap().display()
+    );
 
-    pretty_env_logger::init();
-    let (client, mut events) = simploxide_client::ws::connect("ws://127.0.0.1:5225").await?;
+    let mut cli = ws::cli::SimplexCli::builder("SimplOxide Examples", 5225)
+        .db_prefix("test_db/bot")
+        .spawn()
+        .await?;
+
+    let (client, events) =
+        ws::retry_connect("ws://127.0.0.1:5225", std::time::Duration::from_secs(1), 5).await?;
+
     let response = client.show_active_user().await?;
 
     println!(
@@ -51,98 +62,126 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Bot long address: {address_long}");
     println!("Bot short address: {address_short:?}");
 
-    // The client API is quite low level so defining helper functions is often required to deal
-    // with common bot actions.
-    let send_reply = async |dest: i64, reply: String| -> ClientResult<Arc<NewChatItemsResponse>> {
-        // Use bon builders to build complicated requests. Availaible behind the "bon" feature
-        // flag.
-        client
-            .api_send_messages(
-                ApiSendMessages::builder()
-                    .send_ref(
-                        ChatRef::builder()
-                            .chat_type(ChatType::Direct)
-                            .chat_id(dest)
-                            .build(),
-                    )
-                    .live_message(false)
-                    .composed_messages(vec![
-                        ComposedMessage::builder()
-                            .msg_content(MsgContent::text(reply))
-                            .mentions(Default::default())
-                            .build(),
-                    ])
-                    .build(),
+    let connection = events
+        .into_dispatcher(client)
+        // .fallback(async |ev, _| {
+        //     println!("{ev:?}");
+        //     Ok(StreamEvents::Continue)
+        // })
+        .on(new_contact_request)
+        .on(contact_connected)
+        .on(new_msg)
+        .dispatch()
+        .await?;
+
+    drop(connection);
+
+    cli.kill().await?;
+    Ok(())
+}
+
+async fn contact_connected(
+    ev: Arc<ContactConnected>,
+    client: ws::Client,
+) -> ClientResult<StreamEvents> {
+    println!("{} connected", ev.contact.profile.display_name);
+
+    reply(
+        &client,
+        ev.contact.contact_id,
+        "Hello! I am a simple squaring bot - if you send me a number, I will calculate its square"
+            .to_owned(),
+    )
+    .await?;
+
+    Ok(StreamEvents::Continue)
+}
+
+async fn new_contact_request(
+    ev: Arc<ReceivedContactRequest>,
+    client: ws::Client,
+) -> ClientResult<StreamEvents> {
+    client
+        .api_accept_contact(ev.contact_request.contact_request_id)
+        .await?;
+
+    println!(
+        "Accepted user: {} ({})",
+        ev.contact_request.profile.display_name, ev.contact_request.profile.full_name
+    );
+
+    Ok(StreamEvents::Continue)
+}
+
+async fn new_msg(ev: Arc<NewChatItems>, client: ws::Client) -> ClientResult<StreamEvents> {
+    // SimpleX sends a lot of utility messages like enabled preferences and chat
+    // features. These fake messages must be filtered out, we're interested only in
+    // regular text messages
+    for (contact, text) in ev.chat_items.iter().filter_map(|msg| {
+        let ChatInfo::Direct { ref contact, .. } = msg.chat_info else {
+            return None;
+        };
+
+        let CIContent::RcvMsgContent {
+            msg_content: MsgContent::Text { ref text, .. },
+            ..
+        } = msg.chat_item.content
+        else {
+            return None;
+        };
+
+        Some((contact, text))
+    }) {
+        if text.trim() == "/die" {
+            return Ok(StreamEvents::Break);
+        }
+
+        if let Ok(num) = text.trim().parse::<i64>() {
+            reply(
+                &client,
+                contact.contact_id,
+                format!("Squared: {}", num.wrapping_mul(num)),
             )
-            .await
-    };
-
-    // Implement reactor
-    'reactor: while let Some(ev) = events.try_next().await? {
-        match ev {
-            // A new user connected
-            Event::ContactConnected(connected) => {
-                println!("{} connected", connected.contact.profile.display_name);
-
-                send_reply(
-                    connected.contact.contact_id,
-                    "Hello! I am a simple squaring bot - if you send me a number, I will calculate its square".to_owned()
-                ).await?;
-            }
-            // Got the message -> square the number
-            Event::NewChatItems(new_msgs) => {
-                // SimpleX sends a lot of utility messages like enabled preferences and chat
-                // features. These fake messages must be filtered out, we're interested only in
-                // regular text messages
-                for (contact, text) in new_msgs.chat_items.iter().filter_map(|msg| {
-                    let ChatInfo::Direct { ref contact, .. } = msg.chat_info else {
-                        return None;
-                    };
-
-                    let CIContent::RcvMsgContent {
-                        msg_content: MsgContent::Text { ref text, .. },
-                        ..
-                    } = msg.chat_item.content
-                    else {
-                        return None;
-                    };
-
-                    Some((contact, text))
-                }) {
-                    if text.trim() == "/die" {
-                        break 'reactor;
-                    }
-
-                    if let Ok(num) = text.trim().parse::<i64>() {
-                        send_reply(
-                            contact.contact_id,
-                            format!("Squared: {}", num.wrapping_mul(num)),
-                        )
-                        .await?;
-                    } else {
-                        send_reply(
-                            contact.contact_id,
-                            "Me understands only numbers!".to_owned(),
-                        )
-                        .await?;
-                    }
-                }
-            }
-            // Accept a request from a new user
-            Event::ReceivedContactRequest(req) => {
-                client
-                    .api_accept_contact(req.contact_request.contact_request_id)
-                    .await?;
-
-                println!(
-                    "Accepted user: {} ({})",
-                    req.contact_request.profile.display_name, req.contact_request.profile.full_name
-                );
-            }
-            // Ignore all other events
-            _ => (),
+            .await?;
+        } else {
+            reply(
+                &client,
+                contact.contact_id,
+                "Me understands only numbers!".to_owned(),
+            )
+            .await?;
         }
     }
 
-    Ok(())
+    Ok(StreamEvents::Continue)
+}
+
+// The client API is quite low level so helper functions are often required to deal with common bot
+// actions.
+async fn reply(
+    client: &ws::Client,
+    dest: i64,
+    reply: impl Into<String>,
+) -> ClientResult<Arc<NewChatItemsResponse>> {
+    // Use bon builders to build complicated requests. Availaible behind the "bon" feature
+    // flag.
+    client
+        .api_send_messages(
+            ApiSendMessages::builder()
+                .send_ref(
+                    ChatRef::builder()
+                        .chat_type(ChatType::Direct)
+                        .chat_id(dest)
+                        .build(),
+                )
+                .live_message(false)
+                .composed_messages(vec![
+                    ComposedMessage::builder()
+                        .msg_content(MsgContent::text(reply.into()))
+                        .mentions(Default::default())
+                        .build(),
+                ])
+                .build(),
+        )
+        .await
 }

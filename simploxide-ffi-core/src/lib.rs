@@ -4,19 +4,24 @@ pub use simploxide_sxcrt_sys::{CallError, InitError, MigrationConfirmation};
 use serde::Deserialize;
 use simploxide_sxcrt_sys::SimpleXChat;
 
-use std::{path::Path, sync::mpsc::RecvTimeoutError};
+use std::{
+    path::Path,
+    sync::{Arc, mpsc::RecvTimeoutError},
+};
 
 pub type Command = String;
 pub type Event = String;
 pub type Response = String;
 
-type FfiResponder = tokio::sync::oneshot::Sender<Result<Response, CallError>>;
+pub type Result<T = (), E = Arc<CallError>> = ::std::result::Result<T, E>;
+
+type FfiResponder = tokio::sync::oneshot::Sender<Result<Response>>;
 
 type ChatWorkerTransmitter = std::sync::mpsc::Sender<ChatWorkerCommand>;
 type ChatWorkerReceiver = std::sync::mpsc::Receiver<ChatWorkerCommand>;
 
-type EventTransmitter = tokio::sync::mpsc::UnboundedSender<Result<Event, CallError>>;
-pub type EventReceiver = tokio::sync::mpsc::UnboundedReceiver<Result<Event, CallError>>;
+type EventTransmitter = tokio::sync::mpsc::UnboundedSender<Result<Event>>;
+pub type EventReceiver = tokio::sync::mpsc::UnboundedReceiver<Result<Event>>;
 
 pub async fn init(
     default_user: DefaultUser,
@@ -45,7 +50,7 @@ pub struct RawClient {
 }
 
 impl RawClient {
-    pub async fn send(&self, command: Command) -> Result<Response, CallError> {
+    pub async fn send(&self, command: Command) -> Result<Response> {
         let (responder, response) = tokio::sync::oneshot::channel();
 
         self.tx
@@ -78,7 +83,7 @@ impl RawClient {
         let output = self.send("/v".to_owned()).await?;
 
         let response = serde_json::from_str::<VersionResult>(&output)
-            .map_err(CallError::InvalidJson)?
+            .map_err(|e| Arc::new(CallError::InvalidJson(e)))?
             .result
             .version_info
             .version;
@@ -100,7 +105,7 @@ pub struct RawEventQueue {
 }
 
 impl RawEventQueue {
-    pub async fn next_event(&mut self) -> Option<Result<Event, CallError>> {
+    pub async fn next_event(&mut self) -> Option<Result<Event>> {
         self.receiver.recv().await
     }
 
@@ -160,12 +165,12 @@ impl DbOpts {
 
 #[derive(Debug)]
 pub enum VersionError {
-    Ffi(CallError),
+    Ffi(Arc<CallError>),
     ParseError(String),
 }
 
-impl From<CallError> for VersionError {
-    fn from(value: CallError) -> Self {
+impl From<Arc<CallError>> for VersionError {
+    fn from(value: Arc<CallError>) -> Self {
         Self::Ffi(value)
     }
 }
@@ -235,7 +240,7 @@ fn chat_worker(mut chat: SimpleXChat, rx: ChatWorkerReceiver, ev_tx: EventTransm
                     let _ = ev_tx.send(Ok(event));
                 }
                 Err(err) => {
-                    let _ = ev_tx.send(Err(err));
+                    let _ = ev_tx.send(Err(Arc::new(err)));
                     msg_wait_error = true;
                     break 'outer;
                 }
@@ -246,7 +251,7 @@ fn chat_worker(mut chat: SimpleXChat, rx: ChatWorkerReceiver, ev_tx: EventTransm
             match rx.recv_timeout(POLL_LATENCY) {
                 Ok(ChatWorkerCommand::Execute(command, responder)) => {
                     let output = chat.send_cmd(command);
-                    let _ = responder.send(output);
+                    let _ = responder.send(output.map_err(Arc::new));
                 }
                 Err(RecvTimeoutError::Timeout) => break,
                 Err(RecvTimeoutError::Disconnected) | Ok(ChatWorkerCommand::Disconnect) => {
@@ -259,7 +264,7 @@ fn chat_worker(mut chat: SimpleXChat, rx: ChatWorkerReceiver, ev_tx: EventTransm
     loop {
         match rx.recv_timeout(POLL_LATENCY) {
             Ok(ChatWorkerCommand::Execute(_, responder)) => {
-                let _ = responder.send(Err(CallError::Failure));
+                let _ = responder.send(Err(Arc::new(CallError::Failure)));
             }
             Ok(ChatWorkerCommand::Disconnect) => {}
             Err(_) => break,
@@ -278,7 +283,7 @@ fn chat_worker(mut chat: SimpleXChat, rx: ChatWorkerReceiver, ev_tx: EventTransm
                     }
                 }
                 Err(err) => {
-                    let _ = ev_tx.send(Err(err));
+                    let _ = ev_tx.send(Err(Arc::new(err)));
                     break;
                 }
             }

@@ -157,7 +157,7 @@ impl<'a> std::fmt::Display for CommandResponseTraitMethod<'a> {
         )?;
         writeln!(
             f,
-            "        let response_shape: Self::ResponseShape<{}> = serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;",
+            "        let response_shape: Self::ResponseShape<'_, {}> = serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;",
             self.response.name,
         )?;
 
@@ -253,7 +253,11 @@ impl std::fmt::Display for ResponseFmt<'_> {
 
         for variant in &self.0.variants {
             for comment_line in &variant.doc_comments {
-                writeln!(f, "    /// {}", crate::types::convert_doc_links(comment_line))?;
+                writeln!(
+                    f,
+                    "    /// {}",
+                    crate::types::convert_doc_links(comment_line)
+                )?;
             }
             writeln!(f, "    #[serde(rename = \"{}\")]", variant.api_name)?;
             writeln!(

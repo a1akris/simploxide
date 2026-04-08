@@ -1,18 +1,19 @@
 pub use simploxide_ws_core::{
-    self as core, Error as CoreError, Result as CoreResult, tungstenite::Error as WsError,
+    self as core, Error as CoreError, Event as CoreEvent, Result as CoreResult,
+    tungstenite::Error as WsError,
 };
 
-use futures::Stream;
+#[cfg(feature = "cli")]
+pub use simploxide_ws_core::cli;
+
 use serde::Deserialize;
 use simploxide_api_types::{
     client_api::{ExtractResponse, WebSocketResponseShape, WebSocketResponseShapeInner},
-    events::Event,
+    events::{Event, EventKind},
 };
-use simploxide_ws_core::{EventQueue, EventReceiver, RawClient};
+use simploxide_ws_core::RawClient;
 
-use std::task;
-
-use crate::{BadResponseError, ClientApi, ClientApiError};
+use crate::{BadResponseError, ClientApi, ClientApiError, EventParser, EventStream};
 
 pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
 
@@ -29,9 +30,14 @@ pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
 ///     // Process events...
 /// }
 /// ```
-pub async fn connect<S: AsRef<str>>(uri: S) -> Result<(Client, EventStream), WsError> {
+pub async fn connect<S: AsRef<str>>(
+    uri: S,
+) -> Result<(Client, EventStream<CoreResult<CoreEvent>>), WsError> {
     let (raw_client, raw_event_queue) = simploxide_ws_core::connect(uri.as_ref()).await?;
-    Ok((Client::from(raw_client), EventStream::from(raw_event_queue)))
+    Ok((
+        Client::from(raw_client),
+        EventStream::from(raw_event_queue.into_receiver()),
+    ))
 }
 
 /// Like [`connect`] but retries to connect `retries_count` times before returning an error. This
@@ -52,7 +58,7 @@ pub async fn retry_connect<S: AsRef<str>>(
     uri: S,
     retry_delay: std::time::Duration,
     mut retries_count: usize,
-) -> Result<(Client, EventStream), WsError> {
+) -> Result<(Client, EventStream<CoreResult<CoreEvent>>), WsError> {
     loop {
         match connect(uri.as_ref()).await {
             Ok(connection) => break Ok(connection),
@@ -65,43 +71,52 @@ pub async fn retry_connect<S: AsRef<str>>(
     }
 }
 
-pub struct EventStream(EventReceiver);
+impl EventParser for CoreResult<String> {
+    type Error = ClientError;
 
-impl From<EventQueue> for EventStream {
-    fn from(value: EventQueue) -> Self {
-        Self(value.into_receiver())
+    fn parse_kind(&self) -> Result<EventKind, Self::Error> {
+        #[derive(Deserialize)]
+        struct TypeField<'a> {
+            #[serde(rename = "type", borrow)]
+            typ: &'a str,
+        }
+
+        match parse_data::<TypeField<'_>>(self) {
+            Ok(f) => Ok(EventKind::from_type_str(f.typ)),
+            Err(ClientError::BadResponse(BadResponseError::Undocumented(_))) => {
+                Ok(EventKind::Undocumented)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn parse_event(&self) -> Result<Event, Self::Error> {
+        parse_data(self)
     }
 }
 
-impl Stream for EventStream {
-    type Item = ClientResult<Event>;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut task::Context<'_>,
-    ) -> task::Poll<Option<Self::Item>> {
-        self.0.poll_recv(cx).map(|opt| {
-            opt.map(|res| {
-                res.map_err(ClientError::WebSocketFailure).and_then(|ev| {
-                    serde_json::from_str::<EventShape>(&ev)
-                        .map_err(BadResponseError::InvalidJson)
-                        .and_then(|shape| shape.extract_response())
-                        .map_err(ClientError::BadResponse)
-                })
-            })
+fn parse_data<'de, 'r: 'de, D: 'de + Deserialize<'de>>(
+    res: &'r CoreResult<String>,
+) -> ClientResult<D> {
+    res.as_ref()
+        .map_err(|e| ClientError::WebSocketFailure(e.clone()))
+        .and_then(|ev| {
+            serde_json::from_str::<EventShape<D>>(ev)
+                .map_err(BadResponseError::InvalidJson)
+                .and_then(|shape| shape.extract_response())
+                .map_err(ClientError::BadResponse)
         })
-    }
 }
 
 #[derive(Deserialize)]
 #[serde(untagged)]
-pub enum EventShape {
-    ResponseShape(WebSocketResponseShape<Event>),
-    InlineShape(WebSocketResponseShapeInner<Event>),
+pub enum EventShape<T> {
+    ResponseShape(WebSocketResponseShape<T>),
+    InlineShape(WebSocketResponseShapeInner<T>),
 }
 
-impl ExtractResponse<Event> for EventShape {
-    fn extract_response(self) -> Result<Event, BadResponseError> {
+impl<'de, T: 'de + Deserialize<'de>> ExtractResponse<'de, T> for EventShape<T> {
+    fn extract_response(self) -> Result<T, BadResponseError> {
         match self {
             Self::ResponseShape(resp) => resp.extract_response(),
             Self::InlineShape(inline) => inline.extract_response(),
@@ -131,10 +146,10 @@ impl Client {
 }
 
 impl ClientApi for Client {
-    type ResponseShape<T>
+    type ResponseShape<'de, T>
         = WebSocketResponseShape<T>
     where
-        T: for<'de> Deserialize<'de>;
+        T: 'de + Deserialize<'de>;
 
     type Error = ClientError;
 
