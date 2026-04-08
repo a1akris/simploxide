@@ -189,8 +189,10 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
     writeln!(events_rs, "{top_level_enum}\n")?;
     writeln!(events_rs, "{}\n", EventKindFmt(&top_level_enum))?;
 
+    writeln!(events_rs, "{EVENT_TRAITS}")?;
     for record in records {
         writeln!(events_rs, "{record}\n")?;
+        writeln!(events_rs, "{}\n", EventRecordTraitsFmt(&record))?;
     }
 
     Ok(())
@@ -210,7 +212,6 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     writeln!(responses_rs, "use crate::*;")?;
     writeln!(responses_rs)?;
 
-    writeln!(client_api_rs, "use serde::de::DeserializeOwned;")?;
     writeln!(
         client_api_rs,
         "use crate::{{*, responses::*, commands::*, utils::CommandSyntax}};"
@@ -224,7 +225,7 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
     writeln!(client_api_rs, "pub trait ClientApi: Sync {{")?;
     writeln!(
         client_api_rs,
-        "    type ResponseShape<T>: ExtractResponse<T> where T: for<'de> Deserialize<'de>;"
+        "    type ResponseShape<'de, T>: ExtractResponse<'de, T> where T: 'de + Deserialize<'de>;"
     )?;
     writeln!(client_api_rs, "    type Error: ClientApiError;")?;
     writeln!(client_api_rs)?;
@@ -429,9 +430,20 @@ impl<T: CommandSyntax> CommandSyntax for Option<T> {
 }
 "#;
 
+const EVENT_TRAITS: &str = r#"
+    /// Generalization of event data
+    pub trait EventData {
+        const KIND: EventKind;
+
+        fn from_event(event: Event) -> Result<Arc<Self>, Event>;
+
+        fn into_event(self: Arc<Self>) -> Event;
+    }
+"#;
+
 const CLIENT_API_TRAITS: &str = r#"
 /// A helper trait to handle different response wrappers
-pub trait ExtractResponse<T>: DeserializeOwned {
+pub trait ExtractResponse<'de, T>: Deserialize<'de> {
     fn extract_response(self) -> Result<T, BadResponseError>;
 }
 
@@ -459,19 +471,13 @@ pub enum WebSocketResponseShapeInner<T> {
     Undocumented(JsonObject),
 }
 
-impl<T> ExtractResponse<T> for WebSocketResponseShape<T>
-where
-    T: DeserializeOwned,
-{
+impl<'de, T: 'de + Deserialize<'de>> ExtractResponse<'de, T> for WebSocketResponseShape<T> {
     fn extract_response(self) -> Result<T, BadResponseError> {
         self.resp.extract_response()
     }
 }
 
-impl<T> ExtractResponse<T> for WebSocketResponseShapeInner<T>
-where
-    T: DeserializeOwned,
-{
+impl<'de, T: 'de + Deserialize<'de>> ExtractResponse<'de, T> for WebSocketResponseShapeInner<T> {
     fn extract_response(self) -> Result<T, BadResponseError> {
         match self {
             Self::Response(resp) => Ok(resp),
@@ -497,10 +503,7 @@ pub enum FfiResponseShape<T> {
     Undocumented(JsonObject),
 }
 
-impl<T> ExtractResponse<T> for FfiResponseShape<T>
-where
-    T: DeserializeOwned
-{
+impl<'de, T: 'de + Deserialize<'de>> ExtractResponse<'de, T> for FfiResponseShape<T> {
     fn extract_response(self) -> Result<T, BadResponseError> {
         match self {
             Self::Result(resp) => Ok(resp),
@@ -591,6 +594,25 @@ struct EventKindFmt<'a>(&'a DiscriminatedUnionType);
 
 impl std::fmt::Display for EventKindFmt<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "impl {} {{", self.0.name)?;
+        writeln!(f, "   pub fn kind(&self) -> EventKind {{")?;
+        writeln!(f, "       match self {{")?;
+        for variant in &self.0.variants {
+            writeln!(
+                f,
+                "           Self::{variant}(_) => EventKind::{variant},",
+                variant = variant.rust_name
+            )?;
+        }
+        writeln!(
+            f,
+            "           Self::Undocumented(_) => EventKind::Undocumented,"
+        )?;
+
+        writeln!(f, "       }}")?;
+        writeln!(f, "   }}")?;
+        writeln!(f, "}}")?;
+
         writeln!(f, "#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]")?;
         writeln!(f, "#[non_exhaustive]")?;
         writeln!(f, "pub enum EventKind {{")?;
@@ -600,22 +622,64 @@ impl std::fmt::Display for EventKindFmt<'_> {
         writeln!(f, "    Undocumented,")?;
         writeln!(f, "}}\n")?;
 
-        writeln!(f, "impl {} {{", self.0.name)?;
-        writeln!(f, "    pub fn kind(&self) -> EventKind {{")?;
-        writeln!(f, "        match self {{")?;
-        for variant in &self.0.variants {
+        let count = self.0.variants.len() + 1;
+        writeln!(f, "impl EventKind {{",)?;
+        writeln!(f, "   pub const COUNT: usize = {count};")?;
+        writeln!(f)?;
+        writeln!(f, "   pub fn as_usize(&self) -> usize  {{")?;
+        writeln!(f, "       match self {{")?;
+        for (ix, variant) in self.0.variants.iter().enumerate() {
             writeln!(
                 f,
-                "            Self::{variant}(_) => EventKind::{variant},",
+                "           Self::{variant} => {ix},",
                 variant = variant.rust_name
             )?;
         }
         writeln!(
             f,
-            "            Self::Undocumented(_) => EventKind::Undocumented,"
+            "           Self::Undocumented => {},",
+            self.0.variants.len()
         )?;
         writeln!(f, "        }}")?;
         writeln!(f, "    }}")?;
+
+        writeln!(f, "   pub fn from_type_str(type_str: &str) -> Self  {{")?;
+        writeln!(f, "       match type_str {{")?;
+        for variant in &self.0.variants {
+            writeln!(
+                f,
+                "           \"{api_name}\" => Self::{rust_name},",
+                api_name = variant.api_name,
+                rust_name = variant.rust_name,
+            )?;
+        }
+        writeln!(f, "           _ => Self::Undocumented,",)?;
+        writeln!(f, "        }}")?;
+        writeln!(f, "    }}")?;
+
+        writeln!(f, "}}")
+    }
+}
+
+struct EventRecordTraitsFmt<'a>(&'a RecordType);
+
+impl std::fmt::Display for EventRecordTraitsFmt<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "impl EventData for {} {{", self.0.name)?;
+        writeln!(f, "   const KIND: EventKind = EventKind::{};", self.0.name)?;
+        writeln!(
+            f,
+            "   fn from_event(ev: Event) -> Result<Arc<Self>, Event> {{"
+        )?;
+        writeln!(
+            f,
+            "       if let Event::{}(data) = ev {{ Ok(data) }} else {{ Err(ev) }}",
+            self.0.name
+        )?;
+        writeln!(f, "   }}")?;
+        writeln!(f, "   fn into_event(self: Arc<Self>) -> Event {{")?;
+        writeln!(f, "       Event::{}(self)", self.0.name)?;
+        writeln!(f, "   }}")?;
         writeln!(f, "}}")
     }
 }

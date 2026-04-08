@@ -1,10 +1,9 @@
 use crate::{commands::*, responses::*, utils::CommandSyntax, *};
-use serde::de::DeserializeOwned;
 use std::future::Future;
 use std::sync::Arc;
 
 /// A helper trait to handle different response wrappers
-pub trait ExtractResponse<T>: DeserializeOwned {
+pub trait ExtractResponse<'de, T>: Deserialize<'de> {
     fn extract_response(self) -> Result<T, BadResponseError>;
 }
 
@@ -16,9 +15,9 @@ pub trait ClientApiError: From<BadResponseError> + std::error::Error {
 }
 
 pub trait ClientApi: Sync {
-    type ResponseShape<T>: ExtractResponse<T>
+    type ResponseShape<'de, T>: ExtractResponse<'de, T>
     where
-        T: for<'de> Deserialize<'de>;
+        T: 'de + Deserialize<'de>;
     type Error: ClientApiError;
 
     fn send_raw(&self, command: String)
@@ -46,7 +45,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiCreateMyAddress { user_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiCreateMyAddressResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiCreateMyAddressResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -75,7 +74,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiDeleteMyAddress { user_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiDeleteMyAddressResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiDeleteMyAddressResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -104,7 +103,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiShowMyAddress { user_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiShowMyAddressResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiShowMyAddressResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -132,7 +131,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserProfileUpdatedResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiSetProfileAddressResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiSetProfileAddressResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -162,7 +161,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiSetAddressSettings { user_id, settings };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiSetAddressSettingsResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiSetAddressSettingsResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -190,7 +189,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<NewChatItemsResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiSendMessagesResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiSendMessagesResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -218,7 +217,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<ApiUpdateChatItemResponse, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiUpdateChatItemResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiUpdateChatItemResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response)
@@ -253,7 +252,7 @@ pub trait ClientApi: Sync {
                 delete_mode,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiDeleteChatItemResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiDeleteChatItemResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -286,7 +285,7 @@ pub trait ClientApi: Sync {
                 chat_item_ids,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiDeleteMemberChatItemResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiDeleteMemberChatItemResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -314,7 +313,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<ChatItemReactionResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiChatItemReactionResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiChatItemReactionResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -342,7 +341,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<ReceiveFileResponse, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ReceiveFileResponse> =
+            let response_shape: Self::ResponseShape<'_, ReceiveFileResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response)
@@ -371,7 +370,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = CancelFile { file_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<CancelFileResponse> =
+            let response_shape: Self::ResponseShape<'_, CancelFileResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response)
@@ -406,7 +405,7 @@ pub trait ClientApi: Sync {
                 member_role,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiAddMemberResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiAddMemberResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -435,7 +434,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiJoinGroup { group_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiJoinGroupResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiJoinGroupResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -470,7 +469,7 @@ pub trait ClientApi: Sync {
                 member_role,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiAcceptMemberResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiAcceptMemberResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -505,7 +504,7 @@ pub trait ClientApi: Sync {
                 member_role,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiMembersRoleResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiMembersRoleResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -534,7 +533,7 @@ pub trait ClientApi: Sync {
     {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiBlockMembersForAllResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiBlockMembersForAllResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -562,7 +561,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<UserDeletedMembersResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiRemoveMembersResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiRemoveMembersResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -591,7 +590,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiLeaveGroup { group_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiLeaveGroupResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiLeaveGroupResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -620,7 +619,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiListMembers { group_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiListMembersResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiListMembersResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -648,7 +647,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<GroupCreatedResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiNewGroupResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiNewGroupResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -676,7 +675,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<PublicGroupCreatedResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiNewPublicGroupResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiNewPublicGroupResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -705,7 +704,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiGetGroupRelays { group_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiGetGroupRelaysResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiGetGroupRelaysResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -738,7 +737,7 @@ pub trait ClientApi: Sync {
                 group_profile,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiUpdateGroupProfileResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiUpdateGroupProfileResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -771,7 +770,7 @@ pub trait ClientApi: Sync {
                 member_role,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiCreateGroupLinkResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiCreateGroupLinkResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -804,7 +803,7 @@ pub trait ClientApi: Sync {
                 member_role,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiGroupLinkMemberRoleResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiGroupLinkMemberRoleResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -833,7 +832,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiDeleteGroupLink { group_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiDeleteGroupLinkResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiDeleteGroupLinkResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -862,7 +861,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiGetGroupLink { group_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiGetGroupLinkResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiGetGroupLinkResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -890,7 +889,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<InvitationResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiAddContactResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiAddContactResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -918,7 +917,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<ConnectionPlanResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiConnectPlanResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiConnectPlanResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -946,7 +945,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<ApiConnectResponse, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiConnectResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiConnectResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response)
@@ -974,7 +973,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<ConnectResponse, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ConnectResponse> =
+            let response_shape: Self::ResponseShape<'_, ConnectResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response)
@@ -1004,7 +1003,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiAcceptContact { contact_req_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiAcceptContactResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiAcceptContactResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1033,7 +1032,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiRejectContact { contact_req_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiRejectContactResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiRejectContactResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1062,7 +1061,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiListContacts { user_id };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiListContactsResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiListContactsResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1090,7 +1089,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<GroupsListResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiListGroupsResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiListGroupsResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1123,7 +1122,7 @@ pub trait ClientApi: Sync {
                 chat_delete_mode,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiDeleteChatResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiDeleteChatResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response)
@@ -1151,7 +1150,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<CmdOkResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiSetGroupCustomDataResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiSetGroupCustomDataResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1179,7 +1178,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<CmdOkResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiSetContactCustomDataResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiSetContactCustomDataResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1207,8 +1206,10 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<CmdOkResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiSetUserAutoAcceptMemberContactsResponse> =
-                serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+            let response_shape: Self::ResponseShape<
+                '_,
+                ApiSetUserAutoAcceptMemberContactsResponse,
+            > = serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
         }
@@ -1235,7 +1236,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ShowActiveUser {};
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ShowActiveUserResponse> =
+            let response_shape: Self::ResponseShape<'_, ShowActiveUserResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1264,7 +1265,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = CreateActiveUser { new_user };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<CreateActiveUserResponse> =
+            let response_shape: Self::ResponseShape<'_, CreateActiveUserResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1292,7 +1293,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ListUsers {};
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ListUsersResponse> =
+            let response_shape: Self::ResponseShape<'_, ListUsersResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1320,7 +1321,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<ActiveUserResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiSetActiveUserResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiSetActiveUserResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1348,7 +1349,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<CmdOkResponse>, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiDeleteUserResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiDeleteUserResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1378,7 +1379,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiUpdateProfile { user_id, profile };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiUpdateProfileResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiUpdateProfileResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response)
@@ -1411,7 +1412,7 @@ pub trait ClientApi: Sync {
                 preferences,
             };
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiSetContactPrefsResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiSetContactPrefsResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1439,7 +1440,7 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<StartChatResponse, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<StartChatResponse> =
+            let response_shape: Self::ResponseShape<'_, StartChatResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response)
@@ -1467,7 +1468,7 @@ pub trait ClientApi: Sync {
         async move {
             let command = ApiStopChat {};
             let raw = self.send_raw(command.to_command_string()).await?;
-            let response_shape: Self::ResponseShape<ApiStopChatResponse> =
+            let response_shape: Self::ResponseShape<'_, ApiStopChatResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
             Ok(response.into_inner())
@@ -1489,19 +1490,13 @@ pub enum WebSocketResponseShapeInner<T> {
     Undocumented(JsonObject),
 }
 
-impl<T> ExtractResponse<T> for WebSocketResponseShape<T>
-where
-    T: DeserializeOwned,
-{
+impl<'de, T: 'de + Deserialize<'de>> ExtractResponse<'de, T> for WebSocketResponseShape<T> {
     fn extract_response(self) -> Result<T, BadResponseError> {
         self.resp.extract_response()
     }
 }
 
-impl<T> ExtractResponse<T> for WebSocketResponseShapeInner<T>
-where
-    T: DeserializeOwned,
-{
+impl<'de, T: 'de + Deserialize<'de>> ExtractResponse<'de, T> for WebSocketResponseShapeInner<T> {
     fn extract_response(self) -> Result<T, BadResponseError> {
         match self {
             Self::Response(resp) => Ok(resp),
@@ -1526,10 +1521,7 @@ pub enum FfiResponseShape<T> {
     Undocumented(JsonObject),
 }
 
-impl<T> ExtractResponse<T> for FfiResponseShape<T>
-where
-    T: DeserializeOwned,
-{
+impl<'de, T: 'de + Deserialize<'de>> ExtractResponse<'de, T> for FfiResponseShape<T> {
     fn extract_response(self) -> Result<T, BadResponseError> {
         match self {
             Self::Result(resp) => Ok(resp),

@@ -10,8 +10,9 @@
 //! dynamic(not type-safe) dialogue state machine.
 
 use async_trait::async_trait;
-use futures::{TryFutureExt as _, TryStreamExt as _};
+use futures::TryFutureExt as _;
 use simploxide_client::{
+    StreamEvents,
     ffi::{Client, ClientResult, DbOpts, DefaultUser},
     prelude::*,
 };
@@ -19,9 +20,9 @@ use std::{collections::BTreeMap, error::Error, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (client, mut events) = simploxide_client::ffi::init(
+    let (client, events) = simploxide_client::ffi::init(
         DefaultUser::bot("SimplOxide Examples"),
-        DbOpts::unencrypted("./test_db/simploxide"),
+        DbOpts::unencrypted("./test_db/bot"),
     )
     .await?;
 
@@ -55,7 +56,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Bot long address: {address_long}");
     println!("Bot short address: {address_short:?}");
 
-    let mut dialogue = Dialogue::new(
+    let dialogue = Dialogue::new(
         client.clone(),
         Arc::new(Greetings {
             bot_name: response.user.profile.display_name.clone(),
@@ -63,59 +64,71 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Default::default(),
     );
 
-    'reactor: while let Some(ev) = events.try_next().await? {
-        match ev {
-            Event::ContactConnected(c) => {
-                dialogue.query_data(c.contact.contact_id).await?;
-            }
-            Event::NewChatItems(new) => {
-                for (contact_id, input) in new.chat_items.iter().filter_map(|msg| {
-                    match (&msg.chat_info, &msg.chat_item.content) {
-                        (
-                            ChatInfo::Direct { contact, .. },
-                            CIContent::RcvMsgContent {
-                                msg_content: MsgContent::Text { text, .. },
-                                ..
-                            },
-                        ) => Some((contact.contact_id, text.to_owned())),
-                        _ => None,
-                    }
-                }) {
-                    if input == "/die" {
-                        break 'reactor;
-                    }
+    let connection = events
+        .into_local_dispatcher(dialogue)
+        .on::<ContactConnected, _, _>(async |ev, dialogue| {
+            dialogue.query_data(ev.contact.contact_id).await?;
+            Ok(StreamEvents::Continue)
+        })
+        .on::<ReceivedContactRequest, _>(async |ev, dialogue| {
+            dialogue
+                .client
+                .api_accept_contact(ev.contact_request.contact_request_id)
+                .await?;
 
-                    if dialogue
-                        .process_input(contact_id, input)
-                        .await?
-                        .has_terminated()
-                    {
-                        println!(
-                            "USER DATA DUMP:\n{:#?}",
-                            dialogue.state_map[&contact_id].inputs
-                        );
-                        client
-                            .send_text(contact_id, "You're absolutely the best!")
-                            .await?;
-                    }
-                }
-            }
-            // Accept a request from a new user
-            Event::ReceivedContactRequest(req) => {
-                client
-                    .api_accept_contact(req.contact_request.contact_request_id)
-                    .await?;
+            println!(
+                "Accepted user: {} ({})",
+                ev.contact_request.profile.display_name, ev.contact_request.profile.full_name
+            );
 
-                println!(
-                    "Accepted user: {} ({})",
-                    req.contact_request.profile.display_name, req.contact_request.profile.full_name
-                );
-            }
-            _ => (),
+            Ok(StreamEvents::Continue)
+        })
+        .on(new_msgs)
+        .dispatch()
+        .await?;
+
+    drop(connection);
+
+    Ok(())
+}
+
+async fn new_msgs(ev: Arc<NewChatItems>, dialogue: &mut Dialogue) -> ClientResult<StreamEvents> {
+    for (contact_id, input) in
+        ev.chat_items
+            .iter()
+            .filter_map(|msg| match (&msg.chat_info, &msg.chat_item.content) {
+                (
+                    ChatInfo::Direct { contact, .. },
+                    CIContent::RcvMsgContent {
+                        msg_content: MsgContent::Text { text, .. },
+                        ..
+                    },
+                ) => Some((contact.contact_id, text.to_owned())),
+                _ => None,
+            })
+    {
+        if input == "/die" {
+            return Ok(StreamEvents::Break);
+        }
+
+        if dialogue
+            .process_input(contact_id, input)
+            .await?
+            .has_terminated()
+        {
+            println!(
+                "USER DATA DUMP:\n{:#?}",
+                dialogue.state_map[&contact_id].inputs
+            );
+
+            dialogue
+                .client
+                .send_text(contact_id, "You're absolutely the best!")
+                .await?;
         }
     }
 
-    Ok(())
+    Ok(StreamEvents::Continue)
 }
 
 /// A dynamic dialogue system with absolutely no type-safety. It's easy to implement and it's easy

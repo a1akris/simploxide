@@ -19,13 +19,13 @@ pub struct SimplexCli {
 }
 
 impl SimplexCli {
-    const MIN_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 0, 10);
+    const MIN_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 0, 9);
     const MAX_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 1, 0);
 
     /// Begin building a [`SimplexCli`] that will spawn a `simplex-chat` process.
     ///
     /// Call [`SimplexCliBuilder::spawn`] to launch the process after configuring the builder.
-    pub fn new(default_bot_name: impl Into<String>, port: u16) -> SimplexCliBuilder {
+    pub fn builder(default_bot_name: impl Into<String>, port: u16) -> SimplexCliBuilder {
         SimplexCliBuilder {
             port,
             default_bot_name: default_bot_name.into(),
@@ -93,7 +93,7 @@ where
     I: Iterator<Item = OsString>,
 {
     /// Sets the path to the SimpleX database directory (defaults to `"."`).
-    pub fn db_path(mut self, path: impl Into<String>) -> Self {
+    pub fn db_prefix(mut self, path: impl Into<String>) -> Self {
         self.db_path = path.into();
         self
     }
@@ -125,7 +125,7 @@ where
             default_bot_name: self.default_bot_name,
             db_path: self.db_path,
             db_key: self.db_key,
-            extra_args: self.extra_args.chain(args.into_iter()),
+            extra_args: self.extra_args.chain(args),
         }
     }
 
