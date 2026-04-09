@@ -1,92 +1,40 @@
-//! The example expects that the bot account was already pre-created via CLI by `/create bot
-//! <bot_name> <bot_fullname>` command.
+//! The example expects that SimpleX CLI is running on port `5225`. Use `Spawn CLI with
+//! simplex-chat -p 5225 --create-bot-display-name Default`
 //!
-//! To compile this example pass the --all-features flag like this: `cargo run --example file_bot
-//! --all-features`.
+//! To compile this example pass the --features flag like this:
+//! `cargo run --example file_bot --features websocket`
 //!
 //! ----
 //!
-//! A bot that receives files and sends them back to the user. The interesting thing here is
-//! that files are stored encrypted on your device(you can find them in the `/tmp` directory).
-//! Files larger than 5MiB are rejected by the bot.
-//!
-//! NOTE: If your bot account hadn't enabled the "files" preference before running this example,
-//! then it may take your SimpleX Client several minutes after launching this bot to recognize this
-//! preference and show you the file upload icon.
+//! A bot that receives files and sends them back to the user.
 
-use futures::TryFutureExt as _;
-use simploxide_client::{
-    StreamEvents,
-    prelude::*,
-    ws::{self, Client},
-};
+use simploxide_client::{StreamEvents, preferences, prelude::*, ws};
 use std::{error::Error, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (client, events) = simploxide_client::ws::connect("ws://127.0.0.1:5225").await?;
-
-    let response = client.show_active_user().await?;
-    println!(
-        "Bot profile: {} ({})",
-        response.user.profile.display_name, response.user.profile.full_name
-    );
-
-    // Get or create the bot address
-    let (address_long, address_short) = client
-        .api_show_my_address(response.user.user_id)
-        .map_ok(|resp| {
-            (
-                resp.contact_link.conn_link_contact.conn_full_link.clone(),
-                resp.contact_link.conn_link_contact.conn_short_link.clone(),
-            )
+    let (bot, events) = ws::BotBuilder::new("SimplOxide Examples", 5225)
+        .with_preferences(Preferences {
+            timed_messages: preferences::timed_messages::NO,
+            full_delete: preferences::YES,
+            reactions: preferences::NO,
+            voice: preferences::NO,
+            files: preferences::YES,
+            calls: preferences::NO,
+            sessions: preferences::NO,
+            commands: None,
+            undocumented: Default::default(),
         })
-        .or_else(|_| {
-            client
-                .api_create_my_address(response.user.user_id)
-                .map_ok(|resp| {
-                    (
-                        resp.conn_link_contact.conn_full_link.clone(),
-                        resp.conn_link_contact.conn_short_link.clone(),
-                    )
-                })
-        })
-        .await?;
-
-    println!("Bot long address: {address_long}");
-    println!("Bot short address: {address_short:?}");
-
-    // Allow file operations
-    //
-    // NOTE: It may take several minutes for your SimpleX Client to recognize this update and show
-    // a file upload icon.
-    client
-        .api_update_profile(
-            response.user.user_id,
-            Profile::builder()
-                .display_name(response.user.profile.display_name.clone())
-                .full_name(response.user.profile.full_name.clone())
-                .preferences(
-                    Preferences::builder()
-                        .files(
-                            SimplePreference::builder()
-                                .allow(FeatureAllowed::Yes)
-                                .build(),
-                        )
-                        .build(),
-                )
-                .build(),
-        )
+        .connect()
         .await?;
 
     events
-        .into_dispatcher(client)
+        .into_dispatcher(bot)
         .on(
-            async |ev: Arc<ContactConnected>, client| -> ws::ClientResult<_> {
+            async |ev: Arc<ContactConnected>, bot| -> ws::ClientResult<_> {
                 println!("{} connected", ev.contact.profile.display_name);
 
-                client
-                .send_text(
+                bot.client().send_text(
                     ev.contact.contact_id,
                     "Hello! I am a simple file bot - if you send me a file, I will send it back!",
                 )
@@ -95,8 +43,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 Ok(StreamEvents::Continue)
             },
         )
-        .on(async |ev: Arc<ReceivedContactRequest>, client| {
-            client
+        .on(async |ev: Arc<ReceivedContactRequest>, bot| {
+            bot.client()
                 .api_accept_contact(ev.contact_request.contact_request_id)
                 .await?;
 
@@ -107,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             Ok(StreamEvents::Continue)
         })
-        .on(async |ev: Arc<RcvFileDescrReady>, client| {
+        .on(async |ev: Arc<RcvFileDescrReady>, bot| {
             let file_info = ev
                 .chat_item
                 .chat_item
@@ -121,26 +69,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
             };
 
             if file_info.file_size > 5 * 1024 * 1024 {
-                client
+                bot.client()
                     .send_text(contact.contact_id, "Sorry, but the file must be <5MiB")
                     .await;
 
-                client.cancel_file(file_info.file_id).await?;
+                bot.client().cancel_file(file_info.file_id).await?;
                 println!("File delivery cancelled: {file_info:#?}");
             } else {
                 // Spawns a background file download.
-                client.recv_file(file_info.file_id).await;
+                bot.client().recv_file(file_info.file_id).await;
             }
 
             Ok(StreamEvents::Continue)
         })
-        .on(async |ev: Arc<RcvFileError>, client| {
+        .on(async |ev: Arc<RcvFileError>, bot| {
             eprintln!("Error receiving a file:\n{ev:#?}");
 
             if let Some(ChatInfo::Direct { contact, .. }) =
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
-                client
+                bot.client()
                     .send_text(
                         contact.contact_id,
                         format!(
@@ -153,13 +101,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             Ok(StreamEvents::Continue)
         })
-        .on::<RcvFileWarning, _, _>(async |ev, client| {
+        .on::<RcvFileWarning, _, _>(async |ev, bot| {
             eprintln!("Failure receiving a file:\n{ev:#?}");
 
             if let Some(ChatInfo::Direct { contact, .. }) =
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
-                client
+                bot.client()
                     .send_text(
                         contact.contact_id,
                         format!(
@@ -171,7 +119,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             Ok(StreamEvents::Continue)
         })
-        .on(async |ev: Arc<RcvFileComplete>, client| {
+        .on(async |ev: Arc<RcvFileComplete>, bot| {
             println!("Received file:\n{:#?}", ev.chat_item.chat_item);
 
             let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info else {
@@ -179,7 +127,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 return Ok(StreamEvents::Continue);
             };
 
-            let file_client = client.clone();
+            let file_client = bot.client().clone();
             let contact_id = contact.contact_id;
             let msg_id = ev.chat_item.chat_item.meta.item_id;
             let crypto_file = ev
@@ -200,7 +148,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .await;
             Ok(StreamEvents::Continue)
         })
-        .on(async |ev: Arc<SndFileCompleteXftp>, client| {
+        .on(async |ev: Arc<SndFileCompleteXftp>, bot| {
             println!("Returned file to a user:\n{:#?}", ev.file_transfer_meta);
 
             let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info else {
@@ -208,17 +156,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 return Ok(StreamEvents::Continue);
             };
 
-            client.send_text(contact.contact_id, "Gimme more!").await;
+            bot.client()
+                .send_text(contact.contact_id, "Gimme more!")
+                .await;
 
             Ok(StreamEvents::Continue)
         })
-        .on(async |ev: Arc<SndFileWarning>, client| {
+        .on(async |ev: Arc<SndFileWarning>, bot| {
             eprintln!("Failure sending a file:\n{ev:#?}");
 
             if let Some(ChatInfo::Direct { contact, .. }) =
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
-                client
+                bot.client()
                     .send_text(
                         contact.contact_id,
                         format!(
@@ -231,13 +181,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             Ok(StreamEvents::Continue)
         })
-        .on(async |ev: Arc<SndFileError>, client| {
+        .on(async |ev: Arc<SndFileError>, bot| {
             eprintln!("Error sending a file:\n{ev:#?}");
 
             if let Some(ChatInfo::Direct { contact, .. }) =
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
-                client
+                bot.client()
                     .send_text(
                         contact.contact_id,
                         format!(
@@ -250,7 +200,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             Ok(StreamEvents::Continue)
         })
-        .on(async |ev: Arc<NewChatItems>, client| {
+        .on(async |ev: Arc<NewChatItems>, bot| {
             // Initially, you will receive a file as a new chat item. Then you will start to
             // receive RcvFile* events.
             //
@@ -277,7 +227,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         continue;
                     };
 
-                    client
+                    bot.client()
                         .send_text(contact.contact_id, "Hey, send me some files!")
                         .await
                 }
@@ -307,7 +257,7 @@ trait BotExtensions {
     async fn recv_file(&self, file_id: i64);
 }
 
-impl BotExtensions for Client {
+impl BotExtensions for ws::Client {
     async fn send_text(&self, chat_id: i64, txt: impl Into<String>) {
         let client = self.clone();
         let text = txt.into();
@@ -371,14 +321,6 @@ impl BotExtensions for Client {
 
     async fn recv_file(&self, file_id: i64) {
         let client = self.clone();
-        let _ = client
-            .receive_file(
-                ReceiveFile::builder()
-                    .file_id(file_id)
-                    .user_approved_relays(false)
-                    .store_encrypted(true)
-                    .build(),
-            )
-            .await;
+        let _ = client.receive_file(ReceiveFile::new(file_id)).await;
     }
 }

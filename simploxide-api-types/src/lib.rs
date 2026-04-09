@@ -505,35 +505,35 @@ pub enum CIContent {
 }
 
 impl CIContent {
-    pub fn snd_msg_content(msg_content: MsgContent) -> Self {
+    pub fn make_snd_msg_content(msg_content: MsgContent) -> Self {
         Self::SndMsgContent {
             msg_content,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_msg_content(msg_content: MsgContent) -> Self {
+    pub fn make_rcv_msg_content(msg_content: MsgContent) -> Self {
         Self::RcvMsgContent {
             msg_content,
             undocumented: Default::default(),
         }
     }
 
-    pub fn snd_deleted(delete_mode: CIDeleteMode) -> Self {
+    pub fn make_snd_deleted(delete_mode: CIDeleteMode) -> Self {
         Self::SndDeleted {
             delete_mode,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_deleted(delete_mode: CIDeleteMode) -> Self {
+    pub fn make_rcv_deleted(delete_mode: CIDeleteMode) -> Self {
         Self::RcvDeleted {
             delete_mode,
             undocumented: Default::default(),
         }
     }
 
-    pub fn snd_call(status: CICallStatus, duration: i32) -> Self {
+    pub fn make_snd_call(status: CICallStatus, duration: i32) -> Self {
         Self::SndCall {
             status,
             duration,
@@ -541,7 +541,7 @@ impl CIContent {
         }
     }
 
-    pub fn rcv_call(status: CICallStatus, duration: i32) -> Self {
+    pub fn make_rcv_call(status: CICallStatus, duration: i32) -> Self {
         Self::RcvCall {
             status,
             duration,
@@ -549,14 +549,14 @@ impl CIContent {
         }
     }
 
-    pub fn rcv_integrity_error(msg_error: MsgErrorType) -> Self {
+    pub fn make_rcv_integrity_error(msg_error: MsgErrorType) -> Self {
         Self::RcvIntegrityError {
             msg_error,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_decryption_error(msg_decrypt_error: MsgDecryptError, msg_count: u32) -> Self {
+    pub fn make_rcv_decryption_error(msg_decrypt_error: MsgDecryptError, msg_count: u32) -> Self {
         Self::RcvDecryptionError {
             msg_decrypt_error,
             msg_count,
@@ -564,7 +564,7 @@ impl CIContent {
         }
     }
 
-    pub fn rcv_group_invitation(
+    pub fn make_rcv_group_invitation(
         group_invitation: CIGroupInvitation,
         member_role: GroupMemberRole,
     ) -> Self {
@@ -575,7 +575,7 @@ impl CIContent {
         }
     }
 
-    pub fn snd_group_invitation(
+    pub fn make_snd_group_invitation(
         group_invitation: CIGroupInvitation,
         member_role: GroupMemberRole,
     ) -> Self {
@@ -586,42 +586,42 @@ impl CIContent {
         }
     }
 
-    pub fn rcv_direct_event(rcv_direct_event: RcvDirectEvent) -> Self {
+    pub fn make_rcv_direct_event(rcv_direct_event: RcvDirectEvent) -> Self {
         Self::RcvDirectEvent {
             rcv_direct_event,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_group_event(rcv_group_event: RcvGroupEvent) -> Self {
+    pub fn make_rcv_group_event(rcv_group_event: RcvGroupEvent) -> Self {
         Self::RcvGroupEvent {
             rcv_group_event,
             undocumented: Default::default(),
         }
     }
 
-    pub fn snd_group_event(snd_group_event: SndGroupEvent) -> Self {
+    pub fn make_snd_group_event(snd_group_event: SndGroupEvent) -> Self {
         Self::SndGroupEvent {
             snd_group_event,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_conn_event(rcv_conn_event: RcvConnEvent) -> Self {
+    pub fn make_rcv_conn_event(rcv_conn_event: RcvConnEvent) -> Self {
         Self::RcvConnEvent {
             rcv_conn_event,
             undocumented: Default::default(),
         }
     }
 
-    pub fn snd_conn_event(snd_conn_event: SndConnEvent) -> Self {
+    pub fn make_snd_conn_event(snd_conn_event: SndConnEvent) -> Self {
         Self::SndConnEvent {
             snd_conn_event,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_chat_feature(
+    pub fn make_rcv_chat_feature(
         feature: ChatFeature,
         enabled: PrefEnabled,
         param: Option<i32>,
@@ -634,7 +634,7 @@ impl CIContent {
         }
     }
 
-    pub fn snd_chat_feature(
+    pub fn make_snd_chat_feature(
         feature: ChatFeature,
         enabled: PrefEnabled,
         param: Option<i32>,
@@ -647,7 +647,7 @@ impl CIContent {
         }
     }
 
-    pub fn rcv_chat_preference(
+    pub fn make_rcv_chat_preference(
         feature: ChatFeature,
         allowed: FeatureAllowed,
         param: Option<i32>,
@@ -660,7 +660,7 @@ impl CIContent {
         }
     }
 
-    pub fn snd_chat_preference(
+    pub fn make_snd_chat_preference(
         feature: ChatFeature,
         allowed: FeatureAllowed,
         param: Option<i32>,
@@ -673,7 +673,7 @@ impl CIContent {
         }
     }
 
-    pub fn rcv_group_feature(
+    pub fn make_rcv_group_feature(
         group_feature: GroupFeature,
         preference: GroupPreference,
         param: Option<i32>,
@@ -688,7 +688,7 @@ impl CIContent {
         }
     }
 
-    pub fn snd_group_feature(
+    pub fn make_snd_group_feature(
         group_feature: GroupFeature,
         preference: GroupPreference,
         param: Option<i32>,
@@ -703,63 +703,433 @@ impl CIContent {
         }
     }
 
-    pub fn rcv_chat_feature_rejected(feature: ChatFeature) -> Self {
+    pub fn make_rcv_chat_feature_rejected(feature: ChatFeature) -> Self {
         Self::RcvChatFeatureRejected {
             feature,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_group_feature_rejected(group_feature: GroupFeature) -> Self {
+    pub fn make_rcv_group_feature_rejected(group_feature: GroupFeature) -> Self {
         Self::RcvGroupFeatureRejected {
             group_feature,
             undocumented: Default::default(),
         }
     }
 
-    pub fn snd_moderated() -> Self {
+    pub fn make_snd_moderated() -> Self {
         Self::SndModerated
     }
 
-    pub fn rcv_moderated() -> Self {
+    pub fn make_rcv_moderated() -> Self {
         Self::RcvModerated
     }
 
-    pub fn rcv_blocked() -> Self {
+    pub fn make_rcv_blocked() -> Self {
         Self::RcvBlocked
     }
 
-    pub fn snd_direct_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
+    pub fn make_snd_direct_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
         Self::SndDirectE2EeInfo {
             e_2_ee_info,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_direct_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
+    pub fn make_rcv_direct_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
         Self::RcvDirectE2EeInfo {
             e_2_ee_info,
             undocumented: Default::default(),
         }
     }
 
-    pub fn snd_group_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
+    pub fn make_snd_group_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
         Self::SndGroupE2EeInfo {
             e_2_ee_info,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_group_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
+    pub fn make_rcv_group_e_2_ee_info(e_2_ee_info: E2EInfo) -> Self {
         Self::RcvGroupE2EeInfo {
             e_2_ee_info,
             undocumented: Default::default(),
         }
     }
 
-    pub fn chat_banner() -> Self {
+    pub fn make_chat_banner() -> Self {
         Self::ChatBanner
     }
+}
+
+impl CIContent {
+    pub fn snd_msg_content(&self) -> Option<&MsgContent> {
+        if let Self::SndMsgContent { msg_content, .. } = self {
+            Some(msg_content)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_msg_content(&self) -> Option<&MsgContent> {
+        if let Self::RcvMsgContent { msg_content, .. } = self {
+            Some(msg_content)
+        } else {
+            None
+        }
+    }
+    pub fn snd_deleted(&self) -> Option<&CIDeleteMode> {
+        if let Self::SndDeleted { delete_mode, .. } = self {
+            Some(delete_mode)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_deleted(&self) -> Option<&CIDeleteMode> {
+        if let Self::RcvDeleted { delete_mode, .. } = self {
+            Some(delete_mode)
+        } else {
+            None
+        }
+    }
+    pub fn snd_call(&self) -> Option<CIContentSndCallRef<'_>> {
+        if let Self::SndCall {
+            status, duration, ..
+        } = self
+        {
+            Some(CIContentSndCallRef { status, duration })
+        } else {
+            None
+        }
+    }
+    pub fn rcv_call(&self) -> Option<CIContentRcvCallRef<'_>> {
+        if let Self::RcvCall {
+            status, duration, ..
+        } = self
+        {
+            Some(CIContentRcvCallRef { status, duration })
+        } else {
+            None
+        }
+    }
+    pub fn rcv_integrity_error(&self) -> Option<&MsgErrorType> {
+        if let Self::RcvIntegrityError { msg_error, .. } = self {
+            Some(msg_error)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_decryption_error(&self) -> Option<CIContentRcvDecryptionErrorRef<'_>> {
+        if let Self::RcvDecryptionError {
+            msg_decrypt_error,
+            msg_count,
+            ..
+        } = self
+        {
+            Some(CIContentRcvDecryptionErrorRef {
+                msg_decrypt_error,
+                msg_count,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn rcv_group_invitation(&self) -> Option<CIContentRcvGroupInvitationRef<'_>> {
+        if let Self::RcvGroupInvitation {
+            group_invitation,
+            member_role,
+            ..
+        } = self
+        {
+            Some(CIContentRcvGroupInvitationRef {
+                group_invitation,
+                member_role,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn snd_group_invitation(&self) -> Option<CIContentSndGroupInvitationRef<'_>> {
+        if let Self::SndGroupInvitation {
+            group_invitation,
+            member_role,
+            ..
+        } = self
+        {
+            Some(CIContentSndGroupInvitationRef {
+                group_invitation,
+                member_role,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn rcv_direct_event(&self) -> Option<&RcvDirectEvent> {
+        if let Self::RcvDirectEvent {
+            rcv_direct_event, ..
+        } = self
+        {
+            Some(rcv_direct_event)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_group_event(&self) -> Option<&RcvGroupEvent> {
+        if let Self::RcvGroupEvent {
+            rcv_group_event, ..
+        } = self
+        {
+            Some(rcv_group_event)
+        } else {
+            None
+        }
+    }
+    pub fn snd_group_event(&self) -> Option<&SndGroupEvent> {
+        if let Self::SndGroupEvent {
+            snd_group_event, ..
+        } = self
+        {
+            Some(snd_group_event)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_conn_event(&self) -> Option<&RcvConnEvent> {
+        if let Self::RcvConnEvent { rcv_conn_event, .. } = self {
+            Some(rcv_conn_event)
+        } else {
+            None
+        }
+    }
+    pub fn snd_conn_event(&self) -> Option<&SndConnEvent> {
+        if let Self::SndConnEvent { snd_conn_event, .. } = self {
+            Some(snd_conn_event)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_chat_feature(&self) -> Option<CIContentRcvChatFeatureRef<'_>> {
+        if let Self::RcvChatFeature {
+            feature,
+            enabled,
+            param,
+            ..
+        } = self
+        {
+            Some(CIContentRcvChatFeatureRef {
+                feature,
+                enabled,
+                param,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn snd_chat_feature(&self) -> Option<CIContentSndChatFeatureRef<'_>> {
+        if let Self::SndChatFeature {
+            feature,
+            enabled,
+            param,
+            ..
+        } = self
+        {
+            Some(CIContentSndChatFeatureRef {
+                feature,
+                enabled,
+                param,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn rcv_chat_preference(&self) -> Option<CIContentRcvChatPreferenceRef<'_>> {
+        if let Self::RcvChatPreference {
+            feature,
+            allowed,
+            param,
+            ..
+        } = self
+        {
+            Some(CIContentRcvChatPreferenceRef {
+                feature,
+                allowed,
+                param,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn snd_chat_preference(&self) -> Option<CIContentSndChatPreferenceRef<'_>> {
+        if let Self::SndChatPreference {
+            feature,
+            allowed,
+            param,
+            ..
+        } = self
+        {
+            Some(CIContentSndChatPreferenceRef {
+                feature,
+                allowed,
+                param,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn rcv_group_feature(&self) -> Option<CIContentRcvGroupFeatureRef<'_>> {
+        if let Self::RcvGroupFeature {
+            group_feature,
+            preference,
+            param,
+            member_role,
+            ..
+        } = self
+        {
+            Some(CIContentRcvGroupFeatureRef {
+                group_feature,
+                preference,
+                param,
+                member_role,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn snd_group_feature(&self) -> Option<CIContentSndGroupFeatureRef<'_>> {
+        if let Self::SndGroupFeature {
+            group_feature,
+            preference,
+            param,
+            member_role,
+            ..
+        } = self
+        {
+            Some(CIContentSndGroupFeatureRef {
+                group_feature,
+                preference,
+                param,
+                member_role,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn rcv_chat_feature_rejected(&self) -> Option<&ChatFeature> {
+        if let Self::RcvChatFeatureRejected { feature, .. } = self {
+            Some(feature)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_group_feature_rejected(&self) -> Option<&GroupFeature> {
+        if let Self::RcvGroupFeatureRejected { group_feature, .. } = self {
+            Some(group_feature)
+        } else {
+            None
+        }
+    }
+    pub fn is_snd_moderated(&self) -> bool {
+        matches!(self, Self::SndModerated)
+    }
+    pub fn is_rcv_moderated(&self) -> bool {
+        matches!(self, Self::RcvModerated)
+    }
+    pub fn is_rcv_blocked(&self) -> bool {
+        matches!(self, Self::RcvBlocked)
+    }
+    pub fn snd_direct_e_2_ee_info(&self) -> Option<&E2EInfo> {
+        if let Self::SndDirectE2EeInfo { e_2_ee_info, .. } = self {
+            Some(e_2_ee_info)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_direct_e_2_ee_info(&self) -> Option<&E2EInfo> {
+        if let Self::RcvDirectE2EeInfo { e_2_ee_info, .. } = self {
+            Some(e_2_ee_info)
+        } else {
+            None
+        }
+    }
+    pub fn snd_group_e_2_ee_info(&self) -> Option<&E2EInfo> {
+        if let Self::SndGroupE2EeInfo { e_2_ee_info, .. } = self {
+            Some(e_2_ee_info)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_group_e_2_ee_info(&self) -> Option<&E2EInfo> {
+        if let Self::RcvGroupE2EeInfo { e_2_ee_info, .. } = self {
+            Some(e_2_ee_info)
+        } else {
+            None
+        }
+    }
+    pub fn is_chat_banner(&self) -> bool {
+        matches!(self, Self::ChatBanner)
+    }
+}
+#[derive(Clone, Copy)]
+pub struct CIContentSndCallRef<'a> {
+    pub status: &'a CICallStatus,
+    pub duration: &'a i32,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentRcvCallRef<'a> {
+    pub status: &'a CICallStatus,
+    pub duration: &'a i32,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentRcvDecryptionErrorRef<'a> {
+    pub msg_decrypt_error: &'a MsgDecryptError,
+    pub msg_count: &'a u32,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentRcvGroupInvitationRef<'a> {
+    pub group_invitation: &'a CIGroupInvitation,
+    pub member_role: &'a GroupMemberRole,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentSndGroupInvitationRef<'a> {
+    pub group_invitation: &'a CIGroupInvitation,
+    pub member_role: &'a GroupMemberRole,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentRcvChatFeatureRef<'a> {
+    pub feature: &'a ChatFeature,
+    pub enabled: &'a PrefEnabled,
+    pub param: &'a Option<i32>,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentSndChatFeatureRef<'a> {
+    pub feature: &'a ChatFeature,
+    pub enabled: &'a PrefEnabled,
+    pub param: &'a Option<i32>,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentRcvChatPreferenceRef<'a> {
+    pub feature: &'a ChatFeature,
+    pub allowed: &'a FeatureAllowed,
+    pub param: &'a Option<i32>,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentSndChatPreferenceRef<'a> {
+    pub feature: &'a ChatFeature,
+    pub allowed: &'a FeatureAllowed,
+    pub param: &'a Option<i32>,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentRcvGroupFeatureRef<'a> {
+    pub group_feature: &'a GroupFeature,
+    pub preference: &'a GroupPreference,
+    pub param: &'a Option<i32>,
+    pub member_role: &'a Option<GroupMemberRole>,
+}
+#[derive(Clone, Copy)]
+pub struct CIContentSndGroupFeatureRef<'a> {
+    pub group_feature: &'a GroupFeature,
+    pub preference: &'a GroupPreference,
+    pub param: &'a Option<i32>,
+    pub member_role: &'a Option<GroupMemberRole>,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -821,7 +1191,7 @@ pub enum CIDeleted {
 }
 
 impl CIDeleted {
-    pub fn deleted(deleted_ts: Option<UtcTime>, chat_type: ChatType) -> Self {
+    pub fn make_deleted(deleted_ts: Option<UtcTime>, chat_type: ChatType) -> Self {
         Self::Deleted {
             deleted_ts,
             chat_type,
@@ -829,27 +1199,84 @@ impl CIDeleted {
         }
     }
 
-    pub fn blocked(deleted_ts: Option<UtcTime>) -> Self {
+    pub fn make_blocked(deleted_ts: Option<UtcTime>) -> Self {
         Self::Blocked {
             deleted_ts,
             undocumented: Default::default(),
         }
     }
 
-    pub fn blocked_by_admin(deleted_ts: Option<UtcTime>) -> Self {
+    pub fn make_blocked_by_admin(deleted_ts: Option<UtcTime>) -> Self {
         Self::BlockedByAdmin {
             deleted_ts,
             undocumented: Default::default(),
         }
     }
 
-    pub fn moderated(deleted_ts: Option<UtcTime>, by_group_member: GroupMember) -> Self {
+    pub fn make_moderated(deleted_ts: Option<UtcTime>, by_group_member: GroupMember) -> Self {
         Self::Moderated {
             deleted_ts,
             by_group_member,
             undocumented: Default::default(),
         }
     }
+}
+
+impl CIDeleted {
+    pub fn deleted(&self) -> Option<CIDeletedDeletedRef<'_>> {
+        if let Self::Deleted {
+            deleted_ts,
+            chat_type,
+            ..
+        } = self
+        {
+            Some(CIDeletedDeletedRef {
+                deleted_ts,
+                chat_type,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn blocked(&self) -> Option<&Option<UtcTime>> {
+        if let Self::Blocked { deleted_ts, .. } = self {
+            Some(deleted_ts)
+        } else {
+            None
+        }
+    }
+    pub fn blocked_by_admin(&self) -> Option<&Option<UtcTime>> {
+        if let Self::BlockedByAdmin { deleted_ts, .. } = self {
+            Some(deleted_ts)
+        } else {
+            None
+        }
+    }
+    pub fn moderated(&self) -> Option<CIDeletedModeratedRef<'_>> {
+        if let Self::Moderated {
+            deleted_ts,
+            by_group_member,
+            ..
+        } = self
+        {
+            Some(CIDeletedModeratedRef {
+                deleted_ts,
+                by_group_member,
+            })
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct CIDeletedDeletedRef<'a> {
+    pub deleted_ts: &'a Option<UtcTime>,
+    pub chat_type: &'a ChatType,
+}
+#[derive(Clone, Copy)]
+pub struct CIDeletedModeratedRef<'a> {
+    pub deleted_ts: &'a Option<UtcTime>,
+    pub by_group_member: &'a GroupMember,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -881,35 +1308,63 @@ pub enum CIDirection {
 }
 
 impl CIDirection {
-    pub fn direct_snd() -> Self {
+    pub fn make_direct_snd() -> Self {
         Self::DirectSnd
     }
 
-    pub fn direct_rcv() -> Self {
+    pub fn make_direct_rcv() -> Self {
         Self::DirectRcv
     }
 
-    pub fn group_snd() -> Self {
+    pub fn make_group_snd() -> Self {
         Self::GroupSnd
     }
 
-    pub fn group_rcv(group_member: GroupMember) -> Self {
+    pub fn make_group_rcv(group_member: GroupMember) -> Self {
         Self::GroupRcv {
             group_member,
             undocumented: Default::default(),
         }
     }
 
-    pub fn channel_rcv() -> Self {
+    pub fn make_channel_rcv() -> Self {
         Self::ChannelRcv
     }
 
-    pub fn local_snd() -> Self {
+    pub fn make_local_snd() -> Self {
         Self::LocalSnd
     }
 
-    pub fn local_rcv() -> Self {
+    pub fn make_local_rcv() -> Self {
         Self::LocalRcv
+    }
+}
+
+impl CIDirection {
+    pub fn is_direct_snd(&self) -> bool {
+        matches!(self, Self::DirectSnd)
+    }
+    pub fn is_direct_rcv(&self) -> bool {
+        matches!(self, Self::DirectRcv)
+    }
+    pub fn is_group_snd(&self) -> bool {
+        matches!(self, Self::GroupSnd)
+    }
+    pub fn group_rcv(&self) -> Option<&GroupMember> {
+        if let Self::GroupRcv { group_member, .. } = self {
+            Some(group_member)
+        } else {
+            None
+        }
+    }
+    pub fn is_channel_rcv(&self) -> bool {
+        matches!(self, Self::ChannelRcv)
+    }
+    pub fn is_local_snd(&self) -> bool {
+        matches!(self, Self::LocalSnd)
+    }
+    pub fn is_local_rcv(&self) -> bool {
+        matches!(self, Self::LocalRcv)
     }
 }
 
@@ -1042,11 +1497,11 @@ pub enum CIFileStatus {
 }
 
 impl CIFileStatus {
-    pub fn snd_stored() -> Self {
+    pub fn make_snd_stored() -> Self {
         Self::SndStored
     }
 
-    pub fn snd_transfer(snd_progress: i64, snd_total: i64) -> Self {
+    pub fn make_snd_transfer(snd_progress: i64, snd_total: i64) -> Self {
         Self::SndTransfer {
             snd_progress,
             snd_total,
@@ -1054,37 +1509,37 @@ impl CIFileStatus {
         }
     }
 
-    pub fn snd_cancelled() -> Self {
+    pub fn make_snd_cancelled() -> Self {
         Self::SndCancelled
     }
 
-    pub fn snd_complete() -> Self {
+    pub fn make_snd_complete() -> Self {
         Self::SndComplete
     }
 
-    pub fn snd_error(snd_file_error: FileError) -> Self {
+    pub fn make_snd_error(snd_file_error: FileError) -> Self {
         Self::SndError {
             snd_file_error,
             undocumented: Default::default(),
         }
     }
 
-    pub fn snd_warning(snd_file_error: FileError) -> Self {
+    pub fn make_snd_warning(snd_file_error: FileError) -> Self {
         Self::SndWarning {
             snd_file_error,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_invitation() -> Self {
+    pub fn make_rcv_invitation() -> Self {
         Self::RcvInvitation
     }
 
-    pub fn rcv_accepted() -> Self {
+    pub fn make_rcv_accepted() -> Self {
         Self::RcvAccepted
     }
 
-    pub fn rcv_transfer(rcv_progress: i64, rcv_total: i64) -> Self {
+    pub fn make_rcv_transfer(rcv_progress: i64, rcv_total: i64) -> Self {
         Self::RcvTransfer {
             rcv_progress,
             rcv_total,
@@ -1092,38 +1547,140 @@ impl CIFileStatus {
         }
     }
 
-    pub fn rcv_aborted() -> Self {
+    pub fn make_rcv_aborted() -> Self {
         Self::RcvAborted
     }
 
-    pub fn rcv_complete() -> Self {
+    pub fn make_rcv_complete() -> Self {
         Self::RcvComplete
     }
 
-    pub fn rcv_cancelled() -> Self {
+    pub fn make_rcv_cancelled() -> Self {
         Self::RcvCancelled
     }
 
-    pub fn rcv_error(rcv_file_error: FileError) -> Self {
+    pub fn make_rcv_error(rcv_file_error: FileError) -> Self {
         Self::RcvError {
             rcv_file_error,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_warning(rcv_file_error: FileError) -> Self {
+    pub fn make_rcv_warning(rcv_file_error: FileError) -> Self {
         Self::RcvWarning {
             rcv_file_error,
             undocumented: Default::default(),
         }
     }
 
-    pub fn invalid(text: String) -> Self {
+    pub fn make_invalid(text: String) -> Self {
         Self::Invalid {
             text,
             undocumented: Default::default(),
         }
     }
+}
+
+impl CIFileStatus {
+    pub fn is_snd_stored(&self) -> bool {
+        matches!(self, Self::SndStored)
+    }
+    pub fn snd_transfer(&self) -> Option<CIFileStatusSndTransferRef<'_>> {
+        if let Self::SndTransfer {
+            snd_progress,
+            snd_total,
+            ..
+        } = self
+        {
+            Some(CIFileStatusSndTransferRef {
+                snd_progress,
+                snd_total,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_snd_cancelled(&self) -> bool {
+        matches!(self, Self::SndCancelled)
+    }
+    pub fn is_snd_complete(&self) -> bool {
+        matches!(self, Self::SndComplete)
+    }
+    pub fn snd_error(&self) -> Option<&FileError> {
+        if let Self::SndError { snd_file_error, .. } = self {
+            Some(snd_file_error)
+        } else {
+            None
+        }
+    }
+    pub fn snd_warning(&self) -> Option<&FileError> {
+        if let Self::SndWarning { snd_file_error, .. } = self {
+            Some(snd_file_error)
+        } else {
+            None
+        }
+    }
+    pub fn is_rcv_invitation(&self) -> bool {
+        matches!(self, Self::RcvInvitation)
+    }
+    pub fn is_rcv_accepted(&self) -> bool {
+        matches!(self, Self::RcvAccepted)
+    }
+    pub fn rcv_transfer(&self) -> Option<CIFileStatusRcvTransferRef<'_>> {
+        if let Self::RcvTransfer {
+            rcv_progress,
+            rcv_total,
+            ..
+        } = self
+        {
+            Some(CIFileStatusRcvTransferRef {
+                rcv_progress,
+                rcv_total,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_rcv_aborted(&self) -> bool {
+        matches!(self, Self::RcvAborted)
+    }
+    pub fn is_rcv_complete(&self) -> bool {
+        matches!(self, Self::RcvComplete)
+    }
+    pub fn is_rcv_cancelled(&self) -> bool {
+        matches!(self, Self::RcvCancelled)
+    }
+    pub fn rcv_error(&self) -> Option<&FileError> {
+        if let Self::RcvError { rcv_file_error, .. } = self {
+            Some(rcv_file_error)
+        } else {
+            None
+        }
+    }
+    pub fn rcv_warning(&self) -> Option<&FileError> {
+        if let Self::RcvWarning { rcv_file_error, .. } = self {
+            Some(rcv_file_error)
+        } else {
+            None
+        }
+    }
+    pub fn invalid(&self) -> Option<&String> {
+        if let Self::Invalid { text, .. } = self {
+            Some(text)
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct CIFileStatusSndTransferRef<'a> {
+    pub snd_progress: &'a i64,
+    pub snd_total: &'a i64,
+}
+#[derive(Clone, Copy)]
+pub struct CIFileStatusRcvTransferRef<'a> {
+    pub rcv_progress: &'a i64,
+    pub rcv_total: &'a i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1191,11 +1748,11 @@ pub enum CIForwardedFrom {
 }
 
 impl CIForwardedFrom {
-    pub fn unknown() -> Self {
+    pub fn make_unknown() -> Self {
         Self::Unknown
     }
 
-    pub fn contact(
+    pub fn make_contact(
         chat_name: String,
         msg_dir: MsgDirection,
         contact_id: Option<i64>,
@@ -1210,7 +1767,7 @@ impl CIForwardedFrom {
         }
     }
 
-    pub fn group(
+    pub fn make_group(
         chat_name: String,
         msg_dir: MsgDirection,
         group_id: Option<i64>,
@@ -1224,6 +1781,64 @@ impl CIForwardedFrom {
             undocumented: Default::default(),
         }
     }
+}
+
+impl CIForwardedFrom {
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, Self::Unknown)
+    }
+    pub fn contact(&self) -> Option<CIForwardedFromContactRef<'_>> {
+        if let Self::Contact {
+            chat_name,
+            msg_dir,
+            contact_id,
+            chat_item_id,
+            ..
+        } = self
+        {
+            Some(CIForwardedFromContactRef {
+                chat_name,
+                msg_dir,
+                contact_id,
+                chat_item_id,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn group(&self) -> Option<CIForwardedFromGroupRef<'_>> {
+        if let Self::Group {
+            chat_name,
+            msg_dir,
+            group_id,
+            chat_item_id,
+            ..
+        } = self
+        {
+            Some(CIForwardedFromGroupRef {
+                chat_name,
+                msg_dir,
+                group_id,
+                chat_item_id,
+            })
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct CIForwardedFromContactRef<'a> {
+    pub chat_name: &'a String,
+    pub msg_dir: &'a MsgDirection,
+    pub contact_id: &'a Option<i64>,
+    pub chat_item_id: &'a Option<i64>,
+}
+#[derive(Clone, Copy)]
+pub struct CIForwardedFromGroupRef<'a> {
+    pub chat_name: &'a String,
+    pub msg_dir: &'a MsgDirection,
+    pub group_id: &'a Option<i64>,
+    pub chat_item_id: &'a Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1517,18 +2132,21 @@ pub enum CIStatus {
 }
 
 impl CIStatus {
-    pub fn snd_new() -> Self {
+    pub fn make_snd_new() -> Self {
         Self::SndNew
     }
 
-    pub fn snd_sent(snd_progress: SndCIStatusProgress) -> Self {
+    pub fn make_snd_sent(snd_progress: SndCIStatusProgress) -> Self {
         Self::SndSent {
             snd_progress,
             undocumented: Default::default(),
         }
     }
 
-    pub fn snd_rcvd(msg_rcpt_status: MsgReceiptStatus, snd_progress: SndCIStatusProgress) -> Self {
+    pub fn make_snd_rcvd(
+        msg_rcpt_status: MsgReceiptStatus,
+        snd_progress: SndCIStatusProgress,
+    ) -> Self {
         Self::SndRcvd {
             msg_rcpt_status,
             snd_progress,
@@ -1536,38 +2154,101 @@ impl CIStatus {
         }
     }
 
-    pub fn snd_error_auth() -> Self {
+    pub fn make_snd_error_auth() -> Self {
         Self::SndErrorAuth
     }
 
-    pub fn snd_error(agent_error: SndError) -> Self {
+    pub fn make_snd_error(agent_error: SndError) -> Self {
         Self::SndError {
             agent_error,
             undocumented: Default::default(),
         }
     }
 
-    pub fn snd_warning(agent_error: SndError) -> Self {
+    pub fn make_snd_warning(agent_error: SndError) -> Self {
         Self::SndWarning {
             agent_error,
             undocumented: Default::default(),
         }
     }
 
-    pub fn rcv_new() -> Self {
+    pub fn make_rcv_new() -> Self {
         Self::RcvNew
     }
 
-    pub fn rcv_read() -> Self {
+    pub fn make_rcv_read() -> Self {
         Self::RcvRead
     }
 
-    pub fn invalid(text: String) -> Self {
+    pub fn make_invalid(text: String) -> Self {
         Self::Invalid {
             text,
             undocumented: Default::default(),
         }
     }
+}
+
+impl CIStatus {
+    pub fn is_snd_new(&self) -> bool {
+        matches!(self, Self::SndNew)
+    }
+    pub fn snd_sent(&self) -> Option<&SndCIStatusProgress> {
+        if let Self::SndSent { snd_progress, .. } = self {
+            Some(snd_progress)
+        } else {
+            None
+        }
+    }
+    pub fn snd_rcvd(&self) -> Option<CIStatusSndRcvdRef<'_>> {
+        if let Self::SndRcvd {
+            msg_rcpt_status,
+            snd_progress,
+            ..
+        } = self
+        {
+            Some(CIStatusSndRcvdRef {
+                msg_rcpt_status,
+                snd_progress,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_snd_error_auth(&self) -> bool {
+        matches!(self, Self::SndErrorAuth)
+    }
+    pub fn snd_error(&self) -> Option<&SndError> {
+        if let Self::SndError { agent_error, .. } = self {
+            Some(agent_error)
+        } else {
+            None
+        }
+    }
+    pub fn snd_warning(&self) -> Option<&SndError> {
+        if let Self::SndWarning { agent_error, .. } = self {
+            Some(agent_error)
+        } else {
+            None
+        }
+    }
+    pub fn is_rcv_new(&self) -> bool {
+        matches!(self, Self::RcvNew)
+    }
+    pub fn is_rcv_read(&self) -> bool {
+        matches!(self, Self::RcvRead)
+    }
+    pub fn invalid(&self) -> Option<&String> {
+        if let Self::Invalid { text, .. } = self {
+            Some(text)
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct CIStatusSndRcvdRef<'a> {
+    pub msg_rcpt_status: &'a MsgReceiptStatus,
+    pub snd_progress: &'a SndCIStatusProgress,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1619,7 +2300,7 @@ pub enum ChatBotCommand {
 }
 
 impl ChatBotCommand {
-    pub fn command(keyword: String, label: String, params: Option<String>) -> Self {
+    pub fn make_command(keyword: String, label: String, params: Option<String>) -> Self {
         Self::Command {
             keyword,
             label,
@@ -1628,13 +2309,54 @@ impl ChatBotCommand {
         }
     }
 
-    pub fn menu(label: String, commands: Vec<ChatBotCommand>) -> Self {
+    pub fn make_menu(label: String, commands: Vec<ChatBotCommand>) -> Self {
         Self::Menu {
             label,
             commands,
             undocumented: Default::default(),
         }
     }
+}
+
+impl ChatBotCommand {
+    pub fn command(&self) -> Option<ChatBotCommandCommandRef<'_>> {
+        if let Self::Command {
+            keyword,
+            label,
+            params,
+            ..
+        } = self
+        {
+            Some(ChatBotCommandCommandRef {
+                keyword,
+                label,
+                params,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn menu(&self) -> Option<ChatBotCommandMenuRef<'_>> {
+        if let Self::Menu {
+            label, commands, ..
+        } = self
+        {
+            Some(ChatBotCommandMenuRef { label, commands })
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct ChatBotCommandCommandRef<'a> {
+    pub keyword: &'a String,
+    pub label: &'a String,
+    pub params: &'a Option<String>,
+}
+#[derive(Clone, Copy)]
+pub struct ChatBotCommandMenuRef<'a> {
+    pub label: &'a String,
+    pub commands: &'a Vec<ChatBotCommand>,
 }
 
 /// *Syntax:*
@@ -1691,22 +2413,42 @@ impl CommandSyntax for ChatDeleteMode {
 }
 
 impl ChatDeleteMode {
-    pub fn full(notify: bool) -> Self {
+    pub fn make_full(notify: bool) -> Self {
         Self::Full {
             notify,
             undocumented: Default::default(),
         }
     }
 
-    pub fn entity(notify: bool) -> Self {
+    pub fn make_entity(notify: bool) -> Self {
         Self::Entity {
             notify,
             undocumented: Default::default(),
         }
     }
 
-    pub fn messages() -> Self {
+    pub fn make_messages() -> Self {
         Self::Messages
+    }
+}
+
+impl ChatDeleteMode {
+    pub fn full(&self) -> Option<&bool> {
+        if let Self::Full { notify, .. } = self {
+            Some(notify)
+        } else {
+            None
+        }
+    }
+    pub fn entity(&self) -> Option<&bool> {
+        if let Self::Entity { notify, .. } = self {
+            Some(notify)
+        } else {
+            None
+        }
+    }
+    pub fn is_messages(&self) -> bool {
+        matches!(self, Self::Messages)
     }
 }
 
@@ -1782,14 +2524,14 @@ pub enum ChatInfo {
 }
 
 impl ChatInfo {
-    pub fn direct(contact: Contact) -> Self {
+    pub fn make_direct(contact: Contact) -> Self {
         Self::Direct {
             contact,
             undocumented: Default::default(),
         }
     }
 
-    pub fn group(group_info: GroupInfo, group_chat_scope: Option<GroupChatScopeInfo>) -> Self {
+    pub fn make_group(group_info: GroupInfo, group_chat_scope: Option<GroupChatScopeInfo>) -> Self {
         Self::Group {
             group_info,
             group_chat_scope,
@@ -1797,26 +2539,83 @@ impl ChatInfo {
         }
     }
 
-    pub fn local(note_folder: NoteFolder) -> Self {
+    pub fn make_local(note_folder: NoteFolder) -> Self {
         Self::Local {
             note_folder,
             undocumented: Default::default(),
         }
     }
 
-    pub fn contact_request(contact_request: UserContactRequest) -> Self {
+    pub fn make_contact_request(contact_request: UserContactRequest) -> Self {
         Self::ContactRequest {
             contact_request,
             undocumented: Default::default(),
         }
     }
 
-    pub fn contact_connection(contact_connection: PendingContactConnection) -> Self {
+    pub fn make_contact_connection(contact_connection: PendingContactConnection) -> Self {
         Self::ContactConnection {
             contact_connection,
             undocumented: Default::default(),
         }
     }
+}
+
+impl ChatInfo {
+    pub fn direct(&self) -> Option<&Contact> {
+        if let Self::Direct { contact, .. } = self {
+            Some(contact)
+        } else {
+            None
+        }
+    }
+    pub fn group(&self) -> Option<ChatInfoGroupRef<'_>> {
+        if let Self::Group {
+            group_info,
+            group_chat_scope,
+            ..
+        } = self
+        {
+            Some(ChatInfoGroupRef {
+                group_info,
+                group_chat_scope,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn local(&self) -> Option<&NoteFolder> {
+        if let Self::Local { note_folder, .. } = self {
+            Some(note_folder)
+        } else {
+            None
+        }
+    }
+    pub fn contact_request(&self) -> Option<&UserContactRequest> {
+        if let Self::ContactRequest {
+            contact_request, ..
+        } = self
+        {
+            Some(contact_request)
+        } else {
+            None
+        }
+    }
+    pub fn contact_connection(&self) -> Option<&PendingContactConnection> {
+        if let Self::ContactConnection {
+            contact_connection, ..
+        } = self
+        {
+            Some(contact_connection)
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct ChatInfoGroupRef<'a> {
+    pub group_info: &'a GroupInfo,
+    pub group_chat_scope: &'a Option<GroupChatScopeInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2146,42 +2945,76 @@ pub enum ConnStatus {
 }
 
 impl ConnStatus {
-    pub fn new() -> Self {
+    pub fn make_new() -> Self {
         Self::New
     }
 
-    pub fn prepared() -> Self {
+    pub fn make_prepared() -> Self {
         Self::Prepared
     }
 
-    pub fn joined() -> Self {
+    pub fn make_joined() -> Self {
         Self::Joined
     }
 
-    pub fn requested() -> Self {
+    pub fn make_requested() -> Self {
         Self::Requested
     }
 
-    pub fn accepted() -> Self {
+    pub fn make_accepted() -> Self {
         Self::Accepted
     }
 
-    pub fn snd_ready() -> Self {
+    pub fn make_snd_ready() -> Self {
         Self::SndReady
     }
 
-    pub fn ready() -> Self {
+    pub fn make_ready() -> Self {
         Self::Ready
     }
 
-    pub fn deleted() -> Self {
+    pub fn make_deleted() -> Self {
         Self::Deleted
     }
 
-    pub fn failed(conn_error: String) -> Self {
+    pub fn make_failed(conn_error: String) -> Self {
         Self::Failed {
             conn_error,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl ConnStatus {
+    pub fn is_new(&self) -> bool {
+        matches!(self, Self::New)
+    }
+    pub fn is_prepared(&self) -> bool {
+        matches!(self, Self::Prepared)
+    }
+    pub fn is_joined(&self) -> bool {
+        matches!(self, Self::Joined)
+    }
+    pub fn is_requested(&self) -> bool {
+        matches!(self, Self::Requested)
+    }
+    pub fn is_accepted(&self) -> bool {
+        matches!(self, Self::Accepted)
+    }
+    pub fn is_snd_ready(&self) -> bool {
+        matches!(self, Self::SndReady)
+    }
+    pub fn is_ready(&self) -> bool {
+        matches!(self, Self::Ready)
+    }
+    pub fn is_deleted(&self) -> bool {
+        matches!(self, Self::Deleted)
+    }
+    pub fn failed(&self) -> Option<&String> {
+        if let Self::Failed { conn_error, .. } = self {
+            Some(conn_error)
+        } else {
+            None
         }
     }
 }
@@ -2356,7 +3189,7 @@ pub enum ConnectionEntity {
 }
 
 impl ConnectionEntity {
-    pub fn rcv_direct_msg_connection(
+    pub fn make_rcv_direct_msg_connection(
         entity_connection: Connection,
         contact: Option<Contact>,
     ) -> Self {
@@ -2367,7 +3200,7 @@ impl ConnectionEntity {
         }
     }
 
-    pub fn rcv_group_msg_connection(
+    pub fn make_rcv_group_msg_connection(
         entity_connection: Connection,
         group_info: GroupInfo,
         group_member: GroupMember,
@@ -2380,7 +3213,7 @@ impl ConnectionEntity {
         }
     }
 
-    pub fn user_contact_connection(
+    pub fn make_user_contact_connection(
         entity_connection: Connection,
         user_contact: UserContact,
     ) -> Self {
@@ -2390,6 +3223,74 @@ impl ConnectionEntity {
             undocumented: Default::default(),
         }
     }
+}
+
+impl ConnectionEntity {
+    pub fn rcv_direct_msg_connection(
+        &self,
+    ) -> Option<ConnectionEntityRcvDirectMsgConnectionRef<'_>> {
+        if let Self::RcvDirectMsgConnection {
+            entity_connection,
+            contact,
+            ..
+        } = self
+        {
+            Some(ConnectionEntityRcvDirectMsgConnectionRef {
+                entity_connection,
+                contact,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn rcv_group_msg_connection(&self) -> Option<ConnectionEntityRcvGroupMsgConnectionRef<'_>> {
+        if let Self::RcvGroupMsgConnection {
+            entity_connection,
+            group_info,
+            group_member,
+            ..
+        } = self
+        {
+            Some(ConnectionEntityRcvGroupMsgConnectionRef {
+                entity_connection,
+                group_info,
+                group_member,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn user_contact_connection(&self) -> Option<ConnectionEntityUserContactConnectionRef<'_>> {
+        if let Self::UserContactConnection {
+            entity_connection,
+            user_contact,
+            ..
+        } = self
+        {
+            Some(ConnectionEntityUserContactConnectionRef {
+                entity_connection,
+                user_contact,
+            })
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct ConnectionEntityRcvDirectMsgConnectionRef<'a> {
+    pub entity_connection: &'a Connection,
+    pub contact: &'a Option<Contact>,
+}
+#[derive(Clone, Copy)]
+pub struct ConnectionEntityRcvGroupMsgConnectionRef<'a> {
+    pub entity_connection: &'a Connection,
+    pub group_info: &'a GroupInfo,
+    pub group_member: &'a GroupMember,
+}
+#[derive(Clone, Copy)]
+pub struct ConnectionEntityUserContactConnectionRef<'a> {
+    pub entity_connection: &'a Connection,
+    pub user_contact: &'a UserContact,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -2443,31 +3344,73 @@ pub enum ConnectionPlan {
 }
 
 impl ConnectionPlan {
-    pub fn invitation_link(invitation_link_plan: InvitationLinkPlan) -> Self {
+    pub fn make_invitation_link(invitation_link_plan: InvitationLinkPlan) -> Self {
         Self::InvitationLink {
             invitation_link_plan,
             undocumented: Default::default(),
         }
     }
 
-    pub fn contact_address(contact_address_plan: ContactAddressPlan) -> Self {
+    pub fn make_contact_address(contact_address_plan: ContactAddressPlan) -> Self {
         Self::ContactAddress {
             contact_address_plan,
             undocumented: Default::default(),
         }
     }
 
-    pub fn group_link(group_link_plan: GroupLinkPlan) -> Self {
+    pub fn make_group_link(group_link_plan: GroupLinkPlan) -> Self {
         Self::GroupLink {
             group_link_plan,
             undocumented: Default::default(),
         }
     }
 
-    pub fn error(chat_error: ChatError) -> Self {
+    pub fn make_error(chat_error: ChatError) -> Self {
         Self::Error {
             chat_error,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl ConnectionPlan {
+    pub fn invitation_link(&self) -> Option<&InvitationLinkPlan> {
+        if let Self::InvitationLink {
+            invitation_link_plan,
+            ..
+        } = self
+        {
+            Some(invitation_link_plan)
+        } else {
+            None
+        }
+    }
+    pub fn contact_address(&self) -> Option<&ContactAddressPlan> {
+        if let Self::ContactAddress {
+            contact_address_plan,
+            ..
+        } = self
+        {
+            Some(contact_address_plan)
+        } else {
+            None
+        }
+    }
+    pub fn group_link(&self) -> Option<&GroupLinkPlan> {
+        if let Self::GroupLink {
+            group_link_plan, ..
+        } = self
+        {
+            Some(group_link_plan)
+        } else {
+            None
+        }
+    }
+    pub fn error(&self) -> Option<&ChatError> {
+        if let Self::Error { chat_error, .. } = self {
+            Some(chat_error)
+        } else {
+            None
         }
     }
 }
@@ -2610,39 +3553,80 @@ pub enum ContactAddressPlan {
 }
 
 impl ContactAddressPlan {
-    pub fn ok(contact_s_link_data: Option<ContactShortLinkData>) -> Self {
+    pub fn make_ok(contact_s_link_data: Option<ContactShortLinkData>) -> Self {
         Self::Ok {
             contact_s_link_data,
             undocumented: Default::default(),
         }
     }
 
-    pub fn own_link() -> Self {
+    pub fn make_own_link() -> Self {
         Self::OwnLink
     }
 
-    pub fn connecting_confirm_reconnect() -> Self {
+    pub fn make_connecting_confirm_reconnect() -> Self {
         Self::ConnectingConfirmReconnect
     }
 
-    pub fn connecting_prohibit(contact: Contact) -> Self {
+    pub fn make_connecting_prohibit(contact: Contact) -> Self {
         Self::ConnectingProhibit {
             contact,
             undocumented: Default::default(),
         }
     }
 
-    pub fn known(contact: Contact) -> Self {
+    pub fn make_known(contact: Contact) -> Self {
         Self::Known {
             contact,
             undocumented: Default::default(),
         }
     }
 
-    pub fn contact_via_address(contact: Contact) -> Self {
+    pub fn make_contact_via_address(contact: Contact) -> Self {
         Self::ContactViaAddress {
             contact,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl ContactAddressPlan {
+    pub fn ok(&self) -> Option<&Option<ContactShortLinkData>> {
+        if let Self::Ok {
+            contact_s_link_data,
+            ..
+        } = self
+        {
+            Some(contact_s_link_data)
+        } else {
+            None
+        }
+    }
+    pub fn is_own_link(&self) -> bool {
+        matches!(self, Self::OwnLink)
+    }
+    pub fn is_connecting_confirm_reconnect(&self) -> bool {
+        matches!(self, Self::ConnectingConfirmReconnect)
+    }
+    pub fn connecting_prohibit(&self) -> Option<&Contact> {
+        if let Self::ConnectingProhibit { contact, .. } = self {
+            Some(contact)
+        } else {
+            None
+        }
+    }
+    pub fn known(&self) -> Option<&Contact> {
+        if let Self::Known { contact, .. } = self {
+            Some(contact)
+        } else {
+            None
+        }
+    }
+    pub fn contact_via_address(&self) -> Option<&Contact> {
+        if let Self::ContactViaAddress { contact, .. } = self {
+            Some(contact)
+        } else {
+            None
         }
     }
 }
@@ -2702,17 +3686,34 @@ pub enum ContactUserPref {
 }
 
 impl ContactUserPref {
-    pub fn contact(preference: SimplePreference) -> Self {
+    pub fn make_contact(preference: SimplePreference) -> Self {
         Self::Contact {
             preference,
             undocumented: Default::default(),
         }
     }
 
-    pub fn user(preference: SimplePreference) -> Self {
+    pub fn make_user(preference: SimplePreference) -> Self {
         Self::User {
             preference,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl ContactUserPref {
+    pub fn contact(&self) -> Option<&SimplePreference> {
+        if let Self::Contact { preference, .. } = self {
+            Some(preference)
+        } else {
+            None
+        }
+    }
+    pub fn user(&self) -> Option<&SimplePreference> {
+        if let Self::User { preference, .. } = self {
+            Some(preference)
+        } else {
+            None
         }
     }
 }
@@ -3059,42 +4060,42 @@ pub enum Format {
 }
 
 impl Format {
-    pub fn bold() -> Self {
+    pub fn make_bold() -> Self {
         Self::Bold
     }
 
-    pub fn italic() -> Self {
+    pub fn make_italic() -> Self {
         Self::Italic
     }
 
-    pub fn strike_through() -> Self {
+    pub fn make_strike_through() -> Self {
         Self::StrikeThrough
     }
 
-    pub fn snippet() -> Self {
+    pub fn make_snippet() -> Self {
         Self::Snippet
     }
 
-    pub fn secret() -> Self {
+    pub fn make_secret() -> Self {
         Self::Secret
     }
 
-    pub fn small() -> Self {
+    pub fn make_small() -> Self {
         Self::Small
     }
 
-    pub fn colored(color: Color) -> Self {
+    pub fn make_colored(color: Color) -> Self {
         Self::Colored {
             color,
             undocumented: Default::default(),
         }
     }
 
-    pub fn uri() -> Self {
+    pub fn make_uri() -> Self {
         Self::Uri
     }
 
-    pub fn hyper_link(show_text: Option<String>, link_uri: String) -> Self {
+    pub fn make_hyper_link(show_text: Option<String>, link_uri: String) -> Self {
         Self::HyperLink {
             show_text,
             link_uri,
@@ -3102,7 +4103,7 @@ impl Format {
         }
     }
 
-    pub fn simplex_link(
+    pub fn make_simplex_link(
         show_text: Option<String>,
         link_type: SimplexLinkType,
         simplex_uri: String,
@@ -3117,27 +4118,124 @@ impl Format {
         }
     }
 
-    pub fn command(command_str: String) -> Self {
+    pub fn make_command(command_str: String) -> Self {
         Self::Command {
             command_str,
             undocumented: Default::default(),
         }
     }
 
-    pub fn mention(member_name: String) -> Self {
+    pub fn make_mention(member_name: String) -> Self {
         Self::Mention {
             member_name,
             undocumented: Default::default(),
         }
     }
 
-    pub fn email() -> Self {
+    pub fn make_email() -> Self {
         Self::Email
     }
 
-    pub fn phone() -> Self {
+    pub fn make_phone() -> Self {
         Self::Phone
     }
+}
+
+impl Format {
+    pub fn is_bold(&self) -> bool {
+        matches!(self, Self::Bold)
+    }
+    pub fn is_italic(&self) -> bool {
+        matches!(self, Self::Italic)
+    }
+    pub fn is_strike_through(&self) -> bool {
+        matches!(self, Self::StrikeThrough)
+    }
+    pub fn is_snippet(&self) -> bool {
+        matches!(self, Self::Snippet)
+    }
+    pub fn is_secret(&self) -> bool {
+        matches!(self, Self::Secret)
+    }
+    pub fn is_small(&self) -> bool {
+        matches!(self, Self::Small)
+    }
+    pub fn colored(&self) -> Option<&Color> {
+        if let Self::Colored { color, .. } = self {
+            Some(color)
+        } else {
+            None
+        }
+    }
+    pub fn is_uri(&self) -> bool {
+        matches!(self, Self::Uri)
+    }
+    pub fn hyper_link(&self) -> Option<FormatHyperLinkRef<'_>> {
+        if let Self::HyperLink {
+            show_text,
+            link_uri,
+            ..
+        } = self
+        {
+            Some(FormatHyperLinkRef {
+                show_text,
+                link_uri,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn simplex_link(&self) -> Option<FormatSimplexLinkRef<'_>> {
+        if let Self::SimplexLink {
+            show_text,
+            link_type,
+            simplex_uri,
+            smp_hosts,
+            ..
+        } = self
+        {
+            Some(FormatSimplexLinkRef {
+                show_text,
+                link_type,
+                simplex_uri,
+                smp_hosts,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn command(&self) -> Option<&String> {
+        if let Self::Command { command_str, .. } = self {
+            Some(command_str)
+        } else {
+            None
+        }
+    }
+    pub fn mention(&self) -> Option<&String> {
+        if let Self::Mention { member_name, .. } = self {
+            Some(member_name)
+        } else {
+            None
+        }
+    }
+    pub fn is_email(&self) -> bool {
+        matches!(self, Self::Email)
+    }
+    pub fn is_phone(&self) -> bool {
+        matches!(self, Self::Phone)
+    }
+}
+#[derive(Clone, Copy)]
+pub struct FormatHyperLinkRef<'a> {
+    pub show_text: &'a Option<String>,
+    pub link_uri: &'a String,
+}
+#[derive(Clone, Copy)]
+pub struct FormatSimplexLinkRef<'a> {
+    pub show_text: &'a Option<String>,
+    pub link_type: &'a SimplexLinkType,
+    pub simplex_uri: &'a String,
+    pub smp_hosts: &'a Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3292,10 +4390,23 @@ impl CommandSyntax for GroupChatScope {
 }
 
 impl GroupChatScope {
-    pub fn member_support(group_member_id: Option<i64>) -> Self {
+    pub fn make_member_support(group_member_id: Option<i64>) -> Self {
         Self::MemberSupport {
             group_member_id,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl GroupChatScope {
+    pub fn member_support(&self) -> Option<&Option<i64>> {
+        if let Self::MemberSupport {
+            group_member_id, ..
+        } = self
+        {
+            Some(group_member_id)
+        } else {
+            None
         }
     }
 }
@@ -3317,10 +4428,20 @@ pub enum GroupChatScopeInfo {
 }
 
 impl GroupChatScopeInfo {
-    pub fn member_support(group_member: Option<GroupMember>) -> Self {
+    pub fn make_member_support(group_member: Option<GroupMember>) -> Self {
         Self::MemberSupport {
             group_member,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl GroupChatScopeInfo {
+    pub fn member_support(&self) -> Option<&Option<GroupMember>> {
+        if let Self::MemberSupport { group_member, .. } = self {
+            Some(group_member)
+        } else {
+            None
         }
     }
 }
@@ -3586,7 +4707,7 @@ pub enum GroupLinkPlan {
 }
 
 impl GroupLinkPlan {
-    pub fn ok(
+    pub fn make_ok(
         group_s_link_info: Option<GroupShortLinkInfo>,
         group_s_link_data: Option<GroupShortLinkData>,
     ) -> Self {
@@ -3597,30 +4718,77 @@ impl GroupLinkPlan {
         }
     }
 
-    pub fn own_link(group_info: GroupInfo) -> Self {
+    pub fn make_own_link(group_info: GroupInfo) -> Self {
         Self::OwnLink {
             group_info,
             undocumented: Default::default(),
         }
     }
 
-    pub fn connecting_confirm_reconnect() -> Self {
+    pub fn make_connecting_confirm_reconnect() -> Self {
         Self::ConnectingConfirmReconnect
     }
 
-    pub fn connecting_prohibit(group_info: Option<GroupInfo>) -> Self {
+    pub fn make_connecting_prohibit(group_info: Option<GroupInfo>) -> Self {
         Self::ConnectingProhibit {
             group_info,
             undocumented: Default::default(),
         }
     }
 
-    pub fn known(group_info: GroupInfo) -> Self {
+    pub fn make_known(group_info: GroupInfo) -> Self {
         Self::Known {
             group_info,
             undocumented: Default::default(),
         }
     }
+}
+
+impl GroupLinkPlan {
+    pub fn ok(&self) -> Option<GroupLinkPlanOkRef<'_>> {
+        if let Self::Ok {
+            group_s_link_info,
+            group_s_link_data,
+            ..
+        } = self
+        {
+            Some(GroupLinkPlanOkRef {
+                group_s_link_info,
+                group_s_link_data,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn own_link(&self) -> Option<&GroupInfo> {
+        if let Self::OwnLink { group_info, .. } = self {
+            Some(group_info)
+        } else {
+            None
+        }
+    }
+    pub fn is_connecting_confirm_reconnect(&self) -> bool {
+        matches!(self, Self::ConnectingConfirmReconnect)
+    }
+    pub fn connecting_prohibit(&self) -> Option<&Option<GroupInfo>> {
+        if let Self::ConnectingProhibit { group_info, .. } = self {
+            Some(group_info)
+        } else {
+            None
+        }
+    }
+    pub fn known(&self) -> Option<&GroupInfo> {
+        if let Self::Known { group_info, .. } = self {
+            Some(group_info)
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct GroupLinkPlanOkRef<'a> {
+    pub group_s_link_info: &'a Option<GroupShortLinkInfo>,
+    pub group_s_link_data: &'a Option<GroupShortLinkData>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3976,17 +5144,34 @@ pub enum GroupRootKey {
 }
 
 impl GroupRootKey {
-    pub fn private(root_priv_key: String) -> Self {
+    pub fn make_private(root_priv_key: String) -> Self {
         Self::Private {
             root_priv_key,
             undocumented: Default::default(),
         }
     }
 
-    pub fn public(root_pub_key: String) -> Self {
+    pub fn make_public(root_pub_key: String) -> Self {
         Self::Public {
             root_pub_key,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl GroupRootKey {
+    pub fn private(&self) -> Option<&String> {
+        if let Self::Private { root_priv_key, .. } = self {
+            Some(root_priv_key)
+        } else {
+            None
+        }
+    }
+    pub fn public(&self) -> Option<&String> {
+        if let Self::Public { root_pub_key, .. } = self {
+            Some(root_pub_key)
+        } else {
+            None
         }
     }
 }
@@ -4133,28 +5318,59 @@ pub enum InvitationLinkPlan {
 }
 
 impl InvitationLinkPlan {
-    pub fn ok(contact_s_link_data: Option<ContactShortLinkData>) -> Self {
+    pub fn make_ok(contact_s_link_data: Option<ContactShortLinkData>) -> Self {
         Self::Ok {
             contact_s_link_data,
             undocumented: Default::default(),
         }
     }
 
-    pub fn own_link() -> Self {
+    pub fn make_own_link() -> Self {
         Self::OwnLink
     }
 
-    pub fn connecting(contact: Option<Contact>) -> Self {
+    pub fn make_connecting(contact: Option<Contact>) -> Self {
         Self::Connecting {
             contact,
             undocumented: Default::default(),
         }
     }
 
-    pub fn known(contact: Contact) -> Self {
+    pub fn make_known(contact: Contact) -> Self {
         Self::Known {
             contact,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl InvitationLinkPlan {
+    pub fn ok(&self) -> Option<&Option<ContactShortLinkData>> {
+        if let Self::Ok {
+            contact_s_link_data,
+            ..
+        } = self
+        {
+            Some(contact_s_link_data)
+        } else {
+            None
+        }
+    }
+    pub fn is_own_link(&self) -> bool {
+        matches!(self, Self::OwnLink)
+    }
+    pub fn connecting(&self) -> Option<&Option<Contact>> {
+        if let Self::Connecting { contact, .. } = self {
+            Some(contact)
+        } else {
+            None
+        }
+    }
+    pub fn known(&self) -> Option<&Contact> {
+        if let Self::Known { contact, .. } = self {
+            Some(contact)
+        } else {
+            None
         }
     }
 }
@@ -4183,19 +5399,35 @@ pub enum InvitedBy {
 }
 
 impl InvitedBy {
-    pub fn contact(by_contact_id: i64) -> Self {
+    pub fn make_contact(by_contact_id: i64) -> Self {
         Self::Contact {
             by_contact_id,
             undocumented: Default::default(),
         }
     }
 
-    pub fn user() -> Self {
+    pub fn make_user() -> Self {
         Self::User
     }
 
-    pub fn unknown() -> Self {
+    pub fn make_unknown() -> Self {
         Self::Unknown
+    }
+}
+
+impl InvitedBy {
+    pub fn contact(&self) -> Option<&i64> {
+        if let Self::Contact { by_contact_id, .. } = self {
+            Some(by_contact_id)
+        } else {
+            None
+        }
+    }
+    pub fn is_user(&self) -> bool {
+        matches!(self, Self::User)
+    }
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, Self::Unknown)
     }
 }
 
@@ -4236,28 +5468,56 @@ pub enum LinkContent {
 }
 
 impl LinkContent {
-    pub fn page() -> Self {
+    pub fn make_page() -> Self {
         Self::Page
     }
 
-    pub fn image() -> Self {
+    pub fn make_image() -> Self {
         Self::Image
     }
 
-    pub fn video(duration: Option<i32>) -> Self {
+    pub fn make_video(duration: Option<i32>) -> Self {
         Self::Video {
             duration,
             undocumented: Default::default(),
         }
     }
 
-    pub fn unknown(tag: String, json: JsonObject) -> Self {
+    pub fn make_unknown(tag: String, json: JsonObject) -> Self {
         Self::Unknown {
             tag,
             json,
             undocumented: Default::default(),
         }
     }
+}
+
+impl LinkContent {
+    pub fn is_page(&self) -> bool {
+        matches!(self, Self::Page)
+    }
+    pub fn is_image(&self) -> bool {
+        matches!(self, Self::Image)
+    }
+    pub fn video(&self) -> Option<&Option<i32>> {
+        if let Self::Video { duration, .. } = self {
+            Some(duration)
+        } else {
+            None
+        }
+    }
+    pub fn unknown(&self) -> Option<LinkContentUnknownRef<'_>> {
+        if let Self::Unknown { tag, json, .. } = self {
+            Some(LinkContentUnknownRef { tag, json })
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct LinkContentUnknownRef<'a> {
+    pub tag: &'a String,
+    pub json: &'a JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4377,7 +5637,7 @@ pub enum MsgChatLink {
 }
 
 impl MsgChatLink {
-    pub fn contact(conn_link: String, profile: Profile, business: bool) -> Self {
+    pub fn make_contact(conn_link: String, profile: Profile, business: bool) -> Self {
         Self::Contact {
             conn_link,
             profile,
@@ -4386,7 +5646,7 @@ impl MsgChatLink {
         }
     }
 
-    pub fn invitation(inv_link: String, profile: Profile) -> Self {
+    pub fn make_invitation(inv_link: String, profile: Profile) -> Self {
         Self::Invitation {
             inv_link,
             profile,
@@ -4394,13 +5654,74 @@ impl MsgChatLink {
         }
     }
 
-    pub fn group(conn_link: String, group_profile: GroupProfile) -> Self {
+    pub fn make_group(conn_link: String, group_profile: GroupProfile) -> Self {
         Self::Group {
             conn_link,
             group_profile,
             undocumented: Default::default(),
         }
     }
+}
+
+impl MsgChatLink {
+    pub fn contact(&self) -> Option<MsgChatLinkContactRef<'_>> {
+        if let Self::Contact {
+            conn_link,
+            profile,
+            business,
+            ..
+        } = self
+        {
+            Some(MsgChatLinkContactRef {
+                conn_link,
+                profile,
+                business,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn invitation(&self) -> Option<MsgChatLinkInvitationRef<'_>> {
+        if let Self::Invitation {
+            inv_link, profile, ..
+        } = self
+        {
+            Some(MsgChatLinkInvitationRef { inv_link, profile })
+        } else {
+            None
+        }
+    }
+    pub fn group(&self) -> Option<MsgChatLinkGroupRef<'_>> {
+        if let Self::Group {
+            conn_link,
+            group_profile,
+            ..
+        } = self
+        {
+            Some(MsgChatLinkGroupRef {
+                conn_link,
+                group_profile,
+            })
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct MsgChatLinkContactRef<'a> {
+    pub conn_link: &'a String,
+    pub profile: &'a Profile,
+    pub business: &'a bool,
+}
+#[derive(Clone, Copy)]
+pub struct MsgChatLinkInvitationRef<'a> {
+    pub inv_link: &'a String,
+    pub profile: &'a Profile,
+}
+#[derive(Clone, Copy)]
+pub struct MsgChatLinkGroupRef<'a> {
+    pub conn_link: &'a String,
+    pub group_profile: &'a GroupProfile,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4517,14 +5838,14 @@ pub enum MsgContent {
 }
 
 impl MsgContent {
-    pub fn text(text: String) -> Self {
+    pub fn make_text(text: String) -> Self {
         Self::Text {
             text,
             undocumented: Default::default(),
         }
     }
 
-    pub fn link(text: String, preview: LinkPreview) -> Self {
+    pub fn make_link(text: String, preview: LinkPreview) -> Self {
         Self::Link {
             text,
             preview,
@@ -4532,7 +5853,7 @@ impl MsgContent {
         }
     }
 
-    pub fn image(text: String, image: String) -> Self {
+    pub fn make_image(text: String, image: String) -> Self {
         Self::Image {
             text,
             image,
@@ -4540,7 +5861,7 @@ impl MsgContent {
         }
     }
 
-    pub fn video(text: String, image: String, duration: i32) -> Self {
+    pub fn make_video(text: String, image: String, duration: i32) -> Self {
         Self::Video {
             text,
             image,
@@ -4549,7 +5870,7 @@ impl MsgContent {
         }
     }
 
-    pub fn voice(text: String, duration: i32) -> Self {
+    pub fn make_voice(text: String, duration: i32) -> Self {
         Self::Voice {
             text,
             duration,
@@ -4557,14 +5878,14 @@ impl MsgContent {
         }
     }
 
-    pub fn file(text: String) -> Self {
+    pub fn make_file(text: String) -> Self {
         Self::File {
             text,
             undocumented: Default::default(),
         }
     }
 
-    pub fn report(text: String, reason: ReportReason) -> Self {
+    pub fn make_report(text: String, reason: ReportReason) -> Self {
         Self::Report {
             text,
             reason,
@@ -4572,7 +5893,7 @@ impl MsgContent {
         }
     }
 
-    pub fn chat(text: String, chat_link: MsgChatLink) -> Self {
+    pub fn make_chat(text: String, chat_link: MsgChatLink) -> Self {
         Self::Chat {
             text,
             chat_link,
@@ -4580,7 +5901,7 @@ impl MsgContent {
         }
     }
 
-    pub fn unknown(tag: String, text: String, json: JsonObject) -> Self {
+    pub fn make_unknown(tag: String, text: String, json: JsonObject) -> Self {
         Self::Unknown {
             tag,
             text,
@@ -4588,6 +5909,125 @@ impl MsgContent {
             undocumented: Default::default(),
         }
     }
+}
+
+impl MsgContent {
+    pub fn text(&self) -> Option<&String> {
+        if let Self::Text { text, .. } = self {
+            Some(text)
+        } else {
+            None
+        }
+    }
+    pub fn link(&self) -> Option<MsgContentLinkRef<'_>> {
+        if let Self::Link { text, preview, .. } = self {
+            Some(MsgContentLinkRef { text, preview })
+        } else {
+            None
+        }
+    }
+    pub fn image(&self) -> Option<MsgContentImageRef<'_>> {
+        if let Self::Image { text, image, .. } = self {
+            Some(MsgContentImageRef { text, image })
+        } else {
+            None
+        }
+    }
+    pub fn video(&self) -> Option<MsgContentVideoRef<'_>> {
+        if let Self::Video {
+            text,
+            image,
+            duration,
+            ..
+        } = self
+        {
+            Some(MsgContentVideoRef {
+                text,
+                image,
+                duration,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn voice(&self) -> Option<MsgContentVoiceRef<'_>> {
+        if let Self::Voice { text, duration, .. } = self {
+            Some(MsgContentVoiceRef { text, duration })
+        } else {
+            None
+        }
+    }
+    pub fn file(&self) -> Option<&String> {
+        if let Self::File { text, .. } = self {
+            Some(text)
+        } else {
+            None
+        }
+    }
+    pub fn report(&self) -> Option<MsgContentReportRef<'_>> {
+        if let Self::Report { text, reason, .. } = self {
+            Some(MsgContentReportRef { text, reason })
+        } else {
+            None
+        }
+    }
+    pub fn chat(&self) -> Option<MsgContentChatRef<'_>> {
+        if let Self::Chat {
+            text, chat_link, ..
+        } = self
+        {
+            Some(MsgContentChatRef { text, chat_link })
+        } else {
+            None
+        }
+    }
+    pub fn unknown(&self) -> Option<MsgContentUnknownRef<'_>> {
+        if let Self::Unknown {
+            tag, text, json, ..
+        } = self
+        {
+            Some(MsgContentUnknownRef { tag, text, json })
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct MsgContentLinkRef<'a> {
+    pub text: &'a String,
+    pub preview: &'a LinkPreview,
+}
+#[derive(Clone, Copy)]
+pub struct MsgContentImageRef<'a> {
+    pub text: &'a String,
+    pub image: &'a String,
+}
+#[derive(Clone, Copy)]
+pub struct MsgContentVideoRef<'a> {
+    pub text: &'a String,
+    pub image: &'a String,
+    pub duration: &'a i32,
+}
+#[derive(Clone, Copy)]
+pub struct MsgContentVoiceRef<'a> {
+    pub text: &'a String,
+    pub duration: &'a i32,
+}
+#[derive(Clone, Copy)]
+pub struct MsgContentReportRef<'a> {
+    pub text: &'a String,
+    pub reason: &'a ReportReason,
+}
+#[derive(Clone, Copy)]
+pub struct MsgContentChatRef<'a> {
+    pub text: &'a String,
+    pub chat_link: &'a MsgChatLink,
+}
+#[derive(Clone, Copy)]
+pub struct MsgContentUnknownRef<'a> {
+    pub tag: &'a String,
+    pub text: &'a String,
+    pub json: &'a JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -4640,20 +6080,42 @@ pub enum MsgReaction {
 }
 
 impl MsgReaction {
-    pub fn emoji(emoji: String) -> Self {
+    pub fn make_emoji(emoji: String) -> Self {
         Self::Emoji {
             emoji,
             undocumented: Default::default(),
         }
     }
 
-    pub fn unknown(tag: String, json: JsonObject) -> Self {
+    pub fn make_unknown(tag: String, json: JsonObject) -> Self {
         Self::Unknown {
             tag,
             json,
             undocumented: Default::default(),
         }
     }
+}
+
+impl MsgReaction {
+    pub fn emoji(&self) -> Option<&String> {
+        if let Self::Emoji { emoji, .. } = self {
+            Some(emoji)
+        } else {
+            None
+        }
+    }
+    pub fn unknown(&self) -> Option<MsgReactionUnknownRef<'_>> {
+        if let Self::Unknown { tag, json, .. } = self {
+            Some(MsgReactionUnknownRef { tag, json })
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct MsgReactionUnknownRef<'a> {
+    pub tag: &'a String,
+    pub json: &'a JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -4989,28 +6451,55 @@ pub enum RcvConnEvent {
 }
 
 impl RcvConnEvent {
-    pub fn switch_queue(phase: SwitchPhase) -> Self {
+    pub fn make_switch_queue(phase: SwitchPhase) -> Self {
         Self::SwitchQueue {
             phase,
             undocumented: Default::default(),
         }
     }
 
-    pub fn ratchet_sync(sync_status: RatchetSyncState) -> Self {
+    pub fn make_ratchet_sync(sync_status: RatchetSyncState) -> Self {
         Self::RatchetSync {
             sync_status,
             undocumented: Default::default(),
         }
     }
 
-    pub fn verification_code_reset() -> Self {
+    pub fn make_verification_code_reset() -> Self {
         Self::VerificationCodeReset
     }
 
-    pub fn pq_enabled(enabled: bool) -> Self {
+    pub fn make_pq_enabled(enabled: bool) -> Self {
         Self::PqEnabled {
             enabled,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl RcvConnEvent {
+    pub fn switch_queue(&self) -> Option<&SwitchPhase> {
+        if let Self::SwitchQueue { phase, .. } = self {
+            Some(phase)
+        } else {
+            None
+        }
+    }
+    pub fn ratchet_sync(&self) -> Option<&RatchetSyncState> {
+        if let Self::RatchetSync { sync_status, .. } = self {
+            Some(sync_status)
+        } else {
+            None
+        }
+    }
+    pub fn is_verification_code_reset(&self) -> bool {
+        matches!(self, Self::VerificationCodeReset)
+    }
+    pub fn pq_enabled(&self) -> Option<&bool> {
+        if let Self::PqEnabled { enabled, .. } = self {
+            Some(enabled)
+        } else {
+            None
         }
     }
 }
@@ -5045,11 +6534,11 @@ pub enum RcvDirectEvent {
 }
 
 impl RcvDirectEvent {
-    pub fn contact_deleted() -> Self {
+    pub fn make_contact_deleted() -> Self {
         Self::ContactDeleted
     }
 
-    pub fn profile_updated(from_profile: Profile, to_profile: Profile) -> Self {
+    pub fn make_profile_updated(from_profile: Profile, to_profile: Profile) -> Self {
         Self::ProfileUpdated {
             from_profile,
             to_profile,
@@ -5057,12 +6546,45 @@ impl RcvDirectEvent {
         }
     }
 
-    pub fn group_inv_link_received(group_profile: GroupProfile) -> Self {
+    pub fn make_group_inv_link_received(group_profile: GroupProfile) -> Self {
         Self::GroupInvLinkReceived {
             group_profile,
             undocumented: Default::default(),
         }
     }
+}
+
+impl RcvDirectEvent {
+    pub fn is_contact_deleted(&self) -> bool {
+        matches!(self, Self::ContactDeleted)
+    }
+    pub fn profile_updated(&self) -> Option<RcvDirectEventProfileUpdatedRef<'_>> {
+        if let Self::ProfileUpdated {
+            from_profile,
+            to_profile,
+            ..
+        } = self
+        {
+            Some(RcvDirectEventProfileUpdatedRef {
+                from_profile,
+                to_profile,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn group_inv_link_received(&self) -> Option<&GroupProfile> {
+        if let Self::GroupInvLinkReceived { group_profile, .. } = self {
+            Some(group_profile)
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct RcvDirectEventProfileUpdatedRef<'a> {
+    pub from_profile: &'a Profile,
+    pub to_profile: &'a Profile,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -5135,35 +6657,69 @@ pub enum RcvFileStatus {
 }
 
 impl RcvFileStatus {
-    pub fn new() -> Self {
+    pub fn make_new() -> Self {
         Self::New
     }
 
-    pub fn accepted(file_path: String) -> Self {
+    pub fn make_accepted(file_path: String) -> Self {
         Self::Accepted {
             file_path,
             undocumented: Default::default(),
         }
     }
 
-    pub fn connected(file_path: String) -> Self {
+    pub fn make_connected(file_path: String) -> Self {
         Self::Connected {
             file_path,
             undocumented: Default::default(),
         }
     }
 
-    pub fn complete(file_path: String) -> Self {
+    pub fn make_complete(file_path: String) -> Self {
         Self::Complete {
             file_path,
             undocumented: Default::default(),
         }
     }
 
-    pub fn cancelled(file_path: Option<String>) -> Self {
+    pub fn make_cancelled(file_path: Option<String>) -> Self {
         Self::Cancelled {
             file_path,
             undocumented: Default::default(),
+        }
+    }
+}
+
+impl RcvFileStatus {
+    pub fn is_new(&self) -> bool {
+        matches!(self, Self::New)
+    }
+    pub fn accepted(&self) -> Option<&String> {
+        if let Self::Accepted { file_path, .. } = self {
+            Some(file_path)
+        } else {
+            None
+        }
+    }
+    pub fn connected(&self) -> Option<&String> {
+        if let Self::Connected { file_path, .. } = self {
+            Some(file_path)
+        } else {
+            None
+        }
+    }
+    pub fn complete(&self) -> Option<&String> {
+        if let Self::Complete { file_path, .. } = self {
+            Some(file_path)
+        } else {
+            None
+        }
+    }
+    pub fn cancelled(&self) -> Option<&Option<String>> {
+        if let Self::Cancelled { file_path, .. } = self {
+            Some(file_path)
+        } else {
+            None
         }
     }
 }
@@ -5345,7 +6901,7 @@ pub enum RcvGroupEvent {
 }
 
 impl RcvGroupEvent {
-    pub fn member_added(group_member_id: i64, profile: Profile) -> Self {
+    pub fn make_member_added(group_member_id: i64, profile: Profile) -> Self {
         Self::MemberAdded {
             group_member_id,
             profile,
@@ -5353,11 +6909,11 @@ impl RcvGroupEvent {
         }
     }
 
-    pub fn member_connected() -> Self {
+    pub fn make_member_connected() -> Self {
         Self::MemberConnected
     }
 
-    pub fn member_accepted(group_member_id: i64, profile: Profile) -> Self {
+    pub fn make_member_accepted(group_member_id: i64, profile: Profile) -> Self {
         Self::MemberAccepted {
             group_member_id,
             profile,
@@ -5365,15 +6921,15 @@ impl RcvGroupEvent {
         }
     }
 
-    pub fn user_accepted() -> Self {
+    pub fn make_user_accepted() -> Self {
         Self::UserAccepted
     }
 
-    pub fn member_left() -> Self {
+    pub fn make_member_left() -> Self {
         Self::MemberLeft
     }
 
-    pub fn member_role(group_member_id: i64, profile: Profile, role: GroupMemberRole) -> Self {
+    pub fn make_member_role(group_member_id: i64, profile: Profile, role: GroupMemberRole) -> Self {
         Self::MemberRole {
             group_member_id,
             profile,
@@ -5382,7 +6938,7 @@ impl RcvGroupEvent {
         }
     }
 
-    pub fn member_blocked(group_member_id: i64, profile: Profile, blocked: bool) -> Self {
+    pub fn make_member_blocked(group_member_id: i64, profile: Profile, blocked: bool) -> Self {
         Self::MemberBlocked {
             group_member_id,
             profile,
@@ -5391,14 +6947,14 @@ impl RcvGroupEvent {
         }
     }
 
-    pub fn user_role(role: GroupMemberRole) -> Self {
+    pub fn make_user_role(role: GroupMemberRole) -> Self {
         Self::UserRole {
             role,
             undocumented: Default::default(),
         }
     }
 
-    pub fn member_deleted(group_member_id: i64, profile: Profile) -> Self {
+    pub fn make_member_deleted(group_member_id: i64, profile: Profile) -> Self {
         Self::MemberDeleted {
             group_member_id,
             profile,
@@ -5406,30 +6962,30 @@ impl RcvGroupEvent {
         }
     }
 
-    pub fn user_deleted() -> Self {
+    pub fn make_user_deleted() -> Self {
         Self::UserDeleted
     }
 
-    pub fn group_deleted() -> Self {
+    pub fn make_group_deleted() -> Self {
         Self::GroupDeleted
     }
 
-    pub fn group_updated(group_profile: GroupProfile) -> Self {
+    pub fn make_group_updated(group_profile: GroupProfile) -> Self {
         Self::GroupUpdated {
             group_profile,
             undocumented: Default::default(),
         }
     }
 
-    pub fn invited_via_group_link() -> Self {
+    pub fn make_invited_via_group_link() -> Self {
         Self::InvitedViaGroupLink
     }
 
-    pub fn member_created_contact() -> Self {
+    pub fn make_member_created_contact() -> Self {
         Self::MemberCreatedContact
     }
 
-    pub fn member_profile_updated(from_profile: Profile, to_profile: Profile) -> Self {
+    pub fn make_member_profile_updated(from_profile: Profile, to_profile: Profile) -> Self {
         Self::MemberProfileUpdated {
             from_profile,
             to_profile,
@@ -5437,13 +6993,183 @@ impl RcvGroupEvent {
         }
     }
 
-    pub fn new_member_pending_review() -> Self {
+    pub fn make_new_member_pending_review() -> Self {
         Self::NewMemberPendingReview
     }
 
-    pub fn msg_bad_signature() -> Self {
+    pub fn make_msg_bad_signature() -> Self {
         Self::MsgBadSignature
     }
+}
+
+impl RcvGroupEvent {
+    pub fn member_added(&self) -> Option<RcvGroupEventMemberAddedRef<'_>> {
+        if let Self::MemberAdded {
+            group_member_id,
+            profile,
+            ..
+        } = self
+        {
+            Some(RcvGroupEventMemberAddedRef {
+                group_member_id,
+                profile,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_member_connected(&self) -> bool {
+        matches!(self, Self::MemberConnected)
+    }
+    pub fn member_accepted(&self) -> Option<RcvGroupEventMemberAcceptedRef<'_>> {
+        if let Self::MemberAccepted {
+            group_member_id,
+            profile,
+            ..
+        } = self
+        {
+            Some(RcvGroupEventMemberAcceptedRef {
+                group_member_id,
+                profile,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_user_accepted(&self) -> bool {
+        matches!(self, Self::UserAccepted)
+    }
+    pub fn is_member_left(&self) -> bool {
+        matches!(self, Self::MemberLeft)
+    }
+    pub fn member_role(&self) -> Option<RcvGroupEventMemberRoleRef<'_>> {
+        if let Self::MemberRole {
+            group_member_id,
+            profile,
+            role,
+            ..
+        } = self
+        {
+            Some(RcvGroupEventMemberRoleRef {
+                group_member_id,
+                profile,
+                role,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn member_blocked(&self) -> Option<RcvGroupEventMemberBlockedRef<'_>> {
+        if let Self::MemberBlocked {
+            group_member_id,
+            profile,
+            blocked,
+            ..
+        } = self
+        {
+            Some(RcvGroupEventMemberBlockedRef {
+                group_member_id,
+                profile,
+                blocked,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn user_role(&self) -> Option<&GroupMemberRole> {
+        if let Self::UserRole { role, .. } = self {
+            Some(role)
+        } else {
+            None
+        }
+    }
+    pub fn member_deleted(&self) -> Option<RcvGroupEventMemberDeletedRef<'_>> {
+        if let Self::MemberDeleted {
+            group_member_id,
+            profile,
+            ..
+        } = self
+        {
+            Some(RcvGroupEventMemberDeletedRef {
+                group_member_id,
+                profile,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_user_deleted(&self) -> bool {
+        matches!(self, Self::UserDeleted)
+    }
+    pub fn is_group_deleted(&self) -> bool {
+        matches!(self, Self::GroupDeleted)
+    }
+    pub fn group_updated(&self) -> Option<&GroupProfile> {
+        if let Self::GroupUpdated { group_profile, .. } = self {
+            Some(group_profile)
+        } else {
+            None
+        }
+    }
+    pub fn is_invited_via_group_link(&self) -> bool {
+        matches!(self, Self::InvitedViaGroupLink)
+    }
+    pub fn is_member_created_contact(&self) -> bool {
+        matches!(self, Self::MemberCreatedContact)
+    }
+    pub fn member_profile_updated(&self) -> Option<RcvGroupEventMemberProfileUpdatedRef<'_>> {
+        if let Self::MemberProfileUpdated {
+            from_profile,
+            to_profile,
+            ..
+        } = self
+        {
+            Some(RcvGroupEventMemberProfileUpdatedRef {
+                from_profile,
+                to_profile,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_new_member_pending_review(&self) -> bool {
+        matches!(self, Self::NewMemberPendingReview)
+    }
+    pub fn is_msg_bad_signature(&self) -> bool {
+        matches!(self, Self::MsgBadSignature)
+    }
+}
+#[derive(Clone, Copy)]
+pub struct RcvGroupEventMemberAddedRef<'a> {
+    pub group_member_id: &'a i64,
+    pub profile: &'a Profile,
+}
+#[derive(Clone, Copy)]
+pub struct RcvGroupEventMemberAcceptedRef<'a> {
+    pub group_member_id: &'a i64,
+    pub profile: &'a Profile,
+}
+#[derive(Clone, Copy)]
+pub struct RcvGroupEventMemberRoleRef<'a> {
+    pub group_member_id: &'a i64,
+    pub profile: &'a Profile,
+    pub role: &'a GroupMemberRole,
+}
+#[derive(Clone, Copy)]
+pub struct RcvGroupEventMemberBlockedRef<'a> {
+    pub group_member_id: &'a i64,
+    pub profile: &'a Profile,
+    pub blocked: &'a bool,
+}
+#[derive(Clone, Copy)]
+pub struct RcvGroupEventMemberDeletedRef<'a> {
+    pub group_member_id: &'a i64,
+    pub profile: &'a Profile,
+}
+#[derive(Clone, Copy)]
+pub struct RcvGroupEventMemberProfileUpdatedRef<'a> {
+    pub from_profile: &'a Profile,
+    pub to_profile: &'a Profile,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -5604,7 +7330,7 @@ pub enum SndConnEvent {
 }
 
 impl SndConnEvent {
-    pub fn switch_queue(phase: SwitchPhase, member: Option<GroupMemberRef>) -> Self {
+    pub fn make_switch_queue(phase: SwitchPhase, member: Option<GroupMemberRef>) -> Self {
         Self::SwitchQueue {
             phase,
             member,
@@ -5612,7 +7338,10 @@ impl SndConnEvent {
         }
     }
 
-    pub fn ratchet_sync(sync_status: RatchetSyncState, member: Option<GroupMemberRef>) -> Self {
+    pub fn make_ratchet_sync(
+        sync_status: RatchetSyncState,
+        member: Option<GroupMemberRef>,
+    ) -> Self {
         Self::RatchetSync {
             sync_status,
             member,
@@ -5620,12 +7349,54 @@ impl SndConnEvent {
         }
     }
 
-    pub fn pq_enabled(enabled: bool) -> Self {
+    pub fn make_pq_enabled(enabled: bool) -> Self {
         Self::PqEnabled {
             enabled,
             undocumented: Default::default(),
         }
     }
+}
+
+impl SndConnEvent {
+    pub fn switch_queue(&self) -> Option<SndConnEventSwitchQueueRef<'_>> {
+        if let Self::SwitchQueue { phase, member, .. } = self {
+            Some(SndConnEventSwitchQueueRef { phase, member })
+        } else {
+            None
+        }
+    }
+    pub fn ratchet_sync(&self) -> Option<SndConnEventRatchetSyncRef<'_>> {
+        if let Self::RatchetSync {
+            sync_status,
+            member,
+            ..
+        } = self
+        {
+            Some(SndConnEventRatchetSyncRef {
+                sync_status,
+                member,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn pq_enabled(&self) -> Option<&bool> {
+        if let Self::PqEnabled { enabled, .. } = self {
+            Some(enabled)
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct SndConnEventSwitchQueueRef<'a> {
+    pub phase: &'a SwitchPhase,
+    pub member: &'a Option<GroupMemberRef>,
+}
+#[derive(Clone, Copy)]
+pub struct SndConnEventRatchetSyncRef<'a> {
+    pub sync_status: &'a RatchetSyncState,
+    pub member: &'a Option<GroupMemberRef>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -5780,7 +7551,7 @@ pub enum SndGroupEvent {
 }
 
 impl SndGroupEvent {
-    pub fn member_role(group_member_id: i64, profile: Profile, role: GroupMemberRole) -> Self {
+    pub fn make_member_role(group_member_id: i64, profile: Profile, role: GroupMemberRole) -> Self {
         Self::MemberRole {
             group_member_id,
             profile,
@@ -5789,7 +7560,7 @@ impl SndGroupEvent {
         }
     }
 
-    pub fn member_blocked(group_member_id: i64, profile: Profile, blocked: bool) -> Self {
+    pub fn make_member_blocked(group_member_id: i64, profile: Profile, blocked: bool) -> Self {
         Self::MemberBlocked {
             group_member_id,
             profile,
@@ -5798,14 +7569,14 @@ impl SndGroupEvent {
         }
     }
 
-    pub fn user_role(role: GroupMemberRole) -> Self {
+    pub fn make_user_role(role: GroupMemberRole) -> Self {
         Self::UserRole {
             role,
             undocumented: Default::default(),
         }
     }
 
-    pub fn member_deleted(group_member_id: i64, profile: Profile) -> Self {
+    pub fn make_member_deleted(group_member_id: i64, profile: Profile) -> Self {
         Self::MemberDeleted {
             group_member_id,
             profile,
@@ -5813,18 +7584,18 @@ impl SndGroupEvent {
         }
     }
 
-    pub fn user_left() -> Self {
+    pub fn make_user_left() -> Self {
         Self::UserLeft
     }
 
-    pub fn group_updated(group_profile: GroupProfile) -> Self {
+    pub fn make_group_updated(group_profile: GroupProfile) -> Self {
         Self::GroupUpdated {
             group_profile,
             undocumented: Default::default(),
         }
     }
 
-    pub fn member_accepted(group_member_id: i64, profile: Profile) -> Self {
+    pub fn make_member_accepted(group_member_id: i64, profile: Profile) -> Self {
         Self::MemberAccepted {
             group_member_id,
             profile,
@@ -5832,9 +7603,118 @@ impl SndGroupEvent {
         }
     }
 
-    pub fn user_pending_review() -> Self {
+    pub fn make_user_pending_review() -> Self {
         Self::UserPendingReview
     }
+}
+
+impl SndGroupEvent {
+    pub fn member_role(&self) -> Option<SndGroupEventMemberRoleRef<'_>> {
+        if let Self::MemberRole {
+            group_member_id,
+            profile,
+            role,
+            ..
+        } = self
+        {
+            Some(SndGroupEventMemberRoleRef {
+                group_member_id,
+                profile,
+                role,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn member_blocked(&self) -> Option<SndGroupEventMemberBlockedRef<'_>> {
+        if let Self::MemberBlocked {
+            group_member_id,
+            profile,
+            blocked,
+            ..
+        } = self
+        {
+            Some(SndGroupEventMemberBlockedRef {
+                group_member_id,
+                profile,
+                blocked,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn user_role(&self) -> Option<&GroupMemberRole> {
+        if let Self::UserRole { role, .. } = self {
+            Some(role)
+        } else {
+            None
+        }
+    }
+    pub fn member_deleted(&self) -> Option<SndGroupEventMemberDeletedRef<'_>> {
+        if let Self::MemberDeleted {
+            group_member_id,
+            profile,
+            ..
+        } = self
+        {
+            Some(SndGroupEventMemberDeletedRef {
+                group_member_id,
+                profile,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_user_left(&self) -> bool {
+        matches!(self, Self::UserLeft)
+    }
+    pub fn group_updated(&self) -> Option<&GroupProfile> {
+        if let Self::GroupUpdated { group_profile, .. } = self {
+            Some(group_profile)
+        } else {
+            None
+        }
+    }
+    pub fn member_accepted(&self) -> Option<SndGroupEventMemberAcceptedRef<'_>> {
+        if let Self::MemberAccepted {
+            group_member_id,
+            profile,
+            ..
+        } = self
+        {
+            Some(SndGroupEventMemberAcceptedRef {
+                group_member_id,
+                profile,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_user_pending_review(&self) -> bool {
+        matches!(self, Self::UserPendingReview)
+    }
+}
+#[derive(Clone, Copy)]
+pub struct SndGroupEventMemberRoleRef<'a> {
+    pub group_member_id: &'a i64,
+    pub profile: &'a Profile,
+    pub role: &'a GroupMemberRole,
+}
+#[derive(Clone, Copy)]
+pub struct SndGroupEventMemberBlockedRef<'a> {
+    pub group_member_id: &'a i64,
+    pub profile: &'a Profile,
+    pub blocked: &'a bool,
+}
+#[derive(Clone, Copy)]
+pub struct SndGroupEventMemberDeletedRef<'a> {
+    pub group_member_id: &'a i64,
+    pub profile: &'a Profile,
+}
+#[derive(Clone, Copy)]
+pub struct SndGroupEventMemberAcceptedRef<'a> {
+    pub group_member_id: &'a i64,
+    pub profile: &'a Profile,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -5860,23 +7740,42 @@ pub enum SubscriptionStatus {
 }
 
 impl SubscriptionStatus {
-    pub fn active() -> Self {
+    pub fn make_active() -> Self {
         Self::Active
     }
 
-    pub fn pending() -> Self {
+    pub fn make_pending() -> Self {
         Self::Pending
     }
 
-    pub fn removed(sub_error: String) -> Self {
+    pub fn make_removed(sub_error: String) -> Self {
         Self::Removed {
             sub_error,
             undocumented: Default::default(),
         }
     }
 
-    pub fn no_sub() -> Self {
+    pub fn make_no_sub() -> Self {
         Self::NoSub
+    }
+}
+
+impl SubscriptionStatus {
+    pub fn is_active(&self) -> bool {
+        matches!(self, Self::Active)
+    }
+    pub fn is_pending(&self) -> bool {
+        matches!(self, Self::Pending)
+    }
+    pub fn removed(&self) -> Option<&String> {
+        if let Self::Removed { sub_error, .. } = self {
+            Some(sub_error)
+        } else {
+            None
+        }
+    }
+    pub fn is_no_sub(&self) -> bool {
+        matches!(self, Self::NoSub)
     }
 }
 

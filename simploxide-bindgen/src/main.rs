@@ -112,6 +112,9 @@ fn generate_types(types_md: &str) -> Result<(), Box<dyn Error>> {
 
         if api_type.is_error() {
             writeln!(errors_rs, "{}", api_type)?;
+            if let ApiType::DiscriminatedUnion(ref x) = api_type {
+                writeln!(errors_rs, "{}", DiscriminatedUnionGetters(x))?;
+            }
             error_types.push(api_type.name().to_owned());
         } else {
             writeln!(lib_rs, "{}", api_type)?;
@@ -121,6 +124,7 @@ fn generate_types(types_md: &str) -> Result<(), Box<dyn Error>> {
 
             if let ApiType::DiscriminatedUnion(ref x) = api_type {
                 writeln!(lib_rs, "{}", DiscriminatedUnionConstructors(x))?;
+                writeln!(lib_rs, "{}", DiscriminatedUnionGetters(x))?;
             }
         }
     }
@@ -449,9 +453,10 @@ pub trait ExtractResponse<'de, T>: Deserialize<'de> {
 
 
 pub trait ClientApiError: From<BadResponseError> + std::error::Error {
-    /// If current error is a bad response error return a mut reference to it!
-    ///
-    /// Required for [`AllowUndocumentedResponses`] impl.
+    /// If current error is a bad response error return a reference to it
+    fn bad_response(&self) -> Option<&BadResponseError>;
+
+    /// If current error is a bad response error return a mut reference to it
     fn bad_response_mut(&mut self) -> Option<&mut BadResponseError>;
 }
 "#;
@@ -520,6 +525,33 @@ pub enum BadResponseError {
     ChatError(Arc<ChatError>),
     InvalidJson(serde_json::Error),
     Undocumented(JsonObject),
+}
+
+impl BadResponseError {
+    pub fn chat_error(&self) -> Option<&ChatError> {
+        if let Self::ChatError(error) = self {
+            Some(error.as_ref())
+        } else {
+            None
+        }
+    }
+
+    pub fn invalid_json(&self) -> Option<&serde_json::Error> {
+        if let Self::InvalidJson(error) = self {
+            Some(error)
+        } else {
+            None
+        }
+    }
+
+    pub fn undocumented(&self) -> Option<&JsonObject> {
+        if let Self::Undocumented(error) = self {
+            Some(error)
+        } else {
+            None
+        }
+    }
+
 }
 
 impl std::error::Error for BadResponseError {
@@ -691,7 +723,7 @@ impl std::fmt::Display for DiscriminatedUnionConstructors<'_> {
         writeln!(f, "impl {} {{", self.0.name)?;
 
         for variant in &self.0.variants {
-            write!(f, "pub fn {}(", variant.rust_name.to_case(Case::Snake))?;
+            write!(f, "pub fn make_{}(", variant.rust_name.to_case(Case::Snake))?;
             for field in &variant.fields {
                 write!(f, "{}: {},", field.rust_name, field.typ)?;
             }
@@ -714,6 +746,96 @@ impl std::fmt::Display for DiscriminatedUnionConstructors<'_> {
         }
 
         writeln!(f, "}}")?;
+
+        Ok(())
+    }
+}
+
+struct DiscriminatedUnionGetters<'a>(&'a DiscriminatedUnionType);
+
+impl std::fmt::Display for DiscriminatedUnionGetters<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "impl {} {{", self.0.name)?;
+
+        for variant in &self.0.variants {
+            if variant.fields.len() == 0 {
+                writeln!(
+                    f,
+                    "   pub fn is_{}(&self) -> bool {{",
+                    variant.rust_name.to_case(Case::Snake)
+                )?;
+
+                writeln!(f, "       matches!(self, Self::{})", variant.rust_name)?;
+                writeln!(f, "   }}")?;
+            } else if variant.fields.len() == 1 {
+                writeln!(
+                    f,
+                    "   pub fn {}(&self) -> Option<&{}> {{",
+                    variant.rust_name.to_case(Case::Snake),
+                    variant.fields[0].typ,
+                )?;
+
+                writeln!(
+                    f,
+                    "       if let Self::{} {{ {}, .. }} = self {{",
+                    variant.rust_name, variant.fields[0].rust_name
+                )?;
+                writeln!(f, "           Some({})", variant.fields[0].rust_name)?;
+                writeln!(f, "       }}")?;
+                writeln!(f, "       else {{")?;
+                writeln!(f, "           None")?;
+                writeln!(f, "       }}")?;
+                writeln!(f, "   }}")?;
+            } else {
+                writeln!(
+                    f,
+                    "   pub fn {}(&self) -> Option<{}{}Ref<'_>> {{",
+                    variant.rust_name.to_case(Case::Snake),
+                    self.0.name,
+                    variant.rust_name
+                )?;
+                write!(f, "       if let Self::{} {{", variant.rust_name)?;
+                for field in &variant.fields {
+                    write!(f, "{}, ", field.rust_name)?;
+                }
+                writeln!(f, "..}} = self {{")?;
+                write!(
+                    f,
+                    "             Some({}{}Ref {{",
+                    self.0.name, variant.rust_name
+                )?;
+                for field in &variant.fields {
+                    write!(f, "{}, ", field.rust_name)?;
+                }
+                writeln!(f, "}})")?;
+                writeln!(f, "       }}")?;
+                writeln!(f, "       else {{")?;
+                writeln!(f, "           None")?;
+                writeln!(f, "       }}")?;
+                writeln!(f, "   }}")?;
+            }
+        }
+
+        writeln!(f, "}}")?;
+
+        for variant in &self.0.variants {
+            if variant.fields.len() <= 1 {
+                continue;
+            }
+
+            writeln!(f, "#[derive(Clone, Copy)]",)?;
+            writeln!(
+                f,
+                "pub struct {}{}Ref<'a> {{",
+                self.0.name, variant.rust_name
+            )?;
+
+            for field in &variant.fields {
+                writeln!(f, "   pub {}: &'a {},", field.rust_name, field.typ)?;
+            }
+
+            writeln!(f, "}}")?;
+        }
 
         Ok(())
     }

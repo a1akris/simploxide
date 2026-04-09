@@ -8,9 +8,10 @@ pub trait ExtractResponse<'de, T>: Deserialize<'de> {
 }
 
 pub trait ClientApiError: From<BadResponseError> + std::error::Error {
-    /// If current error is a bad response error return a mut reference to it!
-    ///
-    /// Required for [`AllowUndocumentedResponses`] impl.
+    /// If current error is a bad response error return a reference to it
+    fn bad_response(&self) -> Option<&BadResponseError>;
+
+    /// If current error is a bad response error return a mut reference to it
     fn bad_response_mut(&mut self) -> Option<&mut BadResponseError>;
 }
 
@@ -1536,6 +1537,32 @@ pub enum BadResponseError {
     ChatError(Arc<ChatError>),
     InvalidJson(serde_json::Error),
     Undocumented(JsonObject),
+}
+
+impl BadResponseError {
+    pub fn chat_error(&self) -> Option<&ChatError> {
+        if let Self::ChatError(error) = self {
+            Some(error.as_ref())
+        } else {
+            None
+        }
+    }
+
+    pub fn invalid_json(&self) -> Option<&serde_json::Error> {
+        if let Self::InvalidJson(error) = self {
+            Some(error)
+        } else {
+            None
+        }
+    }
+
+    pub fn undocumented(&self) -> Option<&JsonObject> {
+        if let Self::Undocumented(error) = self {
+            Some(error)
+        } else {
+            None
+        }
+    }
 }
 
 impl std::error::Error for BadResponseError {

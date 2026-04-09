@@ -1,6 +1,7 @@
 pub use simploxide_ffi_core::{CallError, DbOpts, DefaultUser, InitError};
 
 use simploxide_api_types::{
+    Preferences, Profile,
     client_api::{ExtractResponse as _, FfiResponseShape},
     events::{Event, EventKind},
 };
@@ -8,14 +9,19 @@ use simploxide_ffi_core::{Event as CoreEvent, RawClient, Result as CoreResult};
 
 use std::sync::Arc;
 
-use crate::{BadResponseError, ClientApi, ClientApiError, EventParser, EventStream};
+use crate::{
+    BadResponseError, ClientApi, ClientApiError, EventParser,
+    bot::{BotProfileSettings, BotSettings},
+};
 
+pub type Bot = crate::bot::Bot<Client>;
+pub type EventStream = crate::EventStream<CoreResult<CoreEvent>>;
 pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
 
 pub async fn init(
     default_user: DefaultUser,
     db_opts: DbOpts,
-) -> Result<(Client, EventStream<CoreResult<CoreEvent>>), InitError> {
+) -> Result<(Client, EventStream), InitError> {
     let (raw_client, raw_event_queue) = simploxide_ffi_core::init(default_user, db_opts).await?;
     Ok((
         Client::from(raw_client),
@@ -61,7 +67,7 @@ impl ClientApi for Client {
     }
 }
 
-impl EventParser for CoreResult<String> {
+impl EventParser for CoreResult<CoreEvent> {
     type Error = ClientError;
 
     fn parse_kind(&self) -> Result<EventKind, Self::Error> {
@@ -86,7 +92,7 @@ impl EventParser for CoreResult<String> {
 }
 
 fn parse_data<'de, 'r: 'de, D: 'de + serde::Deserialize<'de>>(
-    result: &'r CoreResult<String>,
+    result: &'r CoreResult<CoreEvent>,
 ) -> Result<D, ClientError> {
     result
         .as_ref()
@@ -97,6 +103,90 @@ fn parse_data<'de, 'r: 'de, D: 'de + serde::Deserialize<'de>>(
                 .and_then(|shape| shape.extract_response())
                 .map_err(ClientError::BadResponse)
         })
+}
+
+/// Builder for an FFI-backed [`Bot`].
+pub struct BotBuilder {
+    display_name: String,
+    db_opts: DbOpts,
+    default_user: Option<DefaultUser>,
+    profile: Option<Profile>,
+    preferences: Option<Preferences>,
+    // worker_config: WorkerConfig,
+}
+
+impl BotBuilder {
+    /// Build a bot account (default).
+    pub fn new(name: impl Into<String>, db_opts: DbOpts) -> Self {
+        Self {
+            display_name: name.into(),
+            db_opts,
+            default_user: None,
+            profile: None,
+            preferences: None,
+            //worker_config: !()
+        }
+    }
+
+    /// Override the default user created for empty databases.
+    ///
+    /// By default the default user name matches the bot name. This setting allows to create a user
+    /// different from an active bot
+    pub fn with_default_user(mut self, user: DefaultUser) -> Self {
+        self.default_user = Some(user);
+        self
+    }
+
+    /// Update/create the whole bot profile on launch
+    pub fn with_profile(mut self, profile: Profile) -> Self {
+        self.profile = Some(profile);
+        self
+    }
+
+    /// Apply these preferences to the bot's profile during initialisation.
+    pub fn with_preferences(mut self, prefs: Preferences) -> Self {
+        self.preferences = Some(prefs);
+        self
+    }
+
+    // /// Set maximum tolerable event loop latency. Defines for how long events may be delayed in the
+    // /// worst case.
+    // ///
+    // /// Only takes effect on the **first** `launch` call in the process; all subsequent launches
+    // /// reuse the already-running event lopo. Minimum: 1ms. Default: 1s.
+    // pub fn event_loop_latency(mut self, duration: std::time::Duration) -> Self {
+    //     self.worker_config.max_idle_sleep = duration;
+    //     self
+    // }
+
+    /// Initialise the SimpleX FFI runtime and return a ready-to-use bot.
+    pub async fn launch(
+        self,
+    ) -> Result<(Bot, crate::EventStream<CoreResult<CoreEvent>>), BotInitError> {
+        let default_user = self
+            .default_user
+            .unwrap_or_else(|| DefaultUser::bot(&self.display_name));
+
+        let (client, events) = init(default_user, self.db_opts /*self.worker_config*/)
+            .await
+            .map_err(BotInitError::Init)?;
+
+        let settings = BotSettings {
+            display_name: self.display_name,
+            profile_settings: match (self.profile, self.preferences) {
+                (Some(mut profile), Some(preferences)) => {
+                    profile.preferences = Some(preferences);
+                    Some(BotProfileSettings::FullProfile(profile))
+                }
+                (Some(profile), None) => Some(BotProfileSettings::FullProfile(profile)),
+                (None, Some(preferences)) => Some(BotProfileSettings::Preferences(preferences)),
+                (None, None) => None,
+            },
+        };
+
+        let bot = Bot::init(client, settings).await?;
+        Ok((bot, events))
+    }
 }
 
 /// See [`crate::client_api::AllowUndocumentedResponses`] if you don't want to trigger an error
@@ -134,11 +224,50 @@ impl From<BadResponseError> for ClientError {
 }
 
 impl ClientApiError for ClientError {
+    fn bad_response(&self) -> Option<&BadResponseError> {
+        if let Self::BadResponse(resp) = self {
+            Some(resp)
+        } else {
+            None
+        }
+    }
+
     fn bad_response_mut(&mut self) -> Option<&mut BadResponseError> {
         if let Self::BadResponse(resp) = self {
             Some(resp)
         } else {
             None
         }
+    }
+}
+
+/// Error returned by [`BotBuilder::launch`].
+#[derive(Debug)]
+pub enum BotInitError {
+    Init(InitError),
+    Api(ClientError),
+}
+
+impl std::fmt::Display for BotInitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Init(e) => write!(f, "SimpleX FFI init failed: {e}"),
+            Self::Api(e) => write!(f, "SimpleX API error during init: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for BotInitError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Init(e) => Some(e),
+            Self::Api(e) => Some(e),
+        }
+    }
+}
+
+impl From<ClientError> for BotInitError {
+    fn from(e: ClientError) -> Self {
+        Self::Api(e)
     }
 }
