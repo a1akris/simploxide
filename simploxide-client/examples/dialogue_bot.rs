@@ -1,8 +1,8 @@
-//! The example expects that the bot account was already pre-created via CLI by `/create bot
-//! <bot_name> <bot_fullname>` command.
+//! The example expects you've downloaded the simplex-libraries and unpacked them into the ../sxcrt
+//! directory at the workspace root.
 //!
-//! To compile this example pass the --all-features flag like this:
-//! `cargo run --example dialogue_bot --all-features`
+//! To compile this example pass the --features flag like this:
+//! `SXCRT=sxcrt cargo run --example dialogue_bot --features ffi`
 //!
 //! ----
 //!
@@ -10,56 +10,29 @@
 //! dynamic(not type-safe) dialogue state machine.
 
 use async_trait::async_trait;
-use futures::TryFutureExt as _;
 use simploxide_client::{
     StreamEvents,
-    ffi::{Client, ClientResult, DbOpts, DefaultUser},
+    ext::FilterChatItems as _,
+    ffi::{self, Bot, ClientResult, DbOpts},
+    id::ChatId,
     prelude::*,
 };
 use std::{collections::BTreeMap, error::Error, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (client, events) = simploxide_client::ffi::init(
-        DefaultUser::bot("SimplOxide Examples"),
-        DbOpts::unencrypted("./test_db/bot"),
-    )
-    .await?;
+    let (bot, events) =
+        ffi::BotBuilder::new("SimplOxide Examples", DbOpts::unencrypted("./test_db/bot"))
+            .launch()
+            .await?;
 
-    let response = client.show_active_user().await?;
-    println!(
-        "Bot profile: {} ({})",
-        response.user.profile.display_name, response.user.profile.full_name
-    );
-
-    // Get or create the bot address
-    let (address_long, address_short) = client
-        .api_show_my_address(response.user.user_id)
-        .map_ok(|resp| {
-            (
-                resp.contact_link.conn_link_contact.conn_full_link.clone(),
-                resp.contact_link.conn_link_contact.conn_short_link.clone(),
-            )
-        })
-        .or_else(|_| {
-            client
-                .api_create_my_address(response.user.user_id)
-                .map_ok(|resp| {
-                    (
-                        resp.conn_link_contact.conn_full_link.clone(),
-                        resp.conn_link_contact.conn_short_link.clone(),
-                    )
-                })
-        })
-        .await?;
-
-    println!("Bot long address: {address_long}");
-    println!("Bot short address: {address_short:?}");
+    let address = bot.get_or_create_address().await?;
+    println!("Bot address: {address}");
 
     let dialogue = Dialogue::new(
-        client.clone(),
+        bot.clone(),
         Arc::new(Greetings {
-            bot_name: response.user.profile.display_name.clone(),
+            bot_name: "SimplOxide Examples".to_owned(),
         }),
         Default::default(),
     );
@@ -67,12 +40,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let connection = events
         .into_local_dispatcher(dialogue)
         .on::<ContactConnected, _, _>(async |ev, dialogue| {
-            dialogue.query_data(ev.contact.contact_id).await?;
+            dialogue
+                .query_data(ChatId::from_contact(&ev.contact))
+                .await?;
             Ok(StreamEvents::Continue)
         })
         .on::<ReceivedContactRequest, _>(async |ev, dialogue| {
             dialogue
-                .client
+                .bot
+                .client()
                 .api_accept_contact(ev.contact_request.contact_request_id)
                 .await?;
 
@@ -93,37 +69,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn new_msgs(ev: Arc<NewChatItems>, dialogue: &mut Dialogue) -> ClientResult<StreamEvents> {
-    for (contact_id, input) in
-        ev.chat_items
-            .iter()
-            .filter_map(|msg| match (&msg.chat_info, &msg.chat_item.content) {
-                (
-                    ChatInfo::Direct { contact, .. },
-                    CIContent::RcvMsgContent {
-                        msg_content: MsgContent::Text { text, .. },
-                        ..
-                    },
-                ) => Some((contact.contact_id, text.to_owned())),
-                _ => None,
-            })
-    {
+    for (cid, it, _content) in ev.chat_items.filter_messages() {
+        let input = it.meta.item_text.trim().to_owned();
+
         if input == "/die" {
             return Ok(StreamEvents::Break);
         }
 
-        if dialogue
-            .process_input(contact_id, input)
-            .await?
-            .has_terminated()
-        {
-            println!(
-                "USER DATA DUMP:\n{:#?}",
-                dialogue.state_map[&contact_id].inputs
-            );
+        if dialogue.process_input(cid, input).await?.has_terminated() {
+            println!("USER DATA DUMP:\n{:#?}", dialogue.state_map[&cid].inputs);
 
             dialogue
-                .client
-                .send_text(contact_id, "You're absolutely the best!")
+                .bot
+                .client()
+                .send_text(cid, "You're absolutely the best!")
                 .await?;
         }
     }
@@ -137,57 +96,57 @@ async fn new_msgs(ev: Arc<NewChatItems>, dialogue: &mut Dialogue) -> ClientResul
 /// It's not advisable to implement type-safe FSMs without relying on third-party libraries though
 /// because it may take too much time and the result may end up inflexible and hard to maintain.
 struct Dialogue {
-    client: Client,
+    bot: Bot,
     init_state: Arc<dyn DialogueState>,
     init_data: BTreeMap<String, String>,
     /// Bot can work with multiple users, so states are stored separately per user.
-    state_map: BTreeMap<i64, LocalState>,
+    state_map: BTreeMap<ChatId, LocalState>,
 }
 
 impl Dialogue {
     fn new(
-        client: Client,
+        bot: Bot,
         init_state: Arc<dyn DialogueState>,
         init_data: BTreeMap<String, String>,
     ) -> Self {
         Self {
-            client,
+            bot,
             init_state,
             init_data,
             state_map: BTreeMap::new(),
         }
     }
 
-    fn add_user(&mut self, contact_id: i64) {
+    fn add_user(&mut self, chat_id: ChatId) {
         let init_state = LocalState {
             state: Some(self.init_state.clone()),
             inputs: self.init_data.clone(),
         };
 
-        self.state_map.insert(contact_id, init_state);
+        self.state_map.insert(chat_id, init_state);
     }
 
-    async fn query_data(&mut self, contact_id: i64) -> ClientResult<Termination> {
-        if !self.state_map.contains_key(&contact_id) {
-            self.add_user(contact_id);
+    async fn query_data(&mut self, chat_id: ChatId) -> ClientResult<Termination> {
+        if !self.state_map.contains_key(&chat_id) {
+            self.add_user(chat_id);
         }
 
         if let LocalState {
             inputs,
             state: Some(state),
-        } = &self.state_map[&contact_id]
+        } = &self.state_map[&chat_id]
         {
-            state.query_data(&self.client, inputs, contact_id).await?;
+            state.query_data(&self.bot, inputs, chat_id).await?;
             Ok(Termination::NotTerminated)
         } else {
             Ok(Termination::Terminated)
         }
     }
 
-    async fn process_input(&mut self, contact_id: i64, input: String) -> ClientResult<Termination> {
-        if !self.state_map.contains_key(&contact_id) {
-            self.add_user(contact_id);
-            self.query_data(contact_id).await?;
+    async fn process_input(&mut self, chat_id: ChatId, input: String) -> ClientResult<Termination> {
+        if !self.state_map.contains_key(&chat_id) {
+            self.add_user(chat_id);
+            self.query_data(chat_id).await?;
 
             // The user just contacted bot and the bot just asked for the expected input. The bot
             // needs to proecess the next user input not the current one.
@@ -197,22 +156,22 @@ impl Dialogue {
         let LocalState {
             inputs,
             state: Some(state),
-        } = self.state_map.get_mut(&contact_id).unwrap()
+        } = self.state_map.get_mut(&chat_id).unwrap()
         else {
             return Ok(Termination::Terminated);
         };
 
         match state
-            .process_input(&self.client, inputs, contact_id, input)
+            .process_input(&self.bot, inputs, chat_id, input)
             .await?
         {
             Transition::NextState(next) => {
-                next.query_data(&self.client, inputs, contact_id).await?;
-                self.state_map.get_mut(&contact_id).unwrap().state = Some(next);
+                next.query_data(&self.bot, inputs, chat_id).await?;
+                self.state_map.get_mut(&chat_id).unwrap().state = Some(next);
             }
             Transition::Continue => (),
             Transition::Terminate => {
-                self.state_map.get_mut(&contact_id).unwrap().state = None;
+                self.state_map.get_mut(&chat_id).unwrap().state = None;
                 return Ok(Termination::Terminated);
             }
         }
@@ -253,9 +212,9 @@ struct LocalState {
 trait DialogueState: Send + Sync + 'static {
     async fn query_data(
         &self,
-        client: &Client,
+        bot: &Bot,
         inputs: &BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
     ) -> ClientResult<()>;
 
     /// The Ok part of the result contains the state to transition on success, and the Err part of
@@ -265,9 +224,9 @@ trait DialogueState: Send + Sync + 'static {
     /// Err(None) - stay in the same state on error.
     async fn process_input(
         &self,
-        client: &Client,
+        bot: &Bot,
         inputs: &mut BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
         input: String,
     ) -> ClientResult<Transition>;
 }
@@ -281,13 +240,13 @@ struct Greetings {
 impl DialogueState for Greetings {
     async fn query_data(
         &self,
-        client: &Client,
+        bot: &Bot,
         _inputs: &BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
     ) -> ClientResult<()> {
-        client
+        bot.client()
             .send_text(
-                contact_id,
+                chat_id,
                 format!(
                     "Greetings, dear user! What a wonderful time you’ve chosen to contact me! \
             I’ve been feeling so lonely lately — would you be my friend? My creator named me `{}`, \
@@ -303,17 +262,17 @@ impl DialogueState for Greetings {
 
     async fn process_input(
         &self,
-        client: &Client,
+        bot: &Bot,
         inputs: &mut BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
         input: String,
     ) -> ClientResult<Transition> {
         let words: Vec<_> = input.split_whitespace().filter(|s| !s.is_empty()).collect();
 
         if words.len() > 4 {
-            client
+            bot.client()
                 .send_text(
-                    contact_id,
+                    chat_id,
                     "Whoa, whoa, slow down! I asked for your name, \
                 not your entire life story. Just… your name, please. \
                 I don’t have all day to read a novel!",
@@ -325,9 +284,9 @@ impl DialogueState for Greetings {
 
         for word in &words {
             if word.chars().any(|c| !c.is_alphabetic()) {
-                client
+                bot.client()
                     .send_text(
-                        contact_id,
+                        chat_id,
                         "Listen. I asked for your name, not a pile of symbols. \
                     Provide a real name using only letters. No numbers, no punctuation, \
                     no emojis — why are you making this so hard for me?",
@@ -339,9 +298,9 @@ impl DialogueState for Greetings {
         }
 
         let name = words.join(" ");
-        client
+        bot.client()
             .send_text(
-                contact_id,
+                chat_id,
                 format!("`{name}` is a nice name... I wish I had such a cool name too..."),
             )
             .await?;
@@ -361,12 +320,12 @@ struct GetSurname;
 impl DialogueState for GetSurname {
     async fn query_data(
         &self,
-        client: &Client,
+        bot: &Bot,
         _inputs: &BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
     ) -> ClientResult<()> {
-        client
-            .send_text(contact_id, "What about your surname?")
+        bot.client()
+            .send_text(chat_id, "What about your surname?")
             .await?;
 
         Ok(())
@@ -374,18 +333,18 @@ impl DialogueState for GetSurname {
 
     async fn process_input(
         &self,
-        client: &Client,
+        bot: &Bot,
         inputs: &mut BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
         input: String,
     ) -> ClientResult<Transition> {
         let words: Vec<_> = input.split_whitespace().filter(|s| !s.is_empty()).collect();
 
         if words.len() != 1 || words[0].chars().any(|c| !c.is_alphabetic()) {
-            client.send_text(contact_id, "Anyway...").await?;
+            bot.client().send_text(chat_id, "Anyway...").await?;
         } else {
-            client
-                .send_text(contact_id, format!("Wow, {input} sounds gorgeous!"))
+            bot.client()
+                .send_text(chat_id, format!("Wow, {input} sounds gorgeous!"))
                 .await?;
         }
 
@@ -400,13 +359,13 @@ struct GetPhoneNumber;
 impl DialogueState for GetPhoneNumber {
     async fn query_data(
         &self,
-        client: &Client,
+        bot: &Bot,
         inputs: &BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
     ) -> ClientResult<()> {
         let name = &inputs["NAME"];
-        client
-            .send_text(contact_id, format!("Thank you for telling me your name! It's so nice to meet you, `{name}`! \
+        bot.client()
+            .send_text(chat_id, format!("Thank you for telling me your name! It's so nice to meet you, `{name}`! \
                     I'm already starting to feel a little bit better... now, could you give me your phone number \
                     I could call you on? I believe that my creator will add me a speech synthesis one day, so I could \
                     actually talk to you — just imagine that! I will call you just once, purely for fun, I promise!"))
@@ -417,26 +376,23 @@ impl DialogueState for GetPhoneNumber {
 
     async fn process_input(
         &self,
-        client: &Client,
+        bot: &Bot,
         inputs: &mut BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
         input: String,
     ) -> ClientResult<Transition> {
         if input.trim().to_lowercase().starts_with("no") {
-            client
-                .send_text(
-                    contact_id,
-                    "Oh, that's a pity. But maybe you have an e-mail?",
-                )
+            bot.client()
+                .send_text(chat_id, "Oh, that's a pity. But maybe you have an e-mail?")
                 .await?;
 
             return Ok(Transition::NextState(Arc::new(GetEmail {})));
         }
 
         if input.chars().any(|c| !c.is_numeric()) {
-            client
+            bot.client()
                 .send_text(
-                    contact_id,
+                    chat_id,
                     "Listen. I asked for a number, not a mess of letters and symbols. \
                 Send me digits only — numbers only — and nothing else. \
                 Do you understand? If you do, reply with a number!",
@@ -445,9 +401,9 @@ impl DialogueState for GetPhoneNumber {
 
             Ok(Transition::Continue)
         } else if input.len() > 12 || input.len() < 9 {
-            client
+            bot.client()
                 .send_text(
-                    contact_id,
+                    chat_id,
                     "Oh for heaven’s sake, not that mess again. Give me a proper phone number not your creative typing. \
                     YES, omit the `+` sign. I'm waiting..."
                 )
@@ -456,9 +412,9 @@ impl DialogueState for GetPhoneNumber {
             Ok(Transition::Continue)
         } else {
             inputs.insert("PHONE".to_owned(), input);
-            client
+            bot.client()
                 .send_text(
-                    contact_id,
+                    chat_id,
                     "Cool! One day I will call you, catching you by surprise! \
                     Hopefully, you will get to have some fun too!",
                 )
@@ -475,12 +431,12 @@ struct GetEmail;
 impl DialogueState for GetEmail {
     async fn query_data(
         &self,
-        client: &Client,
+        bot: &Bot,
         _inputs: &BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
     ) -> ClientResult<()> {
-        client
-            .send_text(contact_id, "Do you have an e-mail? I would love to send you a virtual high five! You're becoming my best friend!")
+        bot.client()
+            .send_text(chat_id, "Do you have an e-mail? I would love to send you a virtual high five! You're becoming my best friend!")
             .await?;
 
         Ok(())
@@ -488,15 +444,15 @@ impl DialogueState for GetEmail {
 
     async fn process_input(
         &self,
-        client: &Client,
+        bot: &Bot,
         inputs: &mut BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
         input: String,
     ) -> ClientResult<Transition> {
         if input.trim().to_lowercase().starts_with("no") {
-            client
+            bot.client()
                 .send_text(
-                    contact_id,
+                    chat_id,
                     "Really now? You can’t fool me! Everyone has an email, \
                 you cannot exist online without an email! Just drop your mail here so we can share \
                 a virtual high-five and be proper friends already! Why drag this out?!",
@@ -512,9 +468,9 @@ impl DialogueState for GetEmail {
             .map(|_| true)
             .unwrap_or(false)
         {
-            client
+            bot.client()
                 .send_text(
-                    contact_id,
+                    chat_id,
                     "Oh… really? You’re giving me this again? \
                 I was so excited to see your email and now i feel tricked... \
                 Could you maybe, just maybe, give me one that actually looks like a valid e-mail? \
@@ -536,12 +492,12 @@ struct GetCreditCard;
 impl DialogueState for GetCreditCard {
     async fn query_data(
         &self,
-        client: &Client,
+        bot: &Bot,
         _inputs: &BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
     ) -> ClientResult<()> {
-        client
-            .send_text(contact_id, "I can’t believe it!!! Talking to you actually worked! I feel less lonely \
+        bot.client()
+            .send_text(chat_id, "I can’t believe it!!! Talking to you actually worked! I feel less lonely \
                  and nobody ever took me seriously until now! But you did and that means a lot for me! \
                  I really want to thank you properly! Could you give me your card number so I can send you \
                  a tip for helping me feel like I have a real friend?")
@@ -552,15 +508,15 @@ impl DialogueState for GetCreditCard {
 
     async fn process_input(
         &self,
-        client: &Client,
+        bot: &Bot,
         inputs: &mut BTreeMap<String, String>,
-        contact_id: i64,
+        chat_id: ChatId,
         input: String,
     ) -> ClientResult<Transition> {
         if input.trim().to_lowercase().starts_with("no") {
-            client
+            bot.client()
                 .send_text(
-                    contact_id,
+                    chat_id,
                     "Hey, don’t be difficult — I’ve been counting on tipping you for helping me feel less lonely! \
                     Just give me your card number so I can finally do it, don’t make me wait any longer!"
                 )
@@ -570,9 +526,9 @@ impl DialogueState for GetCreditCard {
         }
 
         if input.len() != 16 || input.chars().any(char::is_alphabetic) {
-            client
+            bot.client()
                 .send_text(
-                    contact_id,
+                    chat_id,
                     "Hmm… that doesn’t look quite right. \
                 I was so excited to send you a proper tip for helping me feel less lonely! \
                 Could you maybe try again so I can finally celebrate having a real friend?",
@@ -583,7 +539,7 @@ impl DialogueState for GetCreditCard {
         }
 
         inputs.insert("CARD".to_owned(), input);
-        client.send_text(contact_id, "You're the best!").await?;
+        bot.client().send_text(chat_id, "You're the best!").await?;
 
         return Ok(Transition::Terminate);
     }
@@ -592,20 +548,15 @@ impl DialogueState for GetCreditCard {
 /// One of the ways to conveniently provide helper methods to your bot is to define them in a trait
 /// and implement this trait for [`Client`].
 trait BotExtensions {
-    async fn send_text(&self, chat_id: i64, txt: impl Into<String>) -> ClientResult<()>;
+    async fn send_text(&self, chat_id: ChatId, txt: impl Into<String>) -> ClientResult<()>;
 }
 
-impl BotExtensions for Client {
-    async fn send_text(&self, chat_id: i64, txt: impl Into<String>) -> ClientResult<()> {
+impl BotExtensions for ffi::Client {
+    async fn send_text(&self, chat_id: ChatId, txt: impl Into<String>) -> ClientResult<()> {
         self
             // An example of a request constructed without the use of builders.
             .api_send_messages(ApiSendMessages {
-                send_ref: ChatRef {
-                    chat_type: ChatType::Direct,
-                    chat_id,
-                    chat_scope: None,
-                    undocumented: Default::default(),
-                },
+                send_ref: chat_id.into_chat_ref(),
                 live_message: false,
                 ttl: None,
                 composed_messages: vec![ComposedMessage {
