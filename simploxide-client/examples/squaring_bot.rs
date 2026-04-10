@@ -9,9 +9,6 @@
 //! A bot that receives a number and sends back its square.
 
 use simploxide_client::{
-    StreamEvents,
-    ext::FilterChatItems as _,
-    id::ChatId,
     prelude::*,
     ws::{self, ClientResult},
 };
@@ -19,50 +16,22 @@ use std::{error::Error, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (bot, events, mut cli) = ws::BotBuilder::new("SimplOxide Examples", 5225)
+    let (bot, events, _cli) = ws::BotBuilder::new("SimplOxide Examples", 5225)
+        // Set path to the bot database
         .db_prefix("test_db/bot")
+        // create a public bot address auto-accepting new users with a welcome message
+        .auto_reply(
+            "Hello, I'm a simple squaring bot. Send me a number and I will calculate its square",
+        )
+        // Launch CLI, connect the client, and initialise the bot
         .launch()
         .await?;
 
-    let address = bot.get_or_create_address().await?;
+    let address = bot.address().await?;
     println!("Bot address: {address}");
 
-    let connection = events
-        .into_dispatcher(bot)
-        .on(new_contact_request)
-        .on(contact_connected)
-        .on(new_msgs)
-        .dispatch()
-        .await?;
-
-    drop(connection);
-    cli.kill().await?;
+    events.into_dispatcher(bot).on(new_msgs).dispatch().await?;
     Ok(())
-}
-
-async fn contact_connected(ev: Arc<ContactConnected>, bot: ws::Bot) -> ClientResult<StreamEvents> {
-    println!("{} connected", ev.contact.profile.display_name);
-
-    reply(
-        bot.client(),
-        &ChatId::from_contact(&ev.contact),
-        "Hello! I am a simple squaring bot - if you send me a number, I will calculate its square"
-            .to_owned(),
-    )
-    .await?;
-
-    Ok(StreamEvents::Continue)
-}
-
-async fn new_contact_request(
-    ev: Arc<ReceivedContactRequest>,
-    bot: ws::Bot,
-) -> ClientResult<StreamEvents> {
-    bot.client()
-        .api_accept_contact(ev.contact_request.contact_request_id)
-        .await?;
-
-    Ok(StreamEvents::Continue)
 }
 
 async fn new_msgs(ev: Arc<NewChatItems>, bot: ws::Bot) -> ClientResult<StreamEvents> {
@@ -77,41 +46,16 @@ async fn new_msgs(ev: Arc<NewChatItems>, bot: ws::Bot) -> ClientResult<StreamEve
             .text()
             .and_then(|txt| txt.trim().parse::<i64>().ok())
         {
-            reply(
-                bot.client(),
-                &cid,
-                format!("Squared: {}", num.wrapping_mul(num)),
-            )
-            .await?;
+            let square = num.wrapping_mul(num);
+            bot.send_msg(cid, format!("Squared: {square}"))
+                .reply_to(it.meta.item_id)
+                .await?;
         } else {
-            reply(bot.client(), &cid, "Me understands only numbers!").await?;
+            bot.send_msg(cid, "Me understands only numbers!")
+                .reply_to(it.meta.item_id)
+                .await?;
         }
     }
 
     Ok(StreamEvents::Continue)
-}
-
-// The client API is quite low level so helper functions are often required to deal with common bot
-// actions.
-async fn reply(
-    client: &ws::Client,
-    chat_id: &ChatId,
-    reply: impl Into<String>,
-) -> ClientResult<Arc<NewChatItemsResponse>> {
-    // Use bon builders to build complicated requests. Availaible behind the "bon" feature
-    // flag.
-    client
-        .api_send_messages(
-            ApiSendMessages::builder()
-                .send_ref(chat_id.into_chat_ref())
-                .live_message(false)
-                .composed_messages(vec![
-                    ComposedMessage::builder()
-                        .msg_content(MsgContent::make_text(reply.into()))
-                        .mentions(Default::default())
-                        .build(),
-                ])
-                .build(),
-        )
-        .await
 }

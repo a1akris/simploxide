@@ -6,4 +6,7 @@ pub use crate::types::{
     FeatureAllowed, GroupMemberRole, GroupProfile, MsgContent, MsgReaction, NewUser, Preferences,
     Profile, SimplePreference, UpdatedMessage, User, UserInfo,
 };
-pub use crate::{ClientApi as _, client_api::*, commands::*, events::*, responses::*};
+pub use crate::{
+    ClientApi as _, StreamEvents, client_api::*, commands::*, events::*, ext::ClientApiExt as _,
+    ext::FilterChatItems as _, id::*, preferences, responses::*,
+};

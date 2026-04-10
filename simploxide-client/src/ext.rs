@@ -1,10 +1,11 @@
 use simploxide_api_types::{
-    AChatItem, ChatItem, MsgContent, NewUser,
+    AChatItem, ChatItem, ComposedMessage, MsgContent, NewUser,
     client_api::{ClientApi, ClientApiError as _},
-    responses::ActiveUserResponse,
+    commands::ApiSendMessages,
+    responses::{ActiveUserResponse, NewChatItemsResponse},
 };
 
-use std::sync::Arc;
+use std::{pin::Pin, sync::Arc, time::Duration};
 
 use crate::id::ChatId;
 
@@ -15,6 +16,8 @@ pub trait ClientApiExt: ClientApi {
     /// contains invalid UTF-8 characters. The user struct gets cloned when performing the original
     /// request
     fn new_user(&self, user: NewUser) -> impl Future<Output = NewUserResponse<Self>>;
+
+    fn send_message<M: MessageLike>(&self, chat_id: ChatId, msg: M) -> MessageBuilder<'_, Self>;
 }
 
 impl<C> ClientApiExt for C
@@ -36,6 +39,16 @@ where
             },
         }
     }
+
+    fn send_message<M: MessageLike>(&self, chat_id: ChatId, msg: M) -> MessageBuilder<'_, Self> {
+        MessageBuilder {
+            client: self,
+            chat_id,
+            live: false,
+            ttl: None,
+            msg: msg.into_composed_message(),
+        }
+    }
 }
 
 pub trait FilterChatItems {
@@ -52,5 +65,76 @@ impl FilterChatItems for Vec<AChatItem> {
                     .map(|msg| (cid, &item.chat_item, msg))
             })
         })
+    }
+}
+
+pub trait MessageLike {
+    fn into_composed_message(self) -> ComposedMessage;
+}
+
+impl MessageLike for ComposedMessage {
+    fn into_composed_message(self) -> ComposedMessage {
+        self
+    }
+}
+
+impl MessageLike for String {
+    fn into_composed_message(self) -> ComposedMessage {
+        ComposedMessage {
+            file_source: None,
+            quoted_item_id: None,
+            msg_content: MsgContent::make_text(self),
+            mentions: Default::default(),
+            undocumented: Default::default(),
+        }
+    }
+}
+
+impl MessageLike for &str {
+    fn into_composed_message(self) -> ComposedMessage {
+        String::into_composed_message(self.to_owned())
+    }
+}
+
+pub struct MessageBuilder<'a, C: ?Sized> {
+    client: &'a C,
+    chat_id: ChatId,
+    live: bool,
+    ttl: Option<Duration>,
+    msg: ComposedMessage,
+}
+
+impl<'a, C> MessageBuilder<'a, C> {
+    pub fn live_message(mut self) -> Self {
+        self.live = true;
+        self
+    }
+
+    pub fn with_ttl(mut self, ttl: std::time::Duration) -> Self {
+        self.ttl = Some(ttl);
+        self
+    }
+
+    pub fn reply_to(mut self, item_id: i64) -> Self {
+        self.msg.quoted_item_id = Some(item_id);
+        self
+    }
+}
+
+impl<'a, C: 'static + ClientApi> IntoFuture for MessageBuilder<'a, C> {
+    type Output = Result<Arc<NewChatItemsResponse>, C::Error>;
+    type IntoFuture = Pin<Box<dyn 'a + Send + Future<Output = Self::Output>>>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        let command = ApiSendMessages {
+            send_ref: self.chat_id.into_chat_ref(),
+            live_message: self.live,
+            ttl: self.ttl.map(|ttl| {
+                std::cmp::min(ttl, crate::preferences::timed_messages::TTL_MAX).as_secs() as i32
+            }),
+            composed_messages: vec![self.msg],
+        };
+
+        Box::pin(self.client.api_send_messages(command))
     }
 }
