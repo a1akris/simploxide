@@ -1,13 +1,18 @@
 use simploxide_api_types::{
-    ChatPeerType, CreatedConnLink, LocalProfile, NewUser, Preferences, Profile,
+    AddressSettings, AutoAccept, ChatPeerType, CreatedConnLink, LocalProfile, MsgContent, NewUser,
+    Preferences, Profile,
     client_api::{ClientApi, ClientApiError as _},
-    commands::ApiSetActiveUser,
-    responses::ApiUpdateProfileResponse,
+    commands::{ApiSetActiveUser, ApiSetProfileAddress},
+    responses::{ApiUpdateProfileResponse, UserProfileUpdatedResponse},
 };
 
 use std::sync::Arc;
 
-use crate::{ext::ClientApiExt as _, id::UserId, preferences};
+use crate::{
+    ext::{ClientApiExt as _, MessageBuilder, MessageLike},
+    id::{ChatId, UserId},
+    preferences,
+};
 
 /// A cheaply cloneable handle to initialized SimpleX bot.
 #[derive(Clone)]
@@ -41,6 +46,40 @@ impl<C: ClientApi> Bot<C> {
                         .await?;
                 }
 
+                let bot = Bot {
+                    client,
+                    user_id: user.user_id,
+                };
+
+                if let Some(auto_reply) = settings.auto_reply {
+                    if user.profile.contact_link.is_none() {
+                        bot.get_or_create_address().await?;
+                        bot.publish_address().await?;
+                    }
+
+                    bot.configure_address(AddressSettings {
+                        business_address: false,
+                        auto_accept: Some(AutoAccept {
+                            accept_incognito: false,
+                            undocumented: Default::default(),
+                        }),
+                        auto_reply: (!auto_reply.is_empty())
+                            .then(|| MsgContent::make_text(auto_reply)),
+                        undocumented: Default::default(),
+                    })
+                    .await?;
+                } else {
+                    if user.profile.contact_link.is_some() {
+                        bot.configure_address(AddressSettings {
+                            business_address: false,
+                            auto_accept: None,
+                            auto_reply: None,
+                            undocumented: Default::default(),
+                        })
+                        .await?;
+                    }
+                }
+
                 if let Some(profile_settings) = settings.profile_settings {
                     let profile = match profile_settings {
                         BotProfileSettings::Preferences(preferences) => {
@@ -51,13 +90,12 @@ impl<C: ClientApi> Bot<C> {
                         BotProfileSettings::FullProfile(profile) => profile,
                     };
 
-                    client.api_update_profile(user.user_id, profile).await?;
+                    bot.client()
+                        .api_update_profile(user.user_id, profile)
+                        .await?;
                 }
 
-                Ok(Bot {
-                    client,
-                    user_id: user.user_id,
-                })
+                Ok(bot)
             }
             None => {
                 let bot_profile = match settings.profile_settings {
@@ -79,10 +117,28 @@ impl<C: ClientApi> Bot<C> {
                     })
                     .await?;
 
-                Ok(Bot {
+                let bot = Bot {
                     client,
                     user_id: response.user.user_id,
-                })
+                };
+
+                if let Some(auto_reply) = settings.auto_reply {
+                    bot.create_address().await?;
+                    bot.publish_address().await?;
+
+                    bot.configure_address(AddressSettings {
+                        business_address: false,
+                        auto_accept: Some(AutoAccept {
+                            accept_incognito: true,
+                            undocumented: Default::default(),
+                        }),
+                        auto_reply: Some(MsgContent::make_text(auto_reply)),
+                        undocumented: Default::default(),
+                    })
+                    .await?;
+                }
+
+                Ok(bot)
             }
         }
     }
@@ -115,11 +171,6 @@ impl<C: ClientApi> Bot<C> {
         Ok(extract_address(&response.conn_link_contact))
     }
 
-    pub async fn delete_address(&self) -> Result<(), C::Error> {
-        self.client.api_delete_my_address(self.user_id).await?;
-        Ok(())
-    }
-
     /// Throws [StoreError::UserContactLinkNotFound] if bot doesn't have an address. Use
     /// [get_or_create_address] to ensure that address is available
     pub async fn address(&self) -> Result<String, C::Error> {
@@ -143,6 +194,38 @@ impl<C: ClientApi> Bot<C> {
             }
             Err(e) => Err(e),
         }
+    }
+
+    pub async fn configure_address(&self, settings: AddressSettings) -> Result<(), C::Error> {
+        self.client
+            .api_set_address_settings(self.user_id, settings)
+            .await
+            .map(drop)
+    }
+
+    /// Make address visible in bot/user profile
+    pub async fn publish_address(&self) -> Result<Arc<UserProfileUpdatedResponse>, C::Error> {
+        self.client
+            .api_set_profile_address(ApiSetProfileAddress {
+                user_id: self.user_id,
+                enable: true,
+            })
+            .await
+    }
+
+    /// Hide address from bot/user profile
+    pub async fn hide_address(&self) -> Result<Arc<UserProfileUpdatedResponse>, C::Error> {
+        self.client
+            .api_set_profile_address(ApiSetProfileAddress {
+                user_id: self.user_id,
+                enable: false,
+            })
+            .await
+    }
+
+    pub async fn delete_address(&self) -> Result<(), C::Error> {
+        self.client.api_delete_my_address(self.user_id).await?;
+        Ok(())
     }
 
     pub async fn update_profile<F>(&self, updater: F) -> Result<ApiUpdateProfileResponse, C::Error>
@@ -210,11 +293,16 @@ impl<C: ClientApi> Bot<C> {
         self.update_profile(move |profile| profile.preferences = Some(preferences))
             .await
     }
+
+    pub fn send_msg<M: MessageLike>(&self, chat_id: ChatId, msg: M) -> MessageBuilder<'_, C> {
+        self.client().send_message(chat_id, msg)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct BotSettings {
     pub display_name: String,
+    pub auto_reply: Option<String>,
     pub profile_settings: Option<BotProfileSettings>,
 }
 
@@ -222,8 +310,14 @@ impl BotSettings {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             display_name: name.into(),
+            auto_reply: None,
             profile_settings: None,
         }
+    }
+
+    pub fn auto_accept(mut self, reply: impl Into<String>) -> Self {
+        self.auto_reply = Some(reply.into());
+        self
     }
 
     pub fn with_profile_settings(mut self, settings: BotProfileSettings) -> Self {

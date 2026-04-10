@@ -227,6 +227,7 @@ pub struct BotBuilder {
     port: u16,
     retry_delay: std::time::Duration,
     retries: usize,
+    auto_reply: Option<String>,
     profile: Option<Profile>,
     preferences: Option<Preferences>,
     #[cfg(feature = "cli")]
@@ -246,6 +247,7 @@ impl BotBuilder {
             db_key: None,
             retry_delay: std::time::Duration::from_secs(1),
             retries: 5,
+            auto_reply: None,
             profile: None,
             preferences: None,
             #[cfg(feature = "cli")]
@@ -282,6 +284,18 @@ impl BotBuilder {
         self
     }
 
+    /// Create public address and auto accept users
+    pub fn auto_accept(mut self) -> Self {
+        self.auto_reply = Some(String::default());
+        self
+    }
+
+    /// Set a welcome message. This automatically creates a public address with enabled auto_accept
+    pub fn auto_reply(mut self, auto_reply: impl Into<String>) -> Self {
+        self.auto_reply = Some(auto_reply.into());
+        self
+    }
+
     /// Update/create the whole bot profile on launch
     pub fn with_profile(mut self, profile: Profile) -> Self {
         self.profile = Some(profile);
@@ -315,6 +329,7 @@ impl BotBuilder {
 
         let settings = BotSettings {
             display_name: self.name,
+            auto_reply: self.auto_reply,
             profile_settings: match (self.profile, self.preferences) {
                 (Some(mut profile), Some(preferences)) => {
                     profile.preferences = Some(preferences);

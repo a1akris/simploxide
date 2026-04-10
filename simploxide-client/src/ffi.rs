@@ -110,6 +110,7 @@ pub struct BotBuilder {
     display_name: String,
     db_opts: DbOpts,
     default_user: Option<DefaultUser>,
+    auto_reply: Option<String>,
     profile: Option<Profile>,
     preferences: Option<Preferences>,
     // worker_config: WorkerConfig,
@@ -122,6 +123,7 @@ impl BotBuilder {
             display_name: name.into(),
             db_opts,
             default_user: None,
+            auto_reply: None,
             profile: None,
             preferences: None,
             //worker_config: !()
@@ -134,6 +136,18 @@ impl BotBuilder {
     /// different from an active bot
     pub fn with_default_user(mut self, user: DefaultUser) -> Self {
         self.default_user = Some(user);
+        self
+    }
+
+    /// Create public address and auto accept users
+    pub fn auto_accept(mut self) -> Self {
+        self.auto_reply = Some(String::default());
+        self
+    }
+
+    /// Set a welcome message. This automatically creates a public address with enabled auto_accept
+    pub fn auto_reply(mut self, auto_reply: impl Into<String>) -> Self {
+        self.auto_reply = Some(auto_reply.into());
         self
     }
 
@@ -173,6 +187,7 @@ impl BotBuilder {
 
         let settings = BotSettings {
             display_name: self.display_name,
+            auto_reply: self.auto_reply,
             profile_settings: match (self.profile, self.preferences) {
                 (Some(mut profile), Some(preferences)) => {
                     profile.preferences = Some(preferences);
