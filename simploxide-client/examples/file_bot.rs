@@ -28,17 +28,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .connect()
         .await?;
 
+    let address = bot.get_or_create_address().await?;
+    println!("Bot address: {address}");
+
     events
         .into_dispatcher(bot)
         .on(
             async |ev: Arc<ContactConnected>, bot| -> ws::ClientResult<_> {
                 println!("{} connected", ev.contact.profile.display_name);
 
-                bot.client().send_text(
-                    ev.contact.contact_id,
+                bot.send_msg(
+                    ChatId::from_contact(&ev.contact),
                     "Hello! I am a simple file bot - if you send me a file, I will send it back!",
                 )
-                .await;
+                .await?;
 
                 Ok(StreamEvents::Continue)
             },
@@ -69,9 +72,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             };
 
             if file_info.file_size > 5 * 1024 * 1024 {
-                bot.client()
-                    .send_text(contact.contact_id, "Sorry, but the file must be <5MiB")
-                    .await;
+                bot.send_msg(
+                    ChatId::from_contact(contact),
+                    "Sorry, but the file must be <5MiB",
+                )
+                .await?;
 
                 bot.client().cancel_file(file_info.file_id).await?;
                 println!("File delivery cancelled: {file_info:#?}");
@@ -88,15 +93,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if let Some(ChatInfo::Direct { contact, .. }) =
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
-                bot.client()
-                    .send_text(
-                        contact.contact_id,
-                        format!(
-                            "Failed to receive the {} due to this horrible error {:#?}",
-                            ev.rcv_file_transfer.file_invitation.file_name, ev.agent_error
-                        ),
-                    )
-                    .await;
+                bot.send_msg(
+                    ChatId::from_contact(contact),
+                    format!(
+                        "Failed to receive the {} due to this horrible error {:#?}",
+                        ev.rcv_file_transfer.file_invitation.file_name, ev.agent_error
+                    ),
+                )
+                .await?;
             }
 
             Ok(StreamEvents::Continue)
@@ -107,15 +111,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if let Some(ChatInfo::Direct { contact, .. }) =
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
-                bot.client()
-                    .send_text(
-                        contact.contact_id,
-                        format!(
-                            "Failed to receive the {} due to {:?}",
-                            ev.rcv_file_transfer.file_invitation.file_name, ev.agent_error
-                        ),
-                    )
-                    .await;
+                bot.send_msg(
+                    ChatId::from_contact(contact),
+                    format!(
+                        "Failed to receive the {} due to {:?}",
+                        ev.rcv_file_transfer.file_invitation.file_name, ev.agent_error
+                    ),
+                )
+                .await?;
             }
             Ok(StreamEvents::Continue)
         })
@@ -156,9 +159,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 return Ok(StreamEvents::Continue);
             };
 
-            bot.client()
-                .send_text(contact.contact_id, "Gimme more!")
-                .await;
+            bot.send_msg(ChatId::from_contact(contact), "Gimme more!")
+                .await?;
 
             Ok(StreamEvents::Continue)
         })
@@ -168,15 +170,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if let Some(ChatInfo::Direct { contact, .. }) =
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
-                bot.client()
-                    .send_text(
-                        contact.contact_id,
-                        format!(
-                            "Failed to send back the {} due to {:?}",
-                            ev.file_transfer_meta.file_name, ev.error_message
-                        ),
-                    )
-                    .await;
+                bot.send_msg(
+                    ChatId::from_contact(contact),
+                    format!(
+                        "Failed to send back the {} due to {:?}",
+                        ev.file_transfer_meta.file_name, ev.error_message
+                    ),
+                )
+                .await?;
             }
 
             Ok(StreamEvents::Continue)
@@ -187,15 +188,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if let Some(ChatInfo::Direct { contact, .. }) =
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
-                bot.client()
-                    .send_text(
-                        contact.contact_id,
-                        format!(
-                            "Failed to send back the {} due to this horrible error {:#?}",
-                            ev.file_transfer_meta.file_name, ev.error_message
-                        ),
-                    )
-                    .await;
+                bot.send_msg(
+                    ChatId::from_contact(contact),
+                    format!(
+                        "Failed to send back the {} due to this horrible error {:#?}",
+                        ev.file_transfer_meta.file_name, ev.error_message
+                    ),
+                )
+                .await?;
             }
 
             Ok(StreamEvents::Continue)
@@ -227,9 +227,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         continue;
                     };
 
-                    bot.client()
-                        .send_text(contact.contact_id, "Hey, send me some files!")
-                        .await
+                    bot.send_msg(ChatId::from_contact(contact), "Hey, send me some files!")
+                        .await?;
                 }
             }
 
@@ -244,8 +243,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 /// One of the ways to conveniently provide helper methods to your bot is to define them in a trait
 /// and implement the trait for [`simploxide_client::Client`].
 trait BotExtensions {
-    async fn send_text(&self, chat_id: i64, txt: impl Into<String>);
-
     async fn send_file(
         &self,
         chat_id: i64,
@@ -258,34 +255,6 @@ trait BotExtensions {
 }
 
 impl BotExtensions for ws::Client {
-    async fn send_text(&self, chat_id: i64, txt: impl Into<String>) {
-        let client = self.clone();
-        let text = txt.into();
-        let _ = client
-            // An example of a request constructed without the use of builders.
-            .api_send_messages(ApiSendMessages {
-                send_ref: ChatRef {
-                    chat_type: ChatType::Direct,
-                    chat_id,
-                    chat_scope: None,
-                    undocumented: Default::default(),
-                },
-                live_message: false,
-                ttl: None,
-                composed_messages: vec![ComposedMessage {
-                    file_source: None,
-                    quoted_item_id: None,
-                    msg_content: MsgContent::Text {
-                        text,
-                        undocumented: Default::default(),
-                    },
-                    mentions: Default::default(),
-                    undocumented: Default::default(),
-                }],
-            })
-            .await;
-    }
-
     async fn send_file(
         &self,
         chat_id: i64,

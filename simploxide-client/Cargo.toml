@@ -4,24 +4,27 @@ version = "0.10.0"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
-exclude = ["screenshots"]
+exclude = ["screenshots", "sxcrt", "test_db"]
 
 description = "SimpleX-Chat API client"
 readme = "README.md"
 repository = "https://github.com/a1akris/simploxide"
 documentation = "https://docs.rs/simploxide-client"
 categories = ["network-programming", "asynchronous", "web-programming::websocket"]
-keywords = ["simplex", "chat", "websocket", "client"]
+keywords = ["simplex-chat", "websocket", "ffi", "client"]
 
 [features]
 default = ["cli"]
 bon = ["simploxide-api-types/bon"]
-cli = ["websocket", "simploxide-ws-core/cli"]
 ffi = ["dep:simploxide-ffi-core"]
 websocket = ["dep:simploxide-ws-core"]
+cli = ["websocket", "simploxide-ws-core/cli"]
+crypto = ["dep:zeroize", "dep:base64", "dep:rand", "tokio/fs"]
+native_crypto = ["crypto", "dep:salsa20", "dep:poly1305", "dep:subtle"]
 
 [dependencies]
 futures.workspace = true
+log.workspace = true
 serde_json.workspace = true
 serde.workspace = true
 tokio.workspace = true
@@ -30,7 +33,13 @@ simploxide-ws-core = { version = "0.1.0", path = "../simploxide-ws-core", option
 simploxide-ffi-core = { version = "0.1.0", path = "../simploxide-ffi-core", optional = true }
 simploxide-api-types = { version = "0.8.0", path = "../simploxide-api-types" }
 
+base64 = { version = "0.22", optional = true }
+poly1305 = { version = "0.8.0", features = ["zeroize"], optional = true }
+rand = { version = "0.10", optional = true }
+salsa20 = { version = "0.11.0", features = ["zeroize"], optional = true }
+subtle = { version = "2", optional = true }
+zeroize = { version = "1", features = ["derive"], optional = true }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 async-trait = "0.1.89"
-pretty_env_logger = "0.5.0"

@@ -158,6 +158,8 @@
 //!
 //!
 
+#[cfg(feature = "crypto")]
+pub mod crypto;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(feature = "websocket")]
