@@ -1,8 +1,8 @@
 name: AutoMaintainer
 
-on:
-  schedule:
-    - cron: '30 7 * * 2,6'
+on: workflow_dispatch
+#  schedule:
+#    - cron: '30 7 * * 2,6'
 
 env:
   CARGO_TERM_COLOR: always
