@@ -11,9 +11,9 @@
 //!       responses. All futures scheduled after the `.disconnect` call are guaranteed to receive the
 //!       [`tungstenite::Error::AlreadyClosed`] error.
 //!
-//!     - If the web socket connection drops due to an error all already received(buffered)
-//!       responses are guaranteed to be delivered to corresponding futures. All other pending
-//!       futures are guaranteed to be resolved with the web socket error.
+//!     - If the web socket connection drops due to an error all buffered responses are guaranteed
+//!       to be delivered to corresponding futures. All other pending futures are guaranteed to be
+//!       resolved with the web socket error.
 //!
 //!     - You will receive events for as long as there are futures awaiting responses. After all
 //!       futures are resolved you will receive all buffered events and then the event queue will be
@@ -26,6 +26,7 @@
 //!
 //! _Current implementation heavily depends on `tokio` runtime and won't work with other
 //! executors._
+
 mod dispatcher;
 mod router;
 mod transmission;
@@ -36,7 +37,7 @@ use std::sync::{
 };
 
 use futures::StreamExt;
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, watch};
 use tokio_tungstenite::{
     MaybeTlsStream, WebSocketStream, connect_async,
     tungstenite::{Message, client::IntoClientRequest as _},
@@ -58,6 +59,9 @@ type WsOut =
     futures::stream::SplitSink<WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>, Message>;
 type WsIn = futures::stream::SplitStream<WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>>;
 
+type ShutdownEmitter = watch::Sender<bool>;
+type ShutdownSignal = watch::Receiver<bool>;
+
 static REQUEST_ID: AtomicUsize = AtomicUsize::new(0);
 
 #[cfg(feature = "cli")]
@@ -68,16 +72,26 @@ fn next_request_id() -> RequestId {
     REQUEST_ID.fetch_add(1, Ordering::Relaxed)
 }
 
-/// Connect to the running SimpleX daemon by websocket URI str. Note that SimpleX doesn't support
-/// TLS so using "wss://" will produce an error.
+/// Connect to the running SimpleX daemon by websocket URI.
 ///
-/// Returns a client that should be used to send requests and receive responses and the event queue
-/// that buffers SimpleX chat events.
+/// Returns a [RawClient] for sending commands and a [RawEventQueue] that buffers incoming chat
+/// events independently of client activity.
 ///
-/// If you're writing a script-like app that doesn't need to process events drop the returned event
-/// queue immediately to prevent the events being buffered effectively causing a memory leak.
+/// # Security
 ///
-/// Example:
+/// - SimpleX CLI does not support TLS URIs("wss://") and will fail at the handshake. The web
+///   socket carries unencrypted unauthenticated traffic. Bind the daemon to
+///   localhost(`ws://127.0.0.1:{port}`) only. Any process or host that can reach the port has full,
+///   unauthenticated control over the daemon, can intercept traffic and execute arbitrary commands.
+///
+/// # Memory
+///
+/// The [`RawEventQueue`] is backed by an unbounded channel. If events are not consumed they
+/// accumulate indefinitely. Either process events promptly or drop the queue immediately if your
+/// application does not need them:
+///
+/// # Example:
+///
 /// ```ignore
 /// let (client, events) = simploxide_core::connect("ws://127.0.0.1:5225").await?;
 ///
@@ -94,9 +108,13 @@ pub async fn connect(simplex_daemon_url: &str) -> tungstenite::Result<(RawClient
 
     let dispatching_cancellator = CancellationToken::new();
     let (transmission_interrupter, transmission_interrupted) = oneshot::channel();
+    let (shutdown_tx, shutdown) = watch::channel(false);
 
-    let (client_router, response_router) =
-        router::init(dispatching_cancellator.clone(), transmission_interrupter);
+    let (client_router, response_router) = router::init(
+        dispatching_cancellator.clone(),
+        transmission_interrupter,
+        shutdown_tx,
+    );
     let tx = transmission::init(ws_out, transmission_interrupted);
     let event_queue = dispatcher::init(ws_in, response_router, dispatching_cancellator);
 
@@ -104,6 +122,7 @@ pub async fn connect(simplex_daemon_url: &str) -> tungstenite::Result<(RawClient
         RawClient {
             tx,
             router: client_router,
+            shutdown,
         },
         event_queue,
     ))
@@ -118,6 +137,7 @@ pub async fn connect(simplex_daemon_url: &str) -> tungstenite::Result<(RawClient
 pub struct RawClient {
     tx: Transmitter,
     router: ClientRouter,
+    shutdown: ShutdownSignal,
 }
 
 impl RawClient {
@@ -139,13 +159,42 @@ impl RawClient {
             .expect("Registered responders always deliver")
     }
 
-    /// Drops the current client and initiates a graceful shutdown for the underlying web socket
-    /// connection.
+    /// Initiates a graceful shutdown and waits until it is complete. Returns only after the
+    /// connection is fully closed.
     ///
-    /// If there are multiple instances of the client all futures scheduled before this call will
-    /// still receive their responses but all new [`Self::send`] futures will immediately resolve
-    /// with [`tungstenite::Error::AlreadyClosed`].
-    pub fn disconnect(self) {
+    /// All futures that got scheduled before this call will still receive their responses. All
+    /// futures scheduled after this call(from cloned clients) will resolve immediately with
+    /// [`tungstenite::Error::AlreadyClosed`].
+    ///
+    /// If you don't care about waiting for the graceful shutdown to complete you can just drop the
+    /// future
+    ///
+    /// ```ignore
+    /// let _ = client.disconnect();
+    /// ```
+    ///
+    /// or use [`tokio::time::timeout`] to limit the wait time
+    ///
+    /// ```ignore
+    /// tokio::time::timeout(Duration::from_secs(5), client.disconnect())
+    ///     .await
+    ///     .unwrap_or_default();
+    /// ```
+    ///
+    /// # Racing with [`Self::send`]
+    ///
+    /// If [`Self::send`] and [`Self::disconnect`] are called concurrently from different threads
+    /// the outcome depends on scheduling. If `send` wins the channel lock first, it will receive a
+    /// response as normal. If `disconnect` wins first, the `send` future will receive
+    /// [`tungstenite::Error::AlreadyClosed`].
+    ///
+    /// However, in the second case the request could have already been buffered and delivered to the
+    /// server by another thread while disconnect was executing on the current thread, meaning the
+    /// send command ran even though the client received an error. Do not use `AlreadyClosed` as a
+    /// proof that the command was not executed. To guarantee ordering, await all `send` futures to
+    /// completion before calling `disconnect`.
+    pub async fn disconnect(mut self) {
         self.router.shutdown();
+        let _ = self.shutdown.wait_for(|done| *done).await;
     }
 }

@@ -100,8 +100,8 @@ async fn error_handler(
 ) {
     request_stream.close();
 
-    while let Some((id, req)) = request_stream.next().await {
-        log::warn!("Dropping request `({id}, {req})` due to error: {err}");
+    while let Some((id, _)) = request_stream.next().await {
+        log::warn!("Dropping request `({id})` due to error: {err}");
     }
 }
 

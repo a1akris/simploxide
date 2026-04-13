@@ -2,7 +2,7 @@
 
 use crate::transmission;
 
-use super::{Error, RequestId, Response, Result};
+use super::{Error, RequestId, Response, Result, ShutdownEmitter};
 
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
@@ -26,6 +26,7 @@ type ResponseReceiver = mpsc::UnboundedReceiver<DeliveryCommand>;
 pub fn init(
     dispatching_cancellator: CancellationToken,
     transmission_interrupter: transmission::Interrupter,
+    shutdown: ShutdownEmitter,
 ) -> (ClientRouter, ResponseRouter) {
     let (client_sender, client_receiver) = mpsc::unbounded_channel();
     let (response_sender, response_receiver) = mpsc::unbounded_channel();
@@ -35,6 +36,7 @@ pub fn init(
         response_receiver,
         dispatching_cancellator,
         transmission_interrupter,
+        shutdown,
     ));
 
     (
@@ -94,6 +96,7 @@ async fn routing_task(
     mut responses: ResponseReceiver,
     dispatching_cancellator: CancellationToken,
     transmission_interrupter: transmission::Interrupter,
+    shutdown: ShutdownEmitter,
 ) {
     let mut router = InnerRouter::new();
 
@@ -112,6 +115,7 @@ async fn routing_task(
     }
 
     log::debug!("Router task finished");
+    let _ = shutdown.send(true);
 }
 
 /// Deliver responses to the awaiting futures
@@ -151,7 +155,9 @@ async fn normal_operation(
             response = responses.recv() => {
                 match response {
                     // Deliver response by corrId
-                    Some(DeliveryCommand::Deliver { id, response }) =>  { router.deliver(id, Ok(response)); }
+                    Some(DeliveryCommand::Deliver { id, response }) =>  {
+                        assert!(router.deliver(id, Ok(response)), "Request ID is booked before sending a request");
+                    }
                     // WS error
                     Some(DeliveryCommand::Shutdown(err)) =>  {
                         client_commands.close();
@@ -188,7 +194,11 @@ async fn graceful_shutdown(
         match responses.recv().await {
             // Deliver response by corrId
             Some(DeliveryCommand::Deliver { id, response }) => {
-                router.deliver(id, Ok(response));
+                if !router.deliver(id, Ok(response)) {
+                    log::warn!(
+                        "Dropping response for unknown corrId {id} — request lost race with disconnect"
+                    );
+                }
             }
             // WS_error
             Some(DeliveryCommand::Shutdown(err)) => {
@@ -258,13 +268,15 @@ impl InnerRouter {
         assert!(prev.is_none(), "Request ID cannot not be duplicated");
     }
 
-    fn deliver(&mut self, id: RequestId, result: Result<Response>) {
-        let responder = self
-            .table
-            .remove(&id)
-            .expect("Request ID is booked before sending a request");
-
-        // Not the router's business whether the future awaiting the response got dropped or not
-        let _ = responder.send(result);
+    fn deliver(&mut self, id: RequestId, result: Result<Response>) -> bool {
+        if let Some(responder) = self.table.remove(&id) {
+            // Not the router's business whether the future awaiting the response got dropped or not
+            let _ = responder.send(result);
+            true
+        } else {
+            // Unknown corrId here means the request lost the race with disconnect(): and we're
+            // getting a response to unregistered request
+            false
+        }
     }
 }
