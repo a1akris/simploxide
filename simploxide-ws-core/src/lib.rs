@@ -193,8 +193,10 @@ impl RawClient {
     /// send command ran even though the client received an error. Do not use `AlreadyClosed` as a
     /// proof that the command was not executed. To guarantee ordering, await all `send` futures to
     /// completion before calling `disconnect`.
-    pub async fn disconnect(mut self) {
+    pub fn disconnect(mut self) -> impl Future<Output = ()> {
         self.router.shutdown();
-        let _ = self.shutdown.wait_for(|done| *done).await;
+        async move {
+            let _ = self.shutdown.wait_for(|done| *done).await;
+        }
     }
 }
