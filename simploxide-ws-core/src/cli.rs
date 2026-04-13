@@ -12,6 +12,12 @@ use std::{
 /// An instance representing the running SimpleX CLI. Ensure to call [`SimplexCli::kill`] manually
 /// to avoid zombie processes on Linux. The Drop impl tries its best to reap the process if it
 /// wasn't killed by the user but it is not guarnteed to succeed.
+///
+/// # Security
+///
+/// - SimpleX CLI requires to pass the database key via the `-k` argument. On most Linux setups the
+///   `-k` parameter is readable from `ps fx` output and `/proc` by **any** user so
+///   [SimplexCliBuilder::db_key] doesn't provide any meaningful security on untrusted machines
 pub struct SimplexCli {
     handle: Option<Child>,
     port: u16,

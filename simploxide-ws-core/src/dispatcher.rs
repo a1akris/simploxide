@@ -49,6 +49,34 @@ async fn event_dispatcher_task(
 ) {
     loop {
         tokio::select! {
+            // Biased so the cancellation token is always checked before the next frame. Without
+            // this, a frame arriving in the same poll cycle as the cancellation, could be
+            // processed via `process_raw_event` after the routing task has already exited and
+            // dropped its response receiver(race condition between tasks running on different
+            // threads), causing `ResponseRouter::deliver` to panic.
+            biased;
+
+            _ = token.cancelled() => {
+                // Yielding here to give tokio the last chance to move any OS-buffered frames into
+                // the stream. This minimizes the chance of silently dropping events
+                tokio::task::yield_now().await;
+
+                let mut ws_in = Closed(ws_in);
+                while let Some(ev) = ws_in.next().await {
+                    match ev {
+                        Ok(msg) => {
+                            process_raw_event(None, &mut event_queue, msg);
+                        }
+                        Err(e) => {
+                            let _ = event_queue.send(Err(Arc::new(e)));
+                            break;
+                        }
+                    }
+                }
+
+                break;
+            }
+
             ev = ws_in.next() => {
                 match ev {
                     Some(Ok(msg)) => {
@@ -64,24 +92,6 @@ async fn event_dispatcher_task(
                     None => unreachable!("Must receive an error before connection drops")
 
                 }
-            }
-            // Can get cancelled only after router task completion.
-            _ = token.cancelled() => {
-                // Processing buffered events
-                let mut ws_in = Closed(ws_in);
-                while let Some(ev) = ws_in.next().await {
-                    match ev {
-                        Ok(msg) => {
-                            process_raw_event(None, &mut event_queue, msg);
-                        }
-                        Err(e) => {
-                            let _ = event_queue.send(Err(Arc::new(e)));
-                            break;
-                        }
-                    }
-                }
-
-                break;
             }
         }
     }
