@@ -67,6 +67,6 @@ async fn smoke() {
     let cloned_client = client.clone();
 
     // handle.await must hang without disconnect or droppin both clients
-    cloned_client.disconnect();
+    cloned_client.disconnect().await;
     handle.await.unwrap();
 }
