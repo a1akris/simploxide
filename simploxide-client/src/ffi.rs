@@ -1,4 +1,4 @@
-pub use simploxide_ffi_core::{CallError, DbOpts, DefaultUser, InitError};
+pub use simploxide_ffi_core::{CallError, DbOpts, DefaultUser, InitError, WorkerConfig};
 
 use simploxide_api_types::{
     Preferences, Profile,
@@ -22,7 +22,16 @@ pub async fn init(
     default_user: DefaultUser,
     db_opts: DbOpts,
 ) -> Result<(Client, EventStream), InitError> {
-    let (raw_client, raw_event_queue) = simploxide_ffi_core::init(default_user, db_opts).await?;
+    init_with_config(default_user, db_opts, WorkerConfig::default()).await
+}
+
+pub async fn init_with_config(
+    default_user: DefaultUser,
+    db_opts: DbOpts,
+    config: WorkerConfig,
+) -> Result<(Client, EventStream), InitError> {
+    let (raw_client, raw_event_queue) =
+        simploxide_ffi_core::init_with_config(default_user, db_opts, config).await?;
     Ok((
         Client::from(raw_client),
         EventStream::from(raw_event_queue.into_receiver()),
@@ -45,9 +54,9 @@ impl From<RawClient> for Client {
 /// serialization and response deserialization.
 impl Client {
     /// Initiates a graceful shutdown for the underlying web socket connection. See
-    /// [`simploxide_core::RawClient::disconnect`] for details.
-    pub fn disconnect(self) {
-        self.inner.disconnect();
+    /// [`simploxide_ffi_core::RawClient::disconnect`] for details.
+    pub fn disconnect(self) -> impl Future<Output = ()> {
+        self.inner.disconnect()
     }
 }
 
@@ -113,7 +122,7 @@ pub struct BotBuilder {
     auto_reply: Option<String>,
     profile: Option<Profile>,
     preferences: Option<Preferences>,
-    // worker_config: WorkerConfig,
+    worker_config: WorkerConfig,
 }
 
 impl BotBuilder {
@@ -126,7 +135,7 @@ impl BotBuilder {
             auto_reply: None,
             profile: None,
             preferences: None,
-            //worker_config: !()
+            worker_config: WorkerConfig::default(),
         }
     }
 
@@ -163,15 +172,17 @@ impl BotBuilder {
         self
     }
 
-    // /// Set maximum tolerable event loop latency. Defines for how long events may be delayed in the
-    // /// worst case.
-    // ///
-    // /// Only takes effect on the **first** `launch` call in the process; all subsequent launches
-    // /// reuse the already-running event lopo. Minimum: 1ms. Default: 1s.
-    // pub fn event_loop_latency(mut self, duration: std::time::Duration) -> Self {
-    //     self.worker_config.max_idle_sleep = duration;
-    //     self
-    // }
+    /// Set max permissible event latency. See [`WorkerConfig::max_event_latency`] for details
+    pub fn max_event_latency(mut self, latency: std::time::Duration) -> Self {
+        self.worker_config.max_event_latency = Some(latency);
+        self
+    }
+
+    /// Set max concurrent SimpleX-Chat instances. See [`WorkerConfig::max_instances`] for details
+    pub fn max_instances(mut self, instances: usize) -> Self {
+        self.worker_config.max_instances = Some(instances);
+        self
+    }
 
     /// Initialise the SimpleX FFI runtime and return a ready-to-use bot.
     pub async fn launch(
@@ -181,7 +192,7 @@ impl BotBuilder {
             .default_user
             .unwrap_or_else(|| DefaultUser::bot(&self.display_name));
 
-        let (client, events) = init(default_user, self.db_opts /*self.worker_config*/)
+        let (client, events) = init_with_config(default_user, self.db_opts, self.worker_config)
             .await
             .map_err(BotInitError::Init)?;
 

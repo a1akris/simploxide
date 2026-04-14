@@ -1,8 +1,6 @@
-pub const MAX_COMMAND_LEN: usize = 64 * 1024;
+pub const MAX_CMDS_PER_ITER: usize = 3;
 
-pub const MAX_CMDS_PER_ITER: usize = 4;
-
-pub const MAX_EVENTS_PER_ITER: usize = 8;
+pub const MAX_EVENTS_PER_ITER: usize = 6;
 
 pub const MAX_EVENT_LATENCY: std::time::Duration = std::time::Duration::from_secs(1);
 

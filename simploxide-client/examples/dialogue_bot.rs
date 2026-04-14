@@ -2,7 +2,7 @@
 //! directory at the workspace root.
 //!
 //! To compile this example pass the --features flag like this:
-//! `SXCRT=sxcrt cargo run --example dialogue_bot --features ffi`
+//! `cargo run --example dialogue_bot --features ffi`
 //!
 //! ----
 //!

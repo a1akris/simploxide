@@ -143,9 +143,9 @@ impl From<RawClient> for Client {
 
 impl Client {
     /// Initiates a graceful shutdown for the underlying web socket connection. See
-    /// [`simploxide_core::RawClient::disconnect`] for details.
-    pub fn disconnect(self) {
-        self.inner.disconnect();
+    /// [`simploxide_ws_core::RawClient::disconnect`] for details.
+    pub fn disconnect(self) -> impl Future<Output = ()> {
+        self.inner.disconnect()
     }
 }
 
