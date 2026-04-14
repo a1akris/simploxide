@@ -7,8 +7,9 @@ edition = "2024"
 tokio = { workspace = true }
 serde.workspace = true
 serde_json.workspace = true
+slab = "0.4"
 simploxide-sxcrt-sys = { path = "../simploxide-sxcrt-sys", version = "0.1.0" }
 simploxide-core = { path = "../simploxide-core", version = "0.4.0" }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "time", "macros"] }

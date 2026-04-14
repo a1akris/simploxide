@@ -1,2 +1,5 @@
+[env]
+SXCRT = { value = "sxcrt", relative = true }
+
 [build]
 rustflags = ["-C", "link-arg=-Wl,-rpath,sxcrt"]

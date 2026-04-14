@@ -1,4 +1,4 @@
-//! A fully asynchronous raw SimpleX client that provides:
+//! A fully asynchronous raw SimpleX websocket client that provides:
 //!
 //! 1. Requests batching under a heavy load.
 //!
@@ -82,15 +82,15 @@ fn next_request_id() -> RequestId {
 /// - SimpleX CLI does not support TLS URIs("wss://") and will fail at the handshake. The web
 ///   socket carries unencrypted unauthenticated traffic. Bind the daemon to
 ///   localhost(`ws://127.0.0.1:{port}`) only. Any process or host that can reach the port has full,
-///   unauthenticated control over the daemon, can intercept traffic and execute arbitrary commands.
+///   unauthenticated control over the daemon, can intercept events and execute arbitrary commands.
 ///
 /// # Memory
 ///
 /// The [`RawEventQueue`] is backed by an unbounded channel. If events are not consumed they
 /// accumulate indefinitely. Either process events promptly or drop the queue immediately if your
-/// application does not need them:
+/// application does not need them
 ///
-/// # Example:
+/// # Example
 ///
 /// ```ignore
 /// let (client, events) = simploxide_core::connect("ws://127.0.0.1:5225").await?;
@@ -129,7 +129,7 @@ pub async fn connect(simplex_daemon_url: &str) -> tungstenite::Result<(RawClient
 }
 
 /// A lightweight cheaply clonable client capable of sending raw requests(SimpleX commands) and
-/// getting raw responses(JSON objects).
+/// receiving raw responses(JSON objects).
 ///
 /// You can use the client behind a shared reference, or you can clone it, in both cases the
 /// created futures will be indpenendent from each other.
@@ -167,7 +167,7 @@ impl RawClient {
     /// [`tungstenite::Error::AlreadyClosed`].
     ///
     /// If you don't care about waiting for the graceful shutdown to complete you can just drop the
-    /// future
+    /// future, the shutdown will still be triggered
     ///
     /// ```ignore
     /// let _ = client.disconnect();
@@ -189,7 +189,7 @@ impl RawClient {
     /// [`tungstenite::Error::AlreadyClosed`].
     ///
     /// However, in the second case the request could have already been buffered and delivered to the
-    /// server by another thread while disconnect was executing on the current thread, meaning the
+    /// server by another thread while `disconnect` was executing on the current thread, meaning the
     /// send command ran even though the client received an error. Do not use `AlreadyClosed` as a
     /// proof that the command was not executed. To guarantee ordering, await all `send` futures to
     /// completion before calling `disconnect`.
