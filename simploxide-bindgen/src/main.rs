@@ -758,7 +758,7 @@ impl std::fmt::Display for DiscriminatedUnionGetters<'_> {
         writeln!(f, "impl {} {{", self.0.name)?;
 
         for variant in &self.0.variants {
-            if variant.fields.len() == 0 {
+            if variant.fields.is_empty() {
                 writeln!(
                     f,
                     "   pub fn is_{}(&self) -> bool {{",

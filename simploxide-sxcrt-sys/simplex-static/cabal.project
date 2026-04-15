@@ -1,12 +1,12 @@
 source-repository-package
     type: git
     location: https://github.com/simplex-chat/simplex-chat
-    tag: 580e781a66ad16b11b67c9dc7296b18111aa2bc2
+    tag: ac6f8b76acff225d6f9adcdc5650319c9739b9e7
 
 source-repository-package
     type: git
     location: https://github.com/simplex-chat/simplexmq.git
-    tag: 50b71d3e569c85e788609f921ec1ae389c15abd3
+    tag: bc5ea42bec3a63e46b191e4150dd79957f114e01
 
 source-repository-package
     type: git
@@ -38,20 +38,17 @@ source-repository-package
     location: https://github.com/simplex-chat/android-support.git
     tag: 9aa09f148089d6752ce563b14c2df1895718d806
 
--- TODO this fork is only needed to compile with GHC 8.10.7 - it allows previous base version
 source-repository-package
     type: git
     location: https://github.com/simplex-chat/zip.git
     tag: 2eff156c3aac389e35d38bf10a52733d7061640a
 
--- waiting for published warp-tls-3.4.7
 source-repository-package
     type: git
     location: https://github.com/yesodweb/wai.git
     tag: ec5e017d896a78e787a5acea62b37a4e677dec2e
     subdir: warp-tls
 
--- backported fork due http-5.0
 source-repository-package
     type: git
     location: https://github.com/simplex-chat/wai.git
