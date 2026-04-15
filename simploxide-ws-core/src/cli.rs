@@ -192,7 +192,17 @@ where
 
         cmd.args(self.extra_args);
 
-        let handle = cmd.spawn()?;
+        let mut handle = cmd.spawn()?;
+
+        match tokio::time::timeout(std::time::Duration::from_secs(2), handle.wait()).await {
+            Ok(ret) => {
+                let exit = ret?;
+                return Err(io::Error::other(format!(
+                    "SimpleX-CLI terminated unexpectedly: {exit}"
+                )));
+            }
+            Err(_) => {}
+        }
 
         Ok(SimplexCli {
             handle: Some(handle),
