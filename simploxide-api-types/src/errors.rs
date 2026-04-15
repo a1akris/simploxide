@@ -2429,6 +2429,50 @@ impl RCErrorType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
+pub enum RcvMsgError {
+    #[serde(rename = "dropped")]
+    Dropped {
+        #[serde(
+            rename = "attempts",
+            deserialize_with = "deserialize_number_from_string"
+        )]
+        attempts: i32,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "parseError")]
+    ParseError {
+        #[serde(rename = "parseError")]
+        parse_error: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl RcvMsgError {
+    pub fn dropped(&self) -> Option<&i32> {
+        if let Self::Dropped { attempts, .. } = self {
+            Some(attempts)
+        } else {
+            None
+        }
+    }
+    pub fn parse_error(&self) -> Option<&String> {
+        if let Self::ParseError { parse_error, .. } = self {
+            Some(parse_error)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
 pub enum SMPAgentError {
     #[serde(rename = "A_MESSAGE")]
     AMessage,
@@ -2459,7 +2503,13 @@ pub enum SMPAgentError {
         undocumented: JsonObject,
     },
     #[serde(rename = "A_DUPLICATE")]
-    ADuplicate,
+    ADuplicate {
+        #[serde(rename = "droppedMsg_", skip_serializing_if = "Option::is_none")]
+        dropped_msg: Option<DroppedMsg>,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(rename = "A_QUEUE")]
     AQueue {
         #[serde(rename = "queueErr")]
@@ -2500,8 +2550,12 @@ impl SMPAgentError {
             None
         }
     }
-    pub fn is_a_duplicate(&self) -> bool {
-        matches!(self, Self::ADuplicate)
+    pub fn a_duplicate(&self) -> Option<&Option<DroppedMsg>> {
+        if let Self::ADuplicate { dropped_msg, .. } = self {
+            Some(dropped_msg)
+        } else {
+            None
+        }
     }
     pub fn a_queue(&self) -> Option<&String> {
         if let Self::AQueue { queue_err, .. } = self {
@@ -4220,6 +4274,7 @@ impl_error!(
     ProxyClientError,
     ProxyError,
     RCErrorType,
+    RcvMsgError,
     SMPAgentError,
     SndError,
     SrvError,

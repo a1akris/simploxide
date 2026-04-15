@@ -12,6 +12,7 @@ cargo run
 ./bindffi.sh
 mv generated/*rs ../simploxide-api-types/src/
 mv generated/ffi/*rs ../simploxide-sxcrt-sys/src/
+mv generated/ffi/cabal.project ../simploxide-sxcrt-sys/simplex-static/cabal.project
 
 # -------- CHECK TYPES
 cd ../simploxide-api-types/

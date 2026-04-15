@@ -15,7 +15,7 @@ use super::{Poly1305Tag, SimplexSecretBox, XSalsa20Key, XSalsa20Nonce};
 pub struct SecretBox {
     cipher: XSalsa20,
     mac: Poly1305,
-    // Partial Poly1305 block buffer — accumulates bytes between full 16-byte blocks.
+    // Partial bytes of Poly1305 block
     mac_tail: Zeroizing<[u8; 16]>,
     mac_tail_len: usize,
 }

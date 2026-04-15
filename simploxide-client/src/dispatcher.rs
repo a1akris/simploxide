@@ -318,7 +318,7 @@ where
         }
     }
 
-    /// *WARNING:* This is not a concurrent dispatch!
+    /// **WARNING:** This is not a concurrent dispatch!
     ///
     /// This method is the equivalent of [LocalDispatcher::dispatch] as it executes handlers
     /// sequentially one by one, the difference is it produces a `'static + Send` future. The

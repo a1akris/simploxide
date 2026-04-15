@@ -17,7 +17,6 @@ use std::{error::Error, sync::Arc};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let (bot, events, _cli) = ws::BotBuilder::new("SimplOxide Examples", 5225)
-        // Set path to the bot database
         .db_prefix("test_db/bot")
         // create a public bot address auto-accepting new users with a welcome message
         .auto_reply(
@@ -46,7 +45,7 @@ async fn new_msgs(ev: Arc<NewChatItems>, bot: ws::Bot) -> ClientResult<StreamEve
             .text()
             .and_then(|txt| txt.trim().parse::<i64>().ok())
         {
-            let square = num.wrapping_mul(num);
+            let square = num.saturating_mul(num);
             bot.send_msg(cid, format!("Squared: {square}"))
                 .reply_to(it.meta.item_id)
                 .await?;

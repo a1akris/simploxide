@@ -262,6 +262,14 @@ pub enum CIContent {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "rcvMsgError")]
+    RcvMsgError {
+        #[serde(rename = "rcvMsgError")]
+        rcv_msg_error: RcvMsgError,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(rename = "rcvGroupInvitation")]
     RcvGroupInvitation {
         #[serde(rename = "groupInvitation")]
@@ -564,6 +572,13 @@ impl CIContent {
         }
     }
 
+    pub fn make_rcv_msg_error(rcv_msg_error: RcvMsgError) -> Self {
+        Self::RcvMsgError {
+            rcv_msg_error,
+            undocumented: Default::default(),
+        }
+    }
+
     pub fn make_rcv_group_invitation(
         group_invitation: CIGroupInvitation,
         member_role: GroupMemberRole,
@@ -829,6 +844,13 @@ impl CIContent {
                 msg_decrypt_error,
                 msg_count,
             })
+        } else {
+            None
+        }
+    }
+    pub fn rcv_msg_error(&self) -> Option<&RcvMsgError> {
+        if let Self::RcvMsgError { rcv_msg_error, .. } = self {
+            Some(rcv_msg_error)
         } else {
             None
         }
@@ -2889,6 +2911,26 @@ pub enum Color {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct CommentsGroupPreference {
+    #[serde(rename = "enable")]
+    pub enable: GroupFeatureEnabled,
+
+    #[serde(
+        rename = "duration",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_option_number_from_string",
+        default
+    )]
+    pub duration: Option<i32>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct ComposedMessage {
     #[serde(rename = "fileSource", skip_serializing_if = "Option::is_none")]
     pub file_source: Option<CryptoFile>,
@@ -3834,6 +3876,24 @@ pub struct CryptoFileArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct DroppedMsg {
+    #[serde(rename = "brokerTs")]
+    pub broker_ts: UtcTime,
+
+    #[serde(
+        rename = "attempts",
+        deserialize_with = "deserialize_number_from_string"
+    )]
+    pub attempts: i32,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct E2EInfo {
     #[serde(rename = "pqEnabled", skip_serializing_if = "Option::is_none")]
     pub pq_enabled: Option<bool>,
@@ -4287,6 +4347,9 @@ pub struct FullGroupPreferences {
     #[serde(rename = "sessions")]
     pub sessions: RoleGroupPreference,
 
+    #[serde(rename = "comments")]
+    pub comments: CommentsGroupPreference,
+
     #[serde(rename = "commands")]
     pub commands: Vec<ChatBotCommand>,
 
@@ -4509,6 +4572,8 @@ pub enum GroupFeature {
     History,
     #[serde(rename = "sessions")]
     Sessions,
+    #[serde(rename = "comments")]
+    Comments,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -5047,6 +5112,9 @@ pub struct GroupPreferences {
 
     #[serde(rename = "sessions", skip_serializing_if = "Option::is_none")]
     pub sessions: Option<RoleGroupPreference>,
+
+    #[serde(rename = "comments", skip_serializing_if = "Option::is_none")]
+    pub comments: Option<CommentsGroupPreference>,
 
     #[serde(rename = "commands", skip_serializing_if = "Option::is_none")]
     pub commands: Option<Vec<ChatBotCommand>>,
