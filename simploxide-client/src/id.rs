@@ -1,4 +1,4 @@
-use simploxide_api_types::{ChatInfo, ChatRef, ChatType, Contact, GroupChatScope};
+use simploxide_api_types::{ChatInfo, ChatRef, ChatType, Contact, GroupChatScope, GroupInfo};
 
 macro_rules! typesafe_ids {
     ($($name:ident),*) => {
@@ -66,10 +66,6 @@ impl ChatId {
         }
     }
 
-    pub fn from_contact(contact: &Contact) -> Self {
-        ContactId(contact.contact_id).into()
-    }
-
     pub fn from_chat_info(chat_info: &ChatInfo) -> Option<Self> {
         match chat_info {
             ChatInfo::Direct { contact, .. } => Some(Self::Direct(ContactId(contact.contact_id))),
@@ -115,6 +111,33 @@ impl ChatId {
         }
     }
 }
+
+macro_rules! impl_id_from_struct {
+    ($strct:ty as $id:ty, $val:ident, $conversion:expr) => {
+        impl From<$strct> for $id {
+            fn from($val: $strct) -> Self {
+                $conversion
+            }
+        }
+
+        impl<'a> From<&'a $strct> for $id {
+            fn from($val: &'a $strct) -> Self {
+                $conversion
+            }
+        }
+
+        impl<'a> From<&'a mut $strct> for $id {
+            fn from($val: &'a mut $strct) -> Self {
+                $conversion
+            }
+        }
+    };
+}
+
+impl_id_from_struct!(Contact as ContactId, contact, ContactId(contact.contact_id));
+impl_id_from_struct!(Contact as ChatId, contact, ContactId::from(contact).into());
+impl_id_from_struct!(GroupInfo as GroupId, group, GroupId(group.group_id));
+impl_id_from_struct!(GroupInfo as ChatId, group, GroupId::from(group).into());
 
 impl From<ContactId> for ChatId {
     fn from(id: ContactId) -> Self {

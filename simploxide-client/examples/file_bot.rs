@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 println!("{} connected", ev.contact.profile.display_name);
 
                 bot.send_msg(
-                    ChatId::from_contact(&ev.contact),
+                    &ev.contact,
                     "Hello! I am a simple file bot - if you send me a file, I will send it back!",
                 )
                 .await?;
@@ -72,11 +72,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             };
 
             if file_info.file_size > 5 * 1024 * 1024 {
-                bot.send_msg(
-                    ChatId::from_contact(contact),
-                    "Sorry, but the file must be <5MiB",
-                )
-                .await?;
+                bot.send_msg(contact, "Sorry, but the file must be <5MiB")
+                    .await?;
 
                 bot.client().cancel_file(file_info.file_id).await?;
                 println!("File delivery cancelled: {file_info:#?}");
@@ -94,7 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
                 bot.send_msg(
-                    ChatId::from_contact(contact),
+                    contact,
                     format!(
                         "Failed to receive the {} due to this horrible error {:#?}",
                         ev.rcv_file_transfer.file_invitation.file_name, ev.agent_error
@@ -112,7 +109,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
                 bot.send_msg(
-                    ChatId::from_contact(contact),
+                    contact,
                     format!(
                         "Failed to receive the {} due to {:?}",
                         ev.rcv_file_transfer.file_invitation.file_name, ev.agent_error
@@ -159,8 +156,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 return Ok(StreamEvents::Continue);
             };
 
-            bot.send_msg(ChatId::from_contact(contact), "Gimme more!")
-                .await?;
+            bot.send_msg(contact, "Gimme more!").await?;
 
             Ok(StreamEvents::Continue)
         })
@@ -171,7 +167,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
                 bot.send_msg(
-                    ChatId::from_contact(contact),
+                    contact,
                     format!(
                         "Failed to send back the {} due to {:?}",
                         ev.file_transfer_meta.file_name, ev.error_message
@@ -189,7 +185,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 ev.chat_item.as_ref().map(|c| &c.chat_info)
             {
                 bot.send_msg(
-                    ChatId::from_contact(contact),
+                    contact,
                     format!(
                         "Failed to send back the {} due to this horrible error {:#?}",
                         ev.file_transfer_meta.file_name, ev.error_message
@@ -227,8 +223,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         continue;
                     };
 
-                    bot.send_msg(ChatId::from_contact(contact), "Hey, send me some files!")
-                        .await?;
+                    bot.send_msg(contact, "Hey, send me some files!").await?;
                 }
             }
 
@@ -290,6 +285,14 @@ impl BotExtensions for ws::Client {
 
     async fn recv_file(&self, file_id: i64) {
         let client = self.clone();
-        let _ = client.receive_file(ReceiveFile::new(file_id)).await;
+        let _ = client
+            .receive_file(ReceiveFile {
+                file_id,
+                user_approved_relays: false,
+                store_encrypted: Some(true),
+                file_inline: None,
+                file_path: None,
+            })
+            .await;
     }
 }
