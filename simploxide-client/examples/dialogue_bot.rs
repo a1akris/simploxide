@@ -55,9 +55,7 @@ async fn contact_connected(
     ev: Arc<ContactConnected>,
     dialogue: &mut Dialogue,
 ) -> ClientResult<StreamEvents> {
-    dialogue
-        .query_data(ChatId::from_contact(&ev.contact))
-        .await?;
+    dialogue.query_data(ChatId::from(&ev.contact)).await?;
 
     Ok(StreamEvents::Continue)
 }

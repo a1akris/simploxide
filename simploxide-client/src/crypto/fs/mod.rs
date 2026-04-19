@@ -136,7 +136,7 @@ impl<P: PlainFileOps, E: EncryptedFileOps> MaybeCryptoFile<P, E> {
         }
     }
 
-    pub fn read(crypto_file: SxcCryptoFile) -> ::std::io::Result<Self> {
+    pub fn reader(crypto_file: SxcCryptoFile) -> ::std::io::Result<Self> {
         match crypto_file.crypto_args {
             Some(args) => {
                 let crypto_args = FileCryptoArgs::try_from(args)?;
@@ -168,7 +168,7 @@ impl<P: AsyncPlainFileOps, E: AsyncEncryptedFileOps> MaybeCryptoFile<P, E> {
         }
     }
 
-    pub async fn read_async(crypto_file: SxcCryptoFile) -> ::std::io::Result<Self> {
+    pub async fn reader_async(crypto_file: SxcCryptoFile) -> ::std::io::Result<Self> {
         match crypto_file.crypto_args {
             Some(args) => {
                 let crypto_args = FileCryptoArgs::try_from(args)?;

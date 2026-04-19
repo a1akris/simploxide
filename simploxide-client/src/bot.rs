@@ -1,16 +1,21 @@
 use simploxide_api_types::{
-    AddressSettings, AutoAccept, ChatPeerType, CreatedConnLink, LocalProfile, MsgContent, NewUser,
-    Preferences, Profile,
-    client_api::{ClientApi, ClientApiError as _},
-    commands::{ApiSetActiveUser, ApiSetProfileAddress},
-    responses::{ApiUpdateProfileResponse, UserProfileUpdatedResponse},
+    AddressSettings, AutoAccept, ChatPeerType, Contact, CreatedConnLink, GroupInfo, LocalProfile,
+    MsgContent, NewUser, PendingContactConnection, Preferences, Profile, User,
+    client_api::{
+        AllowUndocumentedResponses as _, ClientApi, ClientApiError as _, UndocumentedResponse,
+    },
+    commands::{ApiAddContact, ApiSetActiveUser, ApiSetProfileAddress},
+    responses::{
+        ApiDeleteChatResponse, ApiUpdateProfileResponse, ConnectResponse,
+        ContactPrefsUpdatedResponse, NewChatItemsResponse, UserProfileUpdatedResponse,
+    },
 };
 
 use std::sync::Arc;
 
 use crate::{
-    ext::{ClientApiExt as _, MessageBuilder, MessageLike},
-    id::{ChatId, UserId},
+    ext::{ClientApiExt as _, DeleteMode, MessageBuilder, MessageLike, MulticastBuilder},
+    id::{ChatId, ContactId, UserId},
     preferences,
 };
 
@@ -33,10 +38,9 @@ impl<C> Bot<C> {
 
 impl<C: ClientApi> Bot<C> {
     pub async fn init(client: C, settings: BotSettings) -> Result<Self, C::Error> {
-        let mut response = client.list_users().await?;
-        let response = Arc::get_mut(&mut response).unwrap();
+        let mut users = client.users().await?;
 
-        match response.users.iter_mut().find_map(|info| {
+        match users.iter_mut().find_map(|info| {
             (info.user.profile.display_name == settings.display_name).then_some(&mut info.user)
         }) {
             Some(user) => {
@@ -166,13 +170,58 @@ impl<C: ClientApi> Bot<C> {
         }
     }
 
+    /// Get full bot user info
+    pub async fn info(&self) -> Result<Arc<User>, C::Error> {
+        let response = self.client.show_active_user().await?;
+        Ok(Arc::new(response.user.clone()))
+    }
+
+    /// Initiates the connection sequence.
+    ///
+    /// - If contact is already connected returns either [UndocumentedResponse::Documented] with
+    ///   [ConnectResponse::ContactAlreadyExists] or [UndocumentedResponse::Undocumented] with some
+    ///   other responses(_this is an upstream mistake, SimpleX docs don't list all possible
+    ///   responses for this method_).
+    ///
+    /// - If contact is not connected returns [UndocumentedResponse::Documented] with one of the
+    ///   remaining [ConnectResponse] variants. The implementation must listen for
+    ///   [crate::events::ContactConnected] or [crate::events::UserJoinedGroup] to confirm the
+    ///   connection.
+    pub async fn initiate_connection(
+        &self,
+        link: impl Into<String>,
+    ) -> Result<UndocumentedResponse<ConnectResponse>, C::Error> {
+        self.client
+            .initiate_connection(link)
+            .await
+            .allow_undocumented()
+    }
+
+    /// Create one-time-invitation link. Can be used for admin-access or for private connections
+    /// with other bots. The [PendingContactConnection::pcc_conn_id] can be matched with
+    /// [crate::types::Connection::conn_id] to recognize the user connected by this link when handling the
+    /// [crate::events::ContactConnected] event(see [crate::events::ContactConnected::contact])
+    pub async fn create_invitation_link(
+        &self,
+    ) -> Result<(String, Arc<PendingContactConnection>), C::Error> {
+        let response = self
+            .client
+            .api_add_contact(ApiAddContact::new(self.user_id))
+            .await?;
+
+        let link = extract_address(&response.conn_link_invitation);
+        let pcc = Arc::new(response.connection.clone());
+
+        Ok((link, pcc))
+    }
+
     pub async fn create_address(&self) -> Result<String, C::Error> {
         let response = self.client.api_create_my_address(self.user_id).await?;
         Ok(extract_address(&response.conn_link_contact))
     }
 
-    /// Throws [StoreError::UserContactLinkNotFound] if bot doesn't have an address. Use
-    /// [get_or_create_address] to ensure that address is available
+    /// Throws [crate::types::errors::StoreError::UserContactLinkNotFound] if bot doesn't have an address. Use
+    /// [Self::get_or_create_address] to ensure that address is available
     pub async fn address(&self) -> Result<String, C::Error> {
         let response = self.client.api_show_my_address(self.user_id).await?;
         Ok(extract_address(&response.contact_link.conn_link_contact))
@@ -268,6 +317,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Set the bot/user avatar
     pub async fn set_image(
         &self,
         // TODO: Make a helper type InlineImage type
@@ -286,6 +336,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Set global preferences
     pub async fn set_preferences(
         &self,
         preferences: Preferences,
@@ -294,14 +345,146 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
-    pub fn send_msg<M: MessageLike>(&self, chat_id: ChatId, msg: M) -> MessageBuilder<'_, C> {
-        self.client().send_message(chat_id, msg)
+    /// Set preferences for particular contact
+    pub async fn set_contact_preferences<CID: Into<ContactId>>(
+        &self,
+        contact_id: CID,
+        preferences: Preferences,
+    ) -> Result<Arc<ContactPrefsUpdatedResponse>, C::Error> {
+        self.client
+            .api_set_contact_prefs(contact_id.into().0, preferences)
+            .await
+    }
+
+    /// Get all contacts known to the bot(connected or not)
+    pub async fn contacts(&self) -> Result<Vec<Contact>, C::Error> {
+        self.client.contacts(self.user_id()).await
+    }
+
+    /// Get all groups known to the bot
+    pub async fn groups(&self) -> Result<Vec<GroupInfo>, C::Error> {
+        self.client.groups(self.user_id()).await
+    }
+
+    /// [ChatId] can be created from various types. See [ChatId] docs for the full list of `From`
+    /// impls.
+    pub fn send_msg<CID: Into<ChatId>, M: MessageLike>(
+        &self,
+        chat_id: CID,
+        msg: M,
+    ) -> MessageBuilder<'_, C> {
+        self.client.send_message(chat_id.into(), msg)
+    }
+
+    /// Send the same message to multiple recepients
+    pub fn multicast<I, M>(&self, chat_ids: I, msg: M) -> MulticastBuilder<'_, I, C>
+    where
+        I: IntoIterator<Item = ChatId>,
+        M: MessageLike,
+    {
+        self.client.multicast_message(chat_ids, msg)
+    }
+
+    /// Broadcast the same message to all existing contacts(groups included)
+    pub async fn broadcast<M>(
+        &self,
+        msg: M,
+    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
+    where
+        C: 'static,
+        C::Error: 'static + Send,
+        M: MessageLike,
+    {
+        self.bcst(msg, None, |_| true).await
+    }
+
+    /// Broadcast the same message to all existing contacts(groups included) matching the filter
+    pub async fn broadcast_filter<M, F>(
+        &self,
+        msg: M,
+        f: F,
+    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
+    where
+        C: 'static,
+        C::Error: 'static + Send,
+        M: MessageLike,
+        F: FnMut(&ChatId) -> bool,
+    {
+        self.bcst(msg, None, f).await
+    }
+
+    /// Broadcast the same message with TTL to all existing contacts(groups included)
+    pub async fn broadcast_with_ttl<M>(
+        &self,
+        msg: M,
+        ttl: std::time::Duration,
+    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
+    where
+        C: 'static,
+        C::Error: 'static + Send,
+        M: MessageLike,
+    {
+        self.bcst(msg, Some(ttl), |_| true).await
+    }
+
+    /// Broadcast the same message with TTL to all existing contacts(groups included) matching the
+    /// filter
+    pub async fn broadcast_filter_with_ttl<M, F>(
+        &self,
+        msg: M,
+        ttl: std::time::Duration,
+        f: F,
+    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
+    where
+        C: 'static,
+        C::Error: 'static + Send,
+        M: MessageLike,
+        F: FnMut(&ChatId) -> bool,
+    {
+        self.bcst(msg, Some(ttl), f).await
+    }
+
+    async fn bcst<F, M>(
+        &self,
+        msg: M,
+        ttl: Option<std::time::Duration>,
+        f: F,
+    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
+    where
+        F: FnMut(&ChatId) -> bool,
+        M: MessageLike,
+        C: 'static,
+        C::Error: 'static + Send,
+    {
+        let (contacts, groups) = futures::future::try_join(self.contacts(), self.groups()).await?;
+
+        let ids = contacts
+            .iter()
+            .map(ChatId::from)
+            .chain(groups.iter().map(ChatId::from))
+            .filter(f);
+
+        match ttl {
+            Some(ttl) => Ok(self.multicast(ids, msg).with_ttl(ttl).await),
+            None => Ok(self.multicast(ids, msg).await),
+        }
+    }
+
+    /// [ChatId] can be created from various types. See [ChatId] docs for the full list of `From`
+    /// impls.
+    pub async fn delete_chat<CID: Into<ChatId>>(
+        &self,
+        chat_id: CID,
+        mode: DeleteMode,
+    ) -> Result<ApiDeleteChatResponse, C::Error> {
+        self.client.delete_chat(chat_id, mode).await
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct BotSettings {
     pub display_name: String,
+    /// If string is empty creates an auto-accepting address without a message
     pub auto_reply: Option<String>,
     pub profile_settings: Option<BotProfileSettings>,
 }
@@ -315,7 +498,14 @@ impl BotSettings {
         }
     }
 
-    pub fn auto_accept(mut self, reply: impl Into<String>) -> Self {
+    /// Create a public auto-accepting address during the intialisation
+    pub fn auto_accept(mut self) -> Self {
+        self.auto_reply = Some(String::default());
+        self
+    }
+
+    /// Create a public auto-accepting address with a welcome meesage during the intialisation
+    pub fn auto_reply(mut self, reply: impl Into<String>) -> Self {
         self.auto_reply = Some(reply.into());
         self
     }
