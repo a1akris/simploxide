@@ -1,12 +1,11 @@
 use simploxide_api_types::{
-    AddressSettings, AutoAccept, ChatPeerType, Contact, CreatedConnLink, GroupInfo, LocalProfile,
-    MsgContent, NewUser, PendingContactConnection, Preferences, Profile, User,
-    client_api::{
-        AllowUndocumentedResponses as _, ClientApi, ClientApiError as _, UndocumentedResponse,
-    },
+    AddressSettings, AutoAccept, CIDeleteMode, ChatPeerType, Contact, CreatedConnLink, GroupInfo,
+    LocalProfile, MsgContent, NewUser, PendingContactConnection, Preferences, Profile, User,
+    client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
     commands::{ApiAddContact, ApiSetActiveUser, ApiSetProfileAddress},
     responses::{
-        ApiDeleteChatResponse, ApiUpdateProfileResponse, ConnectResponse,
+        ApiDeleteChatResponse, ApiUpdateChatItemResponse, ApiUpdateProfileResponse,
+        ChatItemReactionResponse, ChatItemsDeletedResponse, ConnectResponse,
         ContactPrefsUpdatedResponse, NewChatItemsResponse, UserProfileUpdatedResponse,
     },
 };
@@ -14,8 +13,8 @@ use simploxide_api_types::{
 use std::sync::Arc;
 
 use crate::{
-    ext::{ClientApiExt as _, DeleteMode, MessageBuilder, MessageLike, MulticastBuilder},
-    id::{ChatId, ContactId, UserId},
+    ext::{ClientApiExt as _, DeleteMode, MessageBuilder, MessageLike, MulticastBuilder, Reaction},
+    id::{ChatId, ContactId, MessageId, UserId},
     preferences,
 };
 
@@ -191,10 +190,7 @@ impl<C: ClientApi> Bot<C> {
         &self,
         link: impl Into<String>,
     ) -> Result<UndocumentedResponse<ConnectResponse>, C::Error> {
-        self.client
-            .initiate_connection(link)
-            .await
-            .allow_undocumented()
+        self.client.initiate_connection(link).await
     }
 
     /// Create one-time-invitation link. Can be used for admin-access or for private connections
@@ -468,6 +464,63 @@ impl<C: ClientApi> Bot<C> {
             Some(ttl) => Ok(self.multicast(ids, msg).with_ttl(ttl).await),
             None => Ok(self.multicast(ids, msg).await),
         }
+    }
+
+    pub async fn update_msg<CID: Into<ChatId>, MID: Into<MessageId>>(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        new_content: MsgContent,
+    ) -> Result<ApiUpdateChatItemResponse, C::Error> {
+        self.client
+            .update_message(chat_id, message_id, new_content)
+            .await
+    }
+
+    pub async fn delete_msg<CID: Into<ChatId>, MID: Into<MessageId>>(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        mode: CIDeleteMode,
+    ) -> Result<Arc<ChatItemsDeletedResponse>, C::Error> {
+        self.client.delete_message(chat_id, message_id, mode).await
+    }
+
+    pub async fn batch_delete_msgs<CID: Into<ChatId>, I: IntoIterator<Item = MessageId>>(
+        &self,
+        chat_id: CID,
+        message_ids: I,
+        mode: CIDeleteMode,
+    ) -> Result<Arc<ChatItemsDeletedResponse>, C::Error> {
+        self.client
+            .batch_delete_messages(chat_id, message_ids, mode)
+            .await
+    }
+
+    pub async fn batch_msg_reactions<
+        CID: Into<ChatId>,
+        MID: Into<MessageId>,
+        I: IntoIterator<Item = Reaction>,
+    >(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        reactions: I,
+    ) -> Vec<Result<Arc<ChatItemReactionResponse>, C::Error>> {
+        self.client
+            .batch_message_reactions(chat_id, message_id, reactions)
+            .await
+    }
+
+    pub async fn update_msg_reaction<CID: Into<ChatId>, MID: Into<MessageId>>(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        reaction: Reaction,
+    ) -> Vec<Result<Arc<ChatItemReactionResponse>, C::Error>> {
+        self.client
+            .update_message_reaction(chat_id, message_id, reaction)
+            .await
     }
 
     /// [ChatId] can be created from various types. See [ChatId] docs for the full list of `From`

@@ -1,21 +1,31 @@
 use simploxide_api_types::{
-    AChatItem, ChatDeleteMode, ChatItem, ComposedMessage, Contact, GroupInfo, MsgContent, NewUser,
-    UserInfo,
-    client_api::{ClientApi, ClientApiError as _},
-    commands::{ApiListGroups, ApiSendMessages, Connect},
-    responses::{ActiveUserResponse, ApiDeleteChatResponse, ConnectResponse, NewChatItemsResponse},
+    AChatItem, CIDeleteMode, ChatDeleteMode, ChatItem, ComposedMessage, Contact, GroupInfo,
+    MsgContent, MsgReaction, NewUser, UpdatedMessage, UserInfo,
+    client_api::{
+        AllowUndocumentedResponses as _, ClientApi, ClientApiError as _, UndocumentedResponse,
+    },
+    commands::{ApiChatItemReaction, ApiListGroups, ApiSendMessages, ApiUpdateChatItem, Connect},
+    responses::{
+        ActiveUserResponse, ApiDeleteChatResponse, ApiUpdateChatItemResponse,
+        ChatItemReactionResponse, ChatItemsDeletedResponse, ConnectResponse, NewChatItemsResponse,
+    },
 };
 
 use std::{pin::Pin, sync::Arc, time::Duration};
 
-use crate::id::{ChatId, UserId};
+use crate::id::{ChatId, MessageId, UserId};
 
-pub type UsersResponse<C> = Result<Vec<UserInfo>, <C as ClientApi>::Error>;
 pub type ContactsResponse<C> = Result<Vec<Contact>, <C as ClientApi>::Error>;
-pub type GroupsResponse<C> = Result<Vec<GroupInfo>, <C as ClientApi>::Error>;
-pub type NewUserResponse<C> = Result<Arc<ActiveUserResponse>, <C as ClientApi>::Error>;
-pub type InitiateConnectionResponse<C> = Result<ConnectResponse, <C as ClientApi>::Error>;
 pub type DeleteChatResponse<C> = Result<ApiDeleteChatResponse, <C as ClientApi>::Error>;
+pub type DeleteMessageResponse<C> = Result<Arc<ChatItemsDeletedResponse>, <C as ClientApi>::Error>;
+pub type GroupsResponse<C> = Result<Vec<GroupInfo>, <C as ClientApi>::Error>;
+pub type InitiateConnectionResponse<C> =
+    Result<UndocumentedResponse<ConnectResponse>, <C as ClientApi>::Error>;
+pub type NewUserResponse<C> = Result<Arc<ActiveUserResponse>, <C as ClientApi>::Error>;
+pub type UpdateMessageReactionsResponse<C> =
+    Vec<Result<Arc<ChatItemReactionResponse>, <C as ClientApi>::Error>>;
+pub type UpdateMessageResponse<C> = Result<ApiUpdateChatItemResponse, <C as ClientApi>::Error>;
+pub type UsersResponse<C> = Result<Vec<UserInfo>, <C as ClientApi>::Error>;
 
 pub trait ClientApiExt: ClientApi {
     fn users(&self) -> impl Future<Output = UsersResponse<Self>>;
@@ -25,21 +35,66 @@ pub trait ClientApiExt: ClientApi {
     fn groups(&self, user_id: UserId) -> impl Future<Output = GroupsResponse<Self>>;
 
     /// Like [ClientApi::create_active_user] but ensures that user is created even if the name
-    /// contains invalid UTF-8 characters. The user struct gets cloned when performing the original
-    /// request
+    /// contains disallowed in SimpleX-Chat UTF-8 characters. The [NewUser] struct gets cloned when
+    /// performing the original request
     fn new_user(&self, user: NewUser) -> impl Future<Output = NewUserResponse<Self>>;
 
-    /// [ChatId] can be created from various types. See [ChatId] docs for all `From` impls
+    /// Returns a powerful awaitable [MessageBuilder] type. Check its docs to learn how to build
+    /// any message kind ergonomically
     fn send_message<CID: Into<ChatId>, M: MessageLike>(
         &self,
         chat_id: CID,
         msg: M,
     ) -> MessageBuilder<'_, Self>;
 
+    /// Deliver the same message to multiple recepients
     fn multicast_message<I, M>(&self, chat_ids: I, msg: M) -> MulticastBuilder<'_, I, Self>
     where
         I: IntoIterator<Item = ChatId>,
         M: MessageLike;
+
+    fn update_message<CID: Into<ChatId>, MID: Into<MessageId>>(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        new_content: MsgContent,
+    ) -> impl Future<Output = UpdateMessageResponse<Self>>;
+
+    fn batch_delete_messages<CID: Into<ChatId>, I: IntoIterator<Item = MessageId>>(
+        &self,
+        chat_id: CID,
+        message_ids: I,
+        mode: CIDeleteMode,
+    ) -> impl Future<Output = DeleteMessageResponse<Self>>;
+
+    fn delete_message<CID: Into<ChatId>, MID: Into<MessageId>>(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        mode: CIDeleteMode,
+    ) -> impl Future<Output = DeleteMessageResponse<Self>> {
+        self.batch_delete_messages(chat_id, std::iter::once(message_id.into()), mode)
+    }
+
+    fn batch_message_reactions<
+        CID: Into<ChatId>,
+        MID: Into<MessageId>,
+        I: IntoIterator<Item = Reaction>,
+    >(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        reactions: I,
+    ) -> impl Future<Output = UpdateMessageReactionsResponse<Self>>;
+
+    fn update_message_reaction<CID: Into<ChatId>, MID: Into<MessageId>>(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        reaction: Reaction,
+    ) -> impl Future<Output = UpdateMessageReactionsResponse<Self>> {
+        self.batch_message_reactions(chat_id, message_id, std::iter::once(reaction))
+    }
 
     fn initiate_connection(
         &self,
@@ -121,6 +176,71 @@ where
         }
     }
 
+    async fn update_message<CID: Into<ChatId>, MID: Into<MessageId>>(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        new_content: MsgContent,
+    ) -> UpdateMessageResponse<Self> {
+        self.api_update_chat_item(ApiUpdateChatItem {
+            chat_ref: chat_id.into().into_chat_ref(),
+            chat_item_id: message_id.into().0,
+            live_message: false,
+            updated_message: UpdatedMessage {
+                msg_content: new_content,
+                mentions: Default::default(),
+                undocumented: Default::default(),
+            },
+        })
+        .await
+    }
+
+    async fn batch_delete_messages<CID: Into<ChatId>, I: IntoIterator<Item = MessageId>>(
+        &self,
+        chat_id: CID,
+        message_ids: I,
+        mode: CIDeleteMode,
+    ) -> DeleteMessageResponse<Self> {
+        self.api_delete_chat_item(
+            chat_id.into().into_chat_ref(),
+            message_ids.into_iter().map(|id| id.0).collect(),
+            mode,
+        )
+        .await
+    }
+
+    async fn batch_message_reactions<
+        CID: Into<ChatId>,
+        MID: Into<MessageId>,
+        I: IntoIterator<Item = Reaction>,
+    >(
+        &self,
+        chat_id: CID,
+        message_id: MID,
+        reactions: I,
+    ) -> UpdateMessageReactionsResponse<Self> {
+        let chat_id = chat_id.into();
+        let message_id = message_id.into();
+
+        futures::future::join_all(reactions.into_iter().map(|r| {
+            let (add, emoji) = match r {
+                Reaction::Set(e) => (true, e),
+                Reaction::Unset(e) => (false, e),
+            };
+
+            self.api_chat_item_reaction(ApiChatItemReaction {
+                chat_ref: chat_id.into_chat_ref(),
+                chat_item_id: message_id.0,
+                add,
+                reaction: MsgReaction::Emoji {
+                    emoji,
+                    undocumented: Default::default(),
+                },
+            })
+        }))
+        .await
+    }
+
     async fn initiate_connection(
         &self,
         link: impl Into<String>,
@@ -130,6 +250,7 @@ where
             conn_link: Some(link.into()),
         })
         .await
+        .allow_undocumented()
     }
 
     async fn delete_chat<CID: Into<ChatId>>(
@@ -334,4 +455,10 @@ where
 
         Box::pin(futures::future::join_all(iter))
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum Reaction {
+    Set(String),
+    Unset(String),
 }
