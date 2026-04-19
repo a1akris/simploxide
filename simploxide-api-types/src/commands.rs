@@ -1382,6 +1382,7 @@ impl CommandSyntax for ApiAddContact {
 pub struct ApiConnectPlan {
     pub user_id: i64,
     pub connection_link: Option<String>,
+    pub link_owner_sig: Option<LinkOwnerSig>,
 }
 
 impl ApiConnectPlan {
@@ -1390,12 +1391,13 @@ impl ApiConnectPlan {
         Self {
             user_id,
             connection_link: None,
+            link_owner_sig: None,
         }
     }
 }
 
 impl CommandSyntax for ApiConnectPlan {
-    const COMMAND_BUF_SIZE: usize = 64;
+    const COMMAND_BUF_SIZE: usize = 256;
 
     fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/_connect ");

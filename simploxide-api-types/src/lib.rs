@@ -3559,6 +3559,9 @@ pub enum ContactAddressPlan {
         #[serde(rename = "contactSLinkData_", skip_serializing_if = "Option::is_none")]
         contact_s_link_data: Option<ContactShortLinkData>,
 
+        #[serde(rename = "ownerVerification", skip_serializing_if = "Option::is_none")]
+        owner_verification: Option<OwnerVerification>,
+
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
@@ -3595,9 +3598,13 @@ pub enum ContactAddressPlan {
 }
 
 impl ContactAddressPlan {
-    pub fn make_ok(contact_s_link_data: Option<ContactShortLinkData>) -> Self {
+    pub fn make_ok(
+        contact_s_link_data: Option<ContactShortLinkData>,
+        owner_verification: Option<OwnerVerification>,
+    ) -> Self {
         Self::Ok {
             contact_s_link_data,
+            owner_verification,
             undocumented: Default::default(),
         }
     }
@@ -3633,13 +3640,17 @@ impl ContactAddressPlan {
 }
 
 impl ContactAddressPlan {
-    pub fn ok(&self) -> Option<&Option<ContactShortLinkData>> {
+    pub fn ok(&self) -> Option<ContactAddressPlanOkRef<'_>> {
         if let Self::Ok {
             contact_s_link_data,
+            owner_verification,
             ..
         } = self
         {
-            Some(contact_s_link_data)
+            Some(ContactAddressPlanOkRef {
+                contact_s_link_data,
+                owner_verification,
+            })
         } else {
             None
         }
@@ -3671,6 +3682,11 @@ impl ContactAddressPlan {
             None
         }
     }
+}
+#[derive(Clone, Copy)]
+pub struct ContactAddressPlanOkRef<'a> {
+    pub contact_s_link_data: &'a Option<ContactShortLinkData>,
+    pub owner_verification: &'a Option<OwnerVerification>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -4738,6 +4754,9 @@ pub enum GroupLinkPlan {
         #[serde(rename = "groupSLinkData_", skip_serializing_if = "Option::is_none")]
         group_s_link_data: Option<GroupShortLinkData>,
 
+        #[serde(rename = "ownerVerification", skip_serializing_if = "Option::is_none")]
+        owner_verification: Option<OwnerVerification>,
+
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
@@ -4767,6 +4786,14 @@ pub enum GroupLinkPlan {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "noRelays")]
+    NoRelays {
+        #[serde(rename = "groupSLinkData_", skip_serializing_if = "Option::is_none")]
+        group_s_link_data: Option<GroupShortLinkData>,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(untagged)]
     Undocumented(JsonObject),
 }
@@ -4775,10 +4802,12 @@ impl GroupLinkPlan {
     pub fn make_ok(
         group_s_link_info: Option<GroupShortLinkInfo>,
         group_s_link_data: Option<GroupShortLinkData>,
+        owner_verification: Option<OwnerVerification>,
     ) -> Self {
         Self::Ok {
             group_s_link_info,
             group_s_link_data,
+            owner_verification,
             undocumented: Default::default(),
         }
     }
@@ -4807,6 +4836,13 @@ impl GroupLinkPlan {
             undocumented: Default::default(),
         }
     }
+
+    pub fn make_no_relays(group_s_link_data: Option<GroupShortLinkData>) -> Self {
+        Self::NoRelays {
+            group_s_link_data,
+            undocumented: Default::default(),
+        }
+    }
 }
 
 impl GroupLinkPlan {
@@ -4814,12 +4850,14 @@ impl GroupLinkPlan {
         if let Self::Ok {
             group_s_link_info,
             group_s_link_data,
+            owner_verification,
             ..
         } = self
         {
             Some(GroupLinkPlanOkRef {
                 group_s_link_info,
                 group_s_link_data,
+                owner_verification,
             })
         } else {
             None
@@ -4849,11 +4887,22 @@ impl GroupLinkPlan {
             None
         }
     }
+    pub fn no_relays(&self) -> Option<&Option<GroupShortLinkData>> {
+        if let Self::NoRelays {
+            group_s_link_data, ..
+        } = self
+        {
+            Some(group_s_link_data)
+        } else {
+            None
+        }
+    }
 }
 #[derive(Clone, Copy)]
 pub struct GroupLinkPlanOkRef<'a> {
     pub group_s_link_info: &'a Option<GroupShortLinkInfo>,
     pub group_s_link_data: &'a Option<GroupShortLinkData>,
+    pub owner_verification: &'a Option<OwnerVerification>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -5360,6 +5409,9 @@ pub enum InvitationLinkPlan {
         #[serde(rename = "contactSLinkData_", skip_serializing_if = "Option::is_none")]
         contact_s_link_data: Option<ContactShortLinkData>,
 
+        #[serde(rename = "ownerVerification", skip_serializing_if = "Option::is_none")]
+        owner_verification: Option<OwnerVerification>,
+
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
@@ -5386,9 +5438,13 @@ pub enum InvitationLinkPlan {
 }
 
 impl InvitationLinkPlan {
-    pub fn make_ok(contact_s_link_data: Option<ContactShortLinkData>) -> Self {
+    pub fn make_ok(
+        contact_s_link_data: Option<ContactShortLinkData>,
+        owner_verification: Option<OwnerVerification>,
+    ) -> Self {
         Self::Ok {
             contact_s_link_data,
+            owner_verification,
             undocumented: Default::default(),
         }
     }
@@ -5413,13 +5469,17 @@ impl InvitationLinkPlan {
 }
 
 impl InvitationLinkPlan {
-    pub fn ok(&self) -> Option<&Option<ContactShortLinkData>> {
+    pub fn ok(&self) -> Option<InvitationLinkPlanOkRef<'_>> {
         if let Self::Ok {
             contact_s_link_data,
+            owner_verification,
             ..
         } = self
         {
-            Some(contact_s_link_data)
+            Some(InvitationLinkPlanOkRef {
+                contact_s_link_data,
+                owner_verification,
+            })
         } else {
             None
         }
@@ -5441,6 +5501,11 @@ impl InvitationLinkPlan {
             None
         }
     }
+}
+#[derive(Clone, Copy)]
+pub struct InvitationLinkPlanOkRef<'a> {
+    pub contact_s_link_data: &'a Option<ContactShortLinkData>,
+    pub owner_verification: &'a Option<OwnerVerification>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -5586,6 +5651,24 @@ impl LinkContent {
 pub struct LinkContentUnknownRef<'a> {
     pub tag: &'a String,
     pub json: &'a JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct LinkOwnerSig {
+    #[serde(rename = "ownerId", skip_serializing_if = "Option::is_none")]
+    pub owner_id: Option<String>,
+
+    #[serde(rename = "chatBinding")]
+    pub chat_binding: String,
+
+    #[serde(rename = "ownerSig")]
+    pub owner_sig: String,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -5884,6 +5967,9 @@ pub enum MsgContent {
         #[serde(rename = "chatLink")]
         chat_link: MsgChatLink,
 
+        #[serde(rename = "ownerSig", skip_serializing_if = "Option::is_none")]
+        owner_sig: Option<LinkOwnerSig>,
+
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
@@ -5961,10 +6047,15 @@ impl MsgContent {
         }
     }
 
-    pub fn make_chat(text: String, chat_link: MsgChatLink) -> Self {
+    pub fn make_chat(
+        text: String,
+        chat_link: MsgChatLink,
+        owner_sig: Option<LinkOwnerSig>,
+    ) -> Self {
         Self::Chat {
             text,
             chat_link,
+            owner_sig,
             undocumented: Default::default(),
         }
     }
@@ -6041,10 +6132,17 @@ impl MsgContent {
     }
     pub fn chat(&self) -> Option<MsgContentChatRef<'_>> {
         if let Self::Chat {
-            text, chat_link, ..
+            text,
+            chat_link,
+            owner_sig,
+            ..
         } = self
         {
-            Some(MsgContentChatRef { text, chat_link })
+            Some(MsgContentChatRef {
+                text,
+                chat_link,
+                owner_sig,
+            })
         } else {
             None
         }
@@ -6090,6 +6188,7 @@ pub struct MsgContentReportRef<'a> {
 pub struct MsgContentChatRef<'a> {
     pub text: &'a String,
     pub chat_link: &'a MsgChatLink,
+    pub owner_sig: &'a Option<LinkOwnerSig>,
 }
 #[derive(Clone, Copy)]
 pub struct MsgContentUnknownRef<'a> {
@@ -6255,6 +6354,50 @@ pub struct NoteFolder {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
+pub enum OwnerVerification {
+    #[serde(rename = "verified")]
+    Verified,
+    #[serde(rename = "failed")]
+    Failed {
+        #[serde(rename = "reason")]
+        reason: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl OwnerVerification {
+    pub fn make_verified() -> Self {
+        Self::Verified
+    }
+
+    pub fn make_failed(reason: String) -> Self {
+        Self::Failed {
+            reason,
+            undocumented: Default::default(),
+        }
+    }
+}
+
+impl OwnerVerification {
+    pub fn is_verified(&self) -> bool {
+        matches!(self, Self::Verified)
+    }
+    pub fn failed(&self) -> Option<&String> {
+        if let Self::Failed { reason, .. } = self {
+            Some(reason)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -7273,6 +7416,8 @@ pub enum RelayStatus {
     Accepted,
     #[serde(rename = "active")]
     Active,
+    #[serde(rename = "inactive")]
+    Inactive,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

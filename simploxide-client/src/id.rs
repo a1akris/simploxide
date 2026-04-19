@@ -1,4 +1,6 @@
-use simploxide_api_types::{ChatInfo, ChatRef, ChatType, Contact, GroupChatScope, GroupInfo};
+use simploxide_api_types::{
+    CIMeta, ChatInfo, ChatItem, ChatRef, ChatType, Contact, GroupChatScope, GroupInfo,
+};
 
 macro_rules! typesafe_ids {
     ($($name:ident),*) => {
@@ -6,12 +8,6 @@ macro_rules! typesafe_ids {
             #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
             #[repr(transparent)]
             pub struct $name(pub i64);
-
-            impl From<$name> for i64 {
-                fn from(id: $name) -> i64 {
-                    id.0
-                }
-            }
 
             impl ::std::fmt::Display for $name {
                 fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -112,6 +108,24 @@ impl ChatId {
     }
 }
 
+impl From<ContactId> for ChatId {
+    fn from(id: ContactId) -> Self {
+        Self::Direct(id)
+    }
+}
+
+impl From<GroupId> for ChatId {
+    fn from(id: GroupId) -> Self {
+        Self::Group { id, scope: None }
+    }
+}
+
+impl From<UserId> for ChatId {
+    fn from(id: UserId) -> Self {
+        Self::Local(id)
+    }
+}
+
 macro_rules! impl_id_from_struct {
     ($strct:ty as $id:ty, $val:ident, $conversion:expr) => {
         impl From<$strct> for $id {
@@ -136,23 +150,9 @@ macro_rules! impl_id_from_struct {
 
 impl_id_from_struct!(Contact as ContactId, contact, ContactId(contact.contact_id));
 impl_id_from_struct!(Contact as ChatId, contact, ContactId::from(contact).into());
+
 impl_id_from_struct!(GroupInfo as GroupId, group, GroupId(group.group_id));
 impl_id_from_struct!(GroupInfo as ChatId, group, GroupId::from(group).into());
 
-impl From<ContactId> for ChatId {
-    fn from(id: ContactId) -> Self {
-        Self::Direct(id)
-    }
-}
-
-impl From<GroupId> for ChatId {
-    fn from(id: GroupId) -> Self {
-        Self::Group { id, scope: None }
-    }
-}
-
-impl From<UserId> for ChatId {
-    fn from(id: UserId) -> Self {
-        Self::Local(id)
-    }
-}
+impl_id_from_struct!(CIMeta as MessageId, meta, MessageId(meta.item_id));
+impl_id_from_struct!(ChatItem as MessageId, item, MessageId::from(&item.meta));
