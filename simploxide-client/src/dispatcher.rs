@@ -1,5 +1,7 @@
 use futures::TryStreamExt as _;
 use simploxide_api_types::events::{Event, EventData};
+#[cfg(feature = "cancellation")]
+use tokio_util::sync::CancellationToken;
 
 use std::{pin::Pin, sync::Arc};
 
@@ -173,6 +175,53 @@ where
         stream.accept_all();
         Ok((stream, ctx))
     }
+
+    /// Like [Self::dispatch] but allows to cancel the dispatching by some external signal
+    /// triggering the [CancellationToken]. The behaviour of triggering the cancellation token is
+    /// equivalent of returning [StreamEvents::Break].
+    #[cfg(feature = "cancellation")]
+    pub async fn dispatch_with_cancellation(
+        self,
+        token: CancellationToken,
+    ) -> Result<(EventStream<P>, Ctx), D::Error>
+    where
+        P: EventParser,
+        D::Error: From<P::Error>,
+    {
+        let Self {
+            mut ctx,
+            mut events,
+            mut chain,
+        } = self;
+
+        loop {
+            tokio::select! {
+                biased;
+
+                _ = token.cancelled() => {
+                    break;
+                }
+
+                res = events.try_next() => match res {
+                    Ok(Some(ev)) => {
+                        let Ok(handler) = chain.dispatch_event(ev, &mut ctx) else {
+                            unreachable!("EventStream filters set by on/fallback methods drop events without handlers during parsing");
+                        };
+
+                        if let StreamEvents::Break = handler.await? {
+                            break;
+                        }
+                    }
+                    Ok(None) => break,
+                    Err(e) => return Err(e.into()),
+                }
+
+            }
+        }
+
+        events.accept_all();
+        Ok((events, ctx))
+    }
 }
 
 /// Dispatcher builder
@@ -342,6 +391,49 @@ where
         Ok((stream, ctx))
     }
 
+    #[cfg(feature = "cancellation")]
+    /// Like [Self::sequential_dispatch] but allows to cancel the dispatching by some external signal
+    /// triggering the [CancellationToken]. The behaviour of triggering the cancellation token is
+    /// equivalent of returning [StreamEvents::Break].
+    pub async fn sequential_dispatch_with_cancellation(
+        self,
+        token: CancellationToken,
+    ) -> Result<(EventStream<P>, Ctx), D::Error> {
+        let Self {
+            ctx,
+            mut events,
+            chain,
+        } = self;
+
+        loop {
+            tokio::select! {
+                biased;
+
+                _ = token.cancelled() => {
+                    break;
+                }
+
+                res = events.try_next() => match res {
+                    Ok(Some(ev)) => {
+                        let Ok(handler) = chain.concurrent_dispatch_event(ev, ctx.clone()) else {
+                            unreachable!("EventStream filters set by on/fallback methods drop events without handlers during parsing");
+                        };
+
+                        if let StreamEvents::Break = handler.await? {
+                            break;
+                        }
+                    }
+                    Ok(None) => break,
+                    Err(e) => return Err(e.into()),
+                }
+
+            }
+        }
+
+        events.accept_all();
+        Ok((events, ctx))
+    }
+
     /// Spawns handlers as tokio tasks. Handlers will execute and resolve in arbitrary order.
     /// [StreamEvents::Break] eventually stops the dispatcher but it doesn't stop spawning new
     /// event handlers until it is observed so assumptions about the resulting Ctx state must not
@@ -393,7 +485,78 @@ where
                     Some(Ok(Ok(StreamEvents::Continue)))=> continue,
                     Some(Ok(Ok(StreamEvents::Break))) => break Ok(Ok(StreamEvents::Break)),
                     Some(err) => break err,
-                    None => unreachable!("Dummy task must be running while we're tokio select! loop")
+                    None => unreachable!("Dummy task must be running during the whole tokio select! loop")
+                }
+            }
+        };
+
+        let _ = cancellator.send(());
+        while let Some(res) = join_set.join_next().await {
+            result = result.and(res);
+        }
+
+        match result {
+            Ok(inner) => inner.map(move |_| {
+                events.accept_all();
+                (events, ctx)
+            }),
+            Err(e) => std::panic::resume_unwind(e.into_panic()),
+        }
+    }
+
+    #[cfg(feature = "cancellation")]
+    /// Like [Self::dispatch] but allows to cancel the dispatching by some external signal
+    /// triggering the [CancellationToken]. The behaviour of triggering the cancellation token is
+    /// equivalent of returning [StreamEvents::Break].
+    // TODO: This is a direct copy-paste of dispatch with an extra select branch. Try to reduce
+    // code-duplication
+    pub async fn dispatch_with_cancellation(
+        self,
+        token: CancellationToken,
+    ) -> Result<(EventStream<P>, Ctx), D::Error> {
+        let chain = Arc::new(self.chain);
+        let ctx = self.ctx;
+
+        let mut events = self.events;
+        let mut join_set: tokio::task::JoinSet<Result<StreamEvents, D::Error>> =
+            tokio::task::JoinSet::new();
+        let (cancellator, cancellation) = tokio::sync::oneshot::channel::<()>();
+
+        // A dummy task to avoid busy select! loop when JoinSet is empty.
+        // Should be manually cancelled
+        join_set.spawn(async move {
+            let _ = cancellation.await;
+            Ok(StreamEvents::Continue)
+        });
+
+        let mut result: Result<Result<StreamEvents, D::Error>, tokio::task::JoinError> = loop {
+            tokio::select! {
+                _ = token.cancelled() => {
+                    break Ok(Ok(StreamEvents::Break));
+                }
+                result = events.try_next() => match result {
+                    Ok(Some(event)) => {
+                        let Ok(handler) = chain.concurrent_dispatch_event(event, ctx.clone()) else {
+                            unreachable!(
+                                "EventStream filtering set by on and fallback methods drops events without handlers before parsing them"
+                            );
+                        };
+
+                        join_set.spawn(handler);
+                    }
+                    Ok(None) => {
+                        break Ok(Ok(StreamEvents::Break));
+                    }
+                    Err(e) => {
+                        break Ok(Err(e.into()));
+                    }
+                },
+
+                result = join_set.join_next() => match result {
+                    Some(Ok(Ok(StreamEvents::Continue)))=> continue,
+                    Some(Ok(Ok(StreamEvents::Break))) => break Ok(Ok(StreamEvents::Break)),
+                    Some(err) => break err,
+                    None => unreachable!("Dummy task must be running during the whole tokio select! loop")
                 }
             }
         };
