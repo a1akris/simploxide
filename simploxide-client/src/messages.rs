@@ -213,10 +213,9 @@ impl<'a, C> MessageBuilder<'a, C> {
 
     /// Sets message text preserving current [MsgContent]
     pub fn set_text(mut self, text: impl Into<String>) -> Self {
-        self.msg
-            .msg_content
-            .text_mut()
-            .map(move |s| *s = text.into());
+        if let Some(s) = self.msg.msg_content.text_mut() {
+            *s = text.into();
+        }
 
         self
     }
@@ -225,7 +224,7 @@ impl<'a, C> MessageBuilder<'a, C> {
         self.msg
             .msg_content
             .text_mut()
-            .map(|s| std::mem::take(s))
+            .map(std::mem::take)
             .unwrap_or_default()
     }
 }

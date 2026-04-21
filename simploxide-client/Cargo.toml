@@ -21,6 +21,7 @@ websocket = ["dep:simploxide-ws-core"]
 cli = ["websocket", "simploxide-ws-core/cli"]
 crypto = ["dep:zeroize", "dep:base64", "dep:rand", "tokio/fs"]
 native_crypto = ["crypto", "dep:salsa20", "dep:poly1305", "dep:subtle"]
+cancellation = ["dep:tokio-util"]
 
 [dependencies]
 futures.workspace = true
@@ -39,6 +40,7 @@ rand = { version = "0.10", optional = true }
 salsa20 = { version = "0.11.0", features = ["zeroize"], optional = true }
 subtle = { version = "2", optional = true }
 zeroize = { version = "1", features = ["derive"], optional = true }
+tokio-util = { version = "0.7", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }

@@ -21,6 +21,9 @@ pub use simploxide_api_types::{
     utils::CommandSyntax,
 };
 
+#[cfg(feature = "cancellation")]
+pub use tokio_util::{self, sync::CancellationToken};
+
 pub use dispatcher::{DispatchChain, LocalDispatchChain};
 
 use futures::{Stream, TryStreamExt as _};

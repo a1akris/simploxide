@@ -7,6 +7,7 @@ pub use crate::{
     events::*,
     ext::{ClientApiExt as _, DeleteMode, FilterChatItems as _},
     id::*,
+    messages::*,
     preferences,
     responses::*,
     types::{
