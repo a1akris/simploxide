@@ -4,17 +4,19 @@ use simploxide_api_types::{
     client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
     commands::{ApiAddContact, ApiSetActiveUser, ApiSetProfileAddress},
     responses::{
-        ApiDeleteChatResponse, ApiUpdateChatItemResponse, ApiUpdateProfileResponse,
-        ChatItemReactionResponse, ChatItemsDeletedResponse, ConnectResponse,
-        ContactPrefsUpdatedResponse, NewChatItemsResponse, UserProfileUpdatedResponse,
+        AcceptingContactRequestResponse, ApiDeleteChatResponse, ApiUpdateChatItemResponse,
+        ApiUpdateProfileResponse, ChatItemReactionResponse, ChatItemsDeletedResponse,
+        ConnectResponse, ContactPrefsUpdatedResponse, ContactRequestRejectedResponse,
+        NewChatItemsResponse, UserProfileUpdatedResponse,
     },
 };
 
 use std::sync::Arc;
 
 use crate::{
-    ext::{ClientApiExt as _, DeleteMode, MessageBuilder, MessageLike, MulticastBuilder, Reaction},
-    id::{ChatId, ContactId, MessageId, UserId},
+    ext::{ClientApiExt as _, DeleteMode, Reaction},
+    id::{ChatId, ContactId, ContactRequestId, MessageId, UserId},
+    messages::{MessageBuilder, MessageLike, MulticastBuilder},
     preferences,
 };
 
@@ -93,9 +95,7 @@ impl<C: ClientApi> Bot<C> {
                         BotProfileSettings::FullProfile(profile) => profile,
                     };
 
-                    bot.client()
-                        .api_update_profile(user.user_id, profile)
-                        .await?;
+                    bot.client.api_update_profile(user.user_id, profile).await?;
                 }
 
                 Ok(bot)
@@ -277,7 +277,7 @@ impl<C: ClientApi> Bot<C> {
     where
         F: 'static + Send + FnOnce(&mut Profile),
     {
-        let mut response = self.client().show_active_user().await?;
+        let mut response = self.client.show_active_user().await?;
         let response = Arc::get_mut(&mut response).unwrap();
 
         let mut profile = extract_profile(&mut response.user.profile);
@@ -341,12 +341,52 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Update global preferences via closure accepting current preferences
+    pub async fn update_preferences<F>(
+        &self,
+        updater: F,
+    ) -> Result<ApiUpdateProfileResponse, C::Error>
+    where
+        F: 'static + Send + FnOnce(&mut Preferences),
+    {
+        let mut response = self.client.show_active_user().await?;
+        let response = Arc::get_mut(&mut response).unwrap();
+
+        let mut profile = extract_profile(&mut response.user.profile);
+        let mut preferences = extract_preferences(&mut profile.preferences);
+        updater(&mut preferences);
+        profile.preferences = Some(preferences);
+
+        self.client.api_update_profile(self.user_id, profile).await
+    }
+
     /// Set preferences for particular contact
     pub async fn set_contact_preferences<CID: Into<ContactId>>(
         &self,
         contact_id: CID,
         preferences: Preferences,
     ) -> Result<Arc<ContactPrefsUpdatedResponse>, C::Error> {
+        self.client
+            .api_set_contact_prefs(contact_id.into().0, preferences)
+            .await
+    }
+
+    /// Tweak global preferences for particular contact via closure accepting current global
+    /// preferences
+    pub async fn tweak_preferences_for_contact<CID: Into<ContactId>, F>(
+        &self,
+        contact_id: CID,
+        updater: F,
+    ) -> Result<Arc<ContactPrefsUpdatedResponse>, C::Error>
+    where
+        F: 'static + Send + FnOnce(&mut Preferences),
+    {
+        let mut response = self.client.show_active_user().await?;
+        let response = Arc::get_mut(&mut response).unwrap();
+
+        let mut preferences = extract_preferences(&mut response.user.profile.preferences);
+        updater(&mut preferences);
+
         self.client
             .api_set_contact_prefs(contact_id.into().0, preferences)
             .await
@@ -362,8 +402,22 @@ impl<C: ClientApi> Bot<C> {
         self.client.groups(self.user_id()).await
     }
 
-    /// [ChatId] can be created from various types. See [ChatId] docs for the full list of `From`
-    /// impls.
+    /// Accept contact request
+    pub async fn accept<CRID: Into<ContactRequestId>>(
+        &self,
+        contact_request_id: CRID,
+    ) -> Result<Arc<AcceptingContactRequestResponse>, <C as ClientApi>::Error> {
+        self.client.accept(contact_request_id).await
+    }
+
+    /// Reject contact request
+    pub async fn reject<CRID: Into<ContactRequestId>>(
+        &self,
+        contact_request_id: CRID,
+    ) -> Result<Arc<ContactRequestRejectedResponse>, <C as ClientApi>::Error> {
+        self.client.reject(contact_request_id).await
+    }
+
     pub fn send_msg<CID: Into<ChatId>, M: MessageLike>(
         &self,
         chat_id: CID,
@@ -591,5 +645,32 @@ fn extract_profile(local: &mut LocalProfile) -> Profile {
         preferences: local.preferences.take(),
         peer_type: local.peer_type.take(),
         undocumented: std::mem::take(&mut local.undocumented),
+    }
+}
+
+fn extract_preferences(preferences: &mut Option<Preferences>) -> Preferences {
+    match preferences.as_mut() {
+        Some(prefs) => Preferences {
+            timed_messages: prefs.timed_messages.take(),
+            full_delete: prefs.full_delete.take(),
+            reactions: prefs.reactions.take(),
+            voice: prefs.voice.take(),
+            files: prefs.files.take(),
+            calls: prefs.calls.take(),
+            sessions: prefs.sessions.take(),
+            commands: prefs.commands.take(),
+            undocumented: std::mem::take(&mut prefs.undocumented),
+        },
+        None => Preferences {
+            timed_messages: None,
+            full_delete: None,
+            reactions: None,
+            voice: None,
+            files: None,
+            calls: None,
+            sessions: None,
+            commands: None,
+            undocumented: Default::default(),
+        },
     }
 }
