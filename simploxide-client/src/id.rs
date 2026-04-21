@@ -1,5 +1,6 @@
 use simploxide_api_types::{
-    CIMeta, ChatInfo, ChatItem, ChatRef, ChatType, Contact, GroupChatScope, GroupInfo,
+    CIMeta, ChatInfo, ChatItem, ChatRef, ChatType, Contact, GroupChatScope, GroupInfo, User,
+    UserContactRequest,
 };
 
 macro_rules! typesafe_ids {
@@ -26,7 +27,15 @@ macro_rules! typesafe_ids {
     }
 }
 
-typesafe_ids!(UserId, ContactId, GroupId, FileId, MessageId, MemberId);
+typesafe_ids!(
+    UserId,
+    ContactId,
+    ContactRequestId,
+    GroupId,
+    FileId,
+    MessageId,
+    MemberId
+);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ChatId {
@@ -106,6 +115,18 @@ impl ChatId {
             undocumented: Default::default(),
         }
     }
+
+    pub fn is_direct(&self) -> bool {
+        matches!(self, Self::Direct(_))
+    }
+
+    pub fn is_group(&self) -> bool {
+        matches!(self, Self::Group { .. })
+    }
+
+    pub fn is_local(&self) -> bool {
+        matches!(self, Self::Local(_))
+    }
 }
 
 impl From<ContactId> for ChatId {
@@ -148,8 +169,16 @@ macro_rules! impl_id_from_struct {
     };
 }
 
+impl_id_from_struct!(User as UserId, user, UserId(user.user_id));
+
 impl_id_from_struct!(Contact as ContactId, contact, ContactId(contact.contact_id));
 impl_id_from_struct!(Contact as ChatId, contact, ContactId::from(contact).into());
+
+impl_id_from_struct!(
+    UserContactRequest as ContactRequestId,
+    req,
+    ContactRequestId(req.contact_request_id)
+);
 
 impl_id_from_struct!(GroupInfo as GroupId, group, GroupId(group.group_id));
 impl_id_from_struct!(GroupInfo as ChatId, group, GroupId::from(group).into());

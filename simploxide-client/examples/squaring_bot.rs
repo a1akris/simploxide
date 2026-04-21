@@ -47,11 +47,11 @@ async fn new_msgs(ev: Arc<NewChatItems>, bot: ws::Bot) -> ClientResult<StreamEve
         {
             let square = num.saturating_mul(num);
             bot.send_msg(cid, format!("Squared: {square}"))
-                .reply_to(it.meta.item_id)
+                .reply_to(it)
                 .await?;
         } else {
             bot.send_msg(cid, "Me understands only numbers!")
-                .reply_to(it.meta.item_id)
+                .reply_to(it)
                 .await?;
         }
     }

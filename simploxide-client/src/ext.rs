@@ -1,38 +1,64 @@
+use futures::FutureExt as _;
 use simploxide_api_types::{
-    AChatItem, CIDeleteMode, ChatDeleteMode, ChatItem, ComposedMessage, Contact, GroupInfo,
-    MsgContent, MsgReaction, NewUser, UpdatedMessage, UserInfo,
+    AChatItem, CIDeleteMode, ChatDeleteMode, ChatItem, Contact, GroupInfo, MsgContent, MsgReaction,
+    NewUser, UpdatedMessage, UserInfo,
     client_api::{
         AllowUndocumentedResponses as _, ClientApi, ClientApiError as _, UndocumentedResponse,
     },
-    commands::{ApiChatItemReaction, ApiListGroups, ApiSendMessages, ApiUpdateChatItem, Connect},
+    commands::{ApiChatItemReaction, ApiListGroups, ApiUpdateChatItem, Connect},
     responses::{
-        ActiveUserResponse, ApiDeleteChatResponse, ApiUpdateChatItemResponse,
-        ChatItemReactionResponse, ChatItemsDeletedResponse, ConnectResponse, NewChatItemsResponse,
+        AcceptingContactRequestResponse, ActiveUserResponse, ApiDeleteChatResponse,
+        ApiUpdateChatItemResponse, ChatItemReactionResponse, ChatItemsDeletedResponse,
+        ConnectResponse, ContactRequestRejectedResponse,
     },
 };
 
-use std::{pin::Pin, sync::Arc, time::Duration};
+use std::sync::Arc;
 
-use crate::id::{ChatId, MessageId, UserId};
+use crate::{
+    id::{ChatId, ContactRequestId, MessageId, UserId},
+    messages::{MessageBuilder, MessageLike, MulticastBuilder},
+};
 
-pub type ContactsResponse<C> = Result<Vec<Contact>, <C as ClientApi>::Error>;
-pub type DeleteChatResponse<C> = Result<ApiDeleteChatResponse, <C as ClientApi>::Error>;
-pub type DeleteMessageResponse<C> = Result<Arc<ChatItemsDeletedResponse>, <C as ClientApi>::Error>;
-pub type GroupsResponse<C> = Result<Vec<GroupInfo>, <C as ClientApi>::Error>;
 pub type InitiateConnectionResponse<C> =
     Result<UndocumentedResponse<ConnectResponse>, <C as ClientApi>::Error>;
-pub type NewUserResponse<C> = Result<Arc<ActiveUserResponse>, <C as ClientApi>::Error>;
+
+pub type AcceptResponse<C> = Result<Arc<AcceptingContactRequestResponse>, <C as ClientApi>::Error>;
+pub type RejectResponse<C> = Result<Arc<ContactRequestRejectedResponse>, <C as ClientApi>::Error>;
+
+pub type ContactsResponse<C> = Result<Vec<Contact>, <C as ClientApi>::Error>;
+pub type GroupsResponse<C> = Result<Vec<GroupInfo>, <C as ClientApi>::Error>;
+
+pub type DeleteChatResponse<C> = Result<ApiDeleteChatResponse, <C as ClientApi>::Error>;
+pub type DeleteMessageResponse<C> = Result<Arc<ChatItemsDeletedResponse>, <C as ClientApi>::Error>;
+
 pub type UpdateMessageReactionsResponse<C> =
     Vec<Result<Arc<ChatItemReactionResponse>, <C as ClientApi>::Error>>;
 pub type UpdateMessageResponse<C> = Result<ApiUpdateChatItemResponse, <C as ClientApi>::Error>;
+
+pub type NewUserResponse<C> = Result<Arc<ActiveUserResponse>, <C as ClientApi>::Error>;
 pub type UsersResponse<C> = Result<Vec<UserInfo>, <C as ClientApi>::Error>;
 
 pub trait ClientApiExt: ClientApi {
     fn users(&self) -> impl Future<Output = UsersResponse<Self>>;
 
-    fn contacts(&self, user_id: UserId) -> impl Future<Output = ContactsResponse<Self>>;
+    fn contacts<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = ContactsResponse<Self>>;
 
-    fn groups(&self, user_id: UserId) -> impl Future<Output = GroupsResponse<Self>>;
+    fn groups<UID: Into<UserId>>(&self, user_id: UID)
+    -> impl Future<Output = GroupsResponse<Self>>;
+
+    fn accept<CRID: Into<ContactRequestId>>(
+        &self,
+        contact_request_id: CRID,
+    ) -> impl Future<Output = AcceptResponse<Self>>;
+
+    fn reject<CRID: Into<ContactRequestId>>(
+        &self,
+        contact_request_id: CRID,
+    ) -> impl Future<Output = RejectResponse<Self>>;
 
     /// Like [ClientApi::create_active_user] but ensures that user is created even if the name
     /// contains disallowed in SimpleX-Chat UTF-8 characters. The [NewUser] struct gets cloned when
@@ -119,15 +145,17 @@ where
         Ok(std::mem::take(&mut response.users))
     }
 
-    async fn contacts(&self, user_id: UserId) -> ContactsResponse<Self> {
-        let mut response = self.api_list_contacts(user_id.0).await?;
+    async fn contacts<UID: Into<UserId>>(&self, user_id: UID) -> ContactsResponse<Self> {
+        let mut response = self.api_list_contacts(user_id.into().0).await?;
         let response = Arc::get_mut(&mut response).unwrap();
 
         Ok(std::mem::take(&mut response.contacts))
     }
 
-    async fn groups(&self, user_id: UserId) -> GroupsResponse<Self> {
-        let mut response = self.api_list_groups(ApiListGroups::new(user_id.0)).await?;
+    async fn groups<UID: Into<UserId>>(&self, user_id: UID) -> GroupsResponse<Self> {
+        let mut response = self
+            .api_list_groups(ApiListGroups::new(user_id.into().0))
+            .await?;
         let response = Arc::get_mut(&mut response).unwrap();
 
         Ok(std::mem::take(&mut response.groups))
@@ -147,6 +175,20 @@ where
                 None => Err(e),
             },
         }
+    }
+
+    fn accept<CRID: Into<ContactRequestId>>(
+        &self,
+        contact_request_id: CRID,
+    ) -> impl Future<Output = AcceptResponse<Self>> {
+        self.api_accept_contact(contact_request_id.into().0)
+    }
+
+    fn reject<CRID: Into<ContactRequestId>>(
+        &self,
+        contact_request_id: CRID,
+    ) -> impl Future<Output = RejectResponse<Self>> {
+        self.api_reject_contact(contact_request_id.into().0)
     }
 
     fn send_message<CID: Into<ChatId>, M: MessageLike>(
@@ -176,12 +218,12 @@ where
         }
     }
 
-    async fn update_message<CID: Into<ChatId>, MID: Into<MessageId>>(
+    fn update_message<CID: Into<ChatId>, MID: Into<MessageId>>(
         &self,
         chat_id: CID,
         message_id: MID,
         new_content: MsgContent,
-    ) -> UpdateMessageResponse<Self> {
+    ) -> impl Future<Output = UpdateMessageResponse<Self>> {
         self.api_update_chat_item(ApiUpdateChatItem {
             chat_ref: chat_id.into().into_chat_ref(),
             chat_item_id: message_id.into().0,
@@ -192,24 +234,22 @@ where
                 undocumented: Default::default(),
             },
         })
-        .await
     }
 
-    async fn batch_delete_messages<CID: Into<ChatId>, I: IntoIterator<Item = MessageId>>(
+    fn batch_delete_messages<CID: Into<ChatId>, I: IntoIterator<Item = MessageId>>(
         &self,
         chat_id: CID,
         message_ids: I,
         mode: CIDeleteMode,
-    ) -> DeleteMessageResponse<Self> {
+    ) -> impl Future<Output = DeleteMessageResponse<Self>> {
         self.api_delete_chat_item(
             chat_id.into().into_chat_ref(),
             message_ids.into_iter().map(|id| id.0).collect(),
             mode,
         )
-        .await
     }
 
-    async fn batch_message_reactions<
+    fn batch_message_reactions<
         CID: Into<ChatId>,
         MID: Into<MessageId>,
         I: IntoIterator<Item = Reaction>,
@@ -218,7 +258,7 @@ where
         chat_id: CID,
         message_id: MID,
         reactions: I,
-    ) -> UpdateMessageReactionsResponse<Self> {
+    ) -> impl Future<Output = UpdateMessageReactionsResponse<Self>> {
         let chat_id = chat_id.into();
         let message_id = message_id.into();
 
@@ -238,28 +278,25 @@ where
                 },
             })
         }))
-        .await
     }
 
-    async fn initiate_connection(
+    fn initiate_connection(
         &self,
         link: impl Into<String>,
-    ) -> InitiateConnectionResponse<Self> {
+    ) -> impl Future<Output = InitiateConnectionResponse<Self>> {
         self.connect(Connect {
             incognito: false,
             conn_link: Some(link.into()),
         })
-        .await
-        .allow_undocumented()
+        .map(|res| res.allow_undocumented())
     }
 
-    async fn delete_chat<CID: Into<ChatId>>(
+    fn delete_chat<CID: Into<ChatId>>(
         &self,
         chat_id: CID,
         mode: DeleteMode,
-    ) -> DeleteChatResponse<Self> {
+    ) -> impl Future<Output = DeleteChatResponse<Self>> {
         self.api_delete_chat(chat_id.into().into_chat_ref(), mode.into())
-            .await
     }
 }
 
@@ -327,133 +364,6 @@ impl TryFrom<ChatDeleteMode> for DeleteMode {
             ChatDeleteMode::Undocumented(_) => Err(mode),
             _ => Err(mode),
         }
-    }
-}
-
-pub trait MessageLike {
-    fn into_composed_message(self) -> ComposedMessage;
-}
-
-impl MessageLike for ComposedMessage {
-    fn into_composed_message(self) -> ComposedMessage {
-        self
-    }
-}
-
-impl MessageLike for String {
-    fn into_composed_message(self) -> ComposedMessage {
-        ComposedMessage {
-            file_source: None,
-            quoted_item_id: None,
-            msg_content: MsgContent::make_text(self),
-            mentions: Default::default(),
-            undocumented: Default::default(),
-        }
-    }
-}
-
-impl MessageLike for &str {
-    fn into_composed_message(self) -> ComposedMessage {
-        String::into_composed_message(self.to_owned())
-    }
-}
-
-pub struct MessageBuilder<'a, C: 'a + ?Sized> {
-    client: &'a C,
-    chat_id: ChatId,
-    live: bool,
-    ttl: Option<Duration>,
-    msg: ComposedMessage,
-}
-
-impl<'a, C> MessageBuilder<'a, C> {
-    pub fn live_message(mut self) -> Self {
-        self.live = true;
-        self
-    }
-
-    pub fn with_ttl(mut self, ttl: std::time::Duration) -> Self {
-        self.ttl = Some(ttl);
-        self
-    }
-
-    pub fn reply_to(mut self, item_id: i64) -> Self {
-        self.msg.quoted_item_id = Some(item_id);
-        self
-    }
-}
-
-impl<'a, C> IntoFuture for MessageBuilder<'a, C>
-where
-    C: 'static + ClientApi,
-    C::Error: 'static + Send,
-{
-    type Output = Result<Arc<NewChatItemsResponse>, C::Error>;
-    type IntoFuture = Pin<Box<dyn 'a + Send + Future<Output = Self::Output>>>;
-
-    fn into_future(self) -> Self::IntoFuture {
-        let command = ApiSendMessages {
-            send_ref: self.chat_id.into_chat_ref(),
-            live_message: self.live,
-            ttl: self.ttl.map(|ttl| {
-                std::cmp::min(ttl, crate::preferences::timed_messages::TTL_MAX).as_secs() as i32
-            }),
-            composed_messages: vec![self.msg],
-        };
-
-        Box::pin(self.client.api_send_messages(command))
-    }
-}
-
-pub struct MulticastBuilder<'a, I, C: 'a + ?Sized> {
-    client: &'a C,
-    chat_ids: I,
-    ttl: Option<Duration>,
-    msg: ComposedMessage,
-}
-
-impl<'a, I, C> MulticastBuilder<'a, I, C> {
-    pub fn with_ttl(mut self, ttl: std::time::Duration) -> Self {
-        self.ttl = Some(ttl);
-        self
-    }
-}
-
-impl<'a, I, C> IntoFuture for MulticastBuilder<'a, I, C>
-where
-    I: IntoIterator<Item = ChatId>,
-    C: 'static + ClientApi,
-    C::Error: 'static + Send,
-{
-    type Output = Vec<Result<Arc<NewChatItemsResponse>, C::Error>>;
-    type IntoFuture = Pin<Box<dyn 'a + Send + Future<Output = Self::Output>>>;
-
-    fn into_future(self) -> Self::IntoFuture {
-        let Self {
-            client,
-            chat_ids,
-            ttl,
-            msg,
-        } = self;
-
-        let iter = chat_ids.into_iter().map(move |id| {
-            let msg = msg.clone();
-            async move {
-                let command = ApiSendMessages {
-                    send_ref: id.into_chat_ref(),
-                    live_message: false,
-                    ttl: ttl.map(|ttl| {
-                        std::cmp::min(ttl, crate::preferences::timed_messages::TTL_MAX).as_secs()
-                            as i32
-                    }),
-                    composed_messages: vec![msg],
-                };
-
-                client.api_send_messages(command).await
-            }
-        });
-
-        Box::pin(futures::future::join_all(iter))
     }
 }
 

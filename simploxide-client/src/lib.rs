@@ -9,6 +9,7 @@ pub mod bot;
 pub mod dispatcher;
 pub mod ext;
 pub mod id;
+pub mod messages;
 pub mod prelude;
 
 pub use simploxide_api_types::{
