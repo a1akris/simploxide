@@ -5,17 +5,17 @@ use simploxide_api_types::{
     commands::{ApiAddContact, ApiSetActiveUser, ApiSetProfileAddress},
     responses::{
         AcceptingContactRequestResponse, ApiDeleteChatResponse, ApiUpdateChatItemResponse,
-        ApiUpdateProfileResponse, ChatItemReactionResponse, ChatItemsDeletedResponse,
-        ConnectResponse, ContactPrefsUpdatedResponse, ContactRequestRejectedResponse,
-        NewChatItemsResponse, UserProfileUpdatedResponse,
+        ApiUpdateProfileResponse, CancelFileResponse, ChatItemReactionResponse,
+        ChatItemsDeletedResponse, ConnectResponse, ContactPrefsUpdatedResponse,
+        ContactRequestRejectedResponse, NewChatItemsResponse, UserProfileUpdatedResponse,
     },
 };
 
 use std::sync::Arc;
 
 use crate::{
-    ext::{ClientApiExt as _, DeleteMode, Reaction},
-    id::{ChatId, ContactId, ContactRequestId, MessageId, UserId},
+    ext::{AcceptFileBuilder, ClientApiExt as _, DeleteMode, Reaction},
+    id::{ChatId, ContactId, ContactRequestId, FileId, MessageId, UserId},
     messages::{MessageBuilder, MessageLike, MulticastBuilder},
     preferences,
 };
@@ -403,19 +403,19 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Accept contact request
-    pub async fn accept<CRID: Into<ContactRequestId>>(
+    pub async fn accept_contact<CRID: Into<ContactRequestId>>(
         &self,
         contact_request_id: CRID,
     ) -> Result<Arc<AcceptingContactRequestResponse>, <C as ClientApi>::Error> {
-        self.client.accept(contact_request_id).await
+        self.client.accept_contact(contact_request_id).await
     }
 
     /// Reject contact request
-    pub async fn reject<CRID: Into<ContactRequestId>>(
+    pub async fn reject_contact<CRID: Into<ContactRequestId>>(
         &self,
         contact_request_id: CRID,
     ) -> Result<Arc<ContactRequestRejectedResponse>, <C as ClientApi>::Error> {
-        self.client.reject(contact_request_id).await
+        self.client.reject_contact(contact_request_id).await
     }
 
     pub fn send_msg<CID: Into<ChatId>, M: MessageLike>(
@@ -575,6 +575,17 @@ impl<C: ClientApi> Bot<C> {
         self.client
             .update_message_reaction(chat_id, message_id, reaction)
             .await
+    }
+
+    pub fn accept_file<FID: Into<FileId>>(&self, file_id: FID) -> AcceptFileBuilder<'_, C> {
+        self.client.accept_file(file_id)
+    }
+
+    pub async fn reject_file<FID: Into<FileId>>(
+        &self,
+        file_id: FID,
+    ) -> Result<CancelFileResponse, C::Error> {
+        self.client.reject_file(file_id).await
     }
 
     /// [ChatId] can be created from various types. See [ChatId] docs for the full list of `From`

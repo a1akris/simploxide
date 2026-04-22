@@ -1,6 +1,6 @@
 use simploxide_api_types::{
-    CIMeta, ChatInfo, ChatItem, ChatRef, ChatType, Contact, GroupChatScope, GroupInfo, User,
-    UserContactRequest,
+    AChatItem, CIFile, CIMeta, ChatInfo, ChatItem, ChatRef, ChatType, Contact, GroupChatScope,
+    GroupInfo, User, UserContactRequest,
 };
 
 macro_rules! typesafe_ids {
@@ -185,3 +185,6 @@ impl_id_from_struct!(GroupInfo as ChatId, group, GroupId::from(group).into());
 
 impl_id_from_struct!(CIMeta as MessageId, meta, MessageId(meta.item_id));
 impl_id_from_struct!(ChatItem as MessageId, item, MessageId::from(&item.meta));
+impl_id_from_struct!(AChatItem as MessageId, it, MessageId::from(&it.chat_item));
+
+impl_id_from_struct!(CIFile as FileId, file, FileId(file.file_id));
