@@ -5,26 +5,31 @@ use simploxide_api_types::{
     client_api::{
         AllowUndocumentedResponses as _, ClientApi, ClientApiError as _, UndocumentedResponse,
     },
-    commands::{ApiChatItemReaction, ApiListGroups, ApiUpdateChatItem, Connect},
+    commands::{ApiChatItemReaction, ApiListGroups, ApiUpdateChatItem, Connect, ReceiveFile},
     responses::{
         AcceptingContactRequestResponse, ActiveUserResponse, ApiDeleteChatResponse,
-        ApiUpdateChatItemResponse, ChatItemReactionResponse, ChatItemsDeletedResponse,
-        ConnectResponse, ContactRequestRejectedResponse,
+        ApiUpdateChatItemResponse, CancelFileResponse, ChatItemReactionResponse,
+        ChatItemsDeletedResponse, ConnectResponse, ContactRequestRejectedResponse,
+        ReceiveFileResponse,
     },
 };
 
-use std::sync::Arc;
+use std::{pin::Pin, sync::Arc};
 
 use crate::{
-    id::{ChatId, ContactRequestId, MessageId, UserId},
+    id::{ChatId, ContactRequestId, FileId, MessageId, UserId},
     messages::{MessageBuilder, MessageLike, MulticastBuilder},
 };
 
 pub type InitiateConnectionResponse<C> =
     Result<UndocumentedResponse<ConnectResponse>, <C as ClientApi>::Error>;
 
-pub type AcceptResponse<C> = Result<Arc<AcceptingContactRequestResponse>, <C as ClientApi>::Error>;
-pub type RejectResponse<C> = Result<Arc<ContactRequestRejectedResponse>, <C as ClientApi>::Error>;
+pub type AcceptContactResponse<C> =
+    Result<Arc<AcceptingContactRequestResponse>, <C as ClientApi>::Error>;
+pub type RejectContactResponse<C> =
+    Result<Arc<ContactRequestRejectedResponse>, <C as ClientApi>::Error>;
+
+pub type RejectFileResponse<C> = Result<CancelFileResponse, <C as ClientApi>::Error>;
 
 pub type ContactsResponse<C> = Result<Vec<Contact>, <C as ClientApi>::Error>;
 pub type GroupsResponse<C> = Result<Vec<GroupInfo>, <C as ClientApi>::Error>;
@@ -50,15 +55,15 @@ pub trait ClientApiExt: ClientApi {
     fn groups<UID: Into<UserId>>(&self, user_id: UID)
     -> impl Future<Output = GroupsResponse<Self>>;
 
-    fn accept<CRID: Into<ContactRequestId>>(
+    fn accept_contact<CRID: Into<ContactRequestId>>(
         &self,
         contact_request_id: CRID,
-    ) -> impl Future<Output = AcceptResponse<Self>>;
+    ) -> impl Future<Output = AcceptContactResponse<Self>>;
 
-    fn reject<CRID: Into<ContactRequestId>>(
+    fn reject_contact<CRID: Into<ContactRequestId>>(
         &self,
         contact_request_id: CRID,
-    ) -> impl Future<Output = RejectResponse<Self>>;
+    ) -> impl Future<Output = RejectContactResponse<Self>>;
 
     /// Like [ClientApi::create_active_user] but ensures that user is created even if the name
     /// contains disallowed in SimpleX-Chat UTF-8 characters. The [NewUser] struct gets cloned when
@@ -122,6 +127,13 @@ pub trait ClientApiExt: ClientApi {
         self.batch_message_reactions(chat_id, message_id, std::iter::once(reaction))
     }
 
+    fn accept_file<FID: Into<FileId>>(&self, file_id: FID) -> AcceptFileBuilder<'_, Self>;
+
+    fn reject_file<FID: Into<FileId>>(
+        &self,
+        file_id: FID,
+    ) -> impl Future<Output = RejectFileResponse<Self>>;
+
     fn initiate_connection(
         &self,
         link: impl Into<String>,
@@ -177,17 +189,17 @@ where
         }
     }
 
-    fn accept<CRID: Into<ContactRequestId>>(
+    fn accept_contact<CRID: Into<ContactRequestId>>(
         &self,
         contact_request_id: CRID,
-    ) -> impl Future<Output = AcceptResponse<Self>> {
+    ) -> impl Future<Output = AcceptContactResponse<Self>> {
         self.api_accept_contact(contact_request_id.into().0)
     }
 
-    fn reject<CRID: Into<ContactRequestId>>(
+    fn reject_contact<CRID: Into<ContactRequestId>>(
         &self,
         contact_request_id: CRID,
-    ) -> impl Future<Output = RejectResponse<Self>> {
+    ) -> impl Future<Output = RejectContactResponse<Self>> {
         self.api_reject_contact(contact_request_id.into().0)
     }
 
@@ -280,6 +292,20 @@ where
         }))
     }
 
+    fn accept_file<FID: Into<FileId>>(&self, file_id: FID) -> AcceptFileBuilder<'_, Self> {
+        AcceptFileBuilder {
+            client: self,
+            cmd: ReceiveFile::new(file_id.into().0),
+        }
+    }
+
+    fn reject_file<FID: Into<FileId>>(
+        &self,
+        file_id: FID,
+    ) -> impl Future<Output = RejectFileResponse<Self>> {
+        self.cancel_file(file_id.into().0)
+    }
+
     fn initiate_connection(
         &self,
         link: impl Into<String>,
@@ -364,6 +390,42 @@ impl TryFrom<ChatDeleteMode> for DeleteMode {
             ChatDeleteMode::Undocumented(_) => Err(mode),
             _ => Err(mode),
         }
+    }
+}
+
+pub struct AcceptFileBuilder<'a, C: 'a + ?Sized> {
+    client: &'a C,
+    cmd: ReceiveFile,
+}
+
+impl<'a, C: 'a + ?Sized> AcceptFileBuilder<'a, C> {
+    pub fn via_user_approved_relays(mut self) -> Self {
+        self.cmd.user_approved_relays = true;
+        self
+    }
+
+    pub fn store_encrypted(mut self) -> Self {
+        self.cmd.store_encrypted = Some(true);
+        self
+    }
+
+    pub fn inline(mut self) -> Self {
+        self.cmd.file_inline = Some(true);
+        self
+    }
+
+    pub fn file_path<P: AsRef<std::path::Path>>(mut self, path: P) -> Self {
+        self.cmd.file_path = Some(path.as_ref().display().to_string());
+        self
+    }
+}
+
+impl<'a, C: 'a + ?Sized + ClientApi> IntoFuture for AcceptFileBuilder<'a, C> {
+    type Output = Result<ReceiveFileResponse, C::Error>;
+    type IntoFuture = Pin<Box<dyn 'a + Send + Future<Output = Self::Output>>>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(self.client.receive_file(self.cmd))
     }
 }
 

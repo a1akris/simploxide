@@ -1,7 +1,8 @@
 use serde::Serialize;
 use simploxide_api_types::{
-    ComposedMessage, JsonObject, LinkOwnerSig, MsgChatLink, MsgContent, ReportReason,
-    client_api::ClientApi, commands::ApiSendMessages, responses::NewChatItemsResponse,
+    ComposedMessage, CryptoFile, CryptoFileArgs, JsonObject, LinkOwnerSig, MsgChatLink, MsgContent,
+    ReportReason, client_api::ClientApi, commands::ApiSendMessages,
+    responses::NewChatItemsResponse,
 };
 
 use std::{pin::Pin, sync::Arc, time::Duration};
@@ -39,6 +40,63 @@ impl MessageLike for String {
 impl MessageLike for &str {
     fn into_composed_message(self) -> ComposedMessage {
         String::into_composed_message(self.to_owned())
+    }
+}
+
+impl MessageLike for CryptoFile {
+    fn into_composed_message(self) -> ComposedMessage {
+        ComposedMessage {
+            file_source: Some(self),
+            msg_content: MsgContent::make_file(String::default()),
+            quoted_item_id: None,
+            mentions: Default::default(),
+            undocumented: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct File {
+    pub path: String,
+    pub text: String,
+    pub crypto_args: Option<CryptoFileArgs>,
+}
+
+impl File {
+    pub fn new<P: AsRef<std::path::Path>>(path: P) -> Self {
+        Self {
+            path: path.as_ref().display().to_string(),
+            text: String::new(),
+            crypto_args: None,
+        }
+    }
+
+    pub fn with_caption(mut self, caption: impl Into<String>) -> Self {
+        self.text = caption.into();
+        self
+    }
+
+    pub fn with_crypto_args(mut self, args: CryptoFileArgs) -> Self {
+        self.crypto_args = Some(args);
+        self
+    }
+}
+
+impl MessageLike for File {
+    fn into_composed_message(self) -> ComposedMessage {
+        let file_source = CryptoFile {
+            file_path: self.path,
+            crypto_args: self.crypto_args,
+            undocumented: Default::default(),
+        };
+
+        ComposedMessage {
+            file_source: Some(file_source),
+            msg_content: MsgContent::make_file(self.text),
+            quoted_item_id: None,
+            mentions: Default::default(),
+            undocumented: Default::default(),
+        }
     }
 }
 
@@ -217,6 +275,12 @@ impl<'a, C> MessageBuilder<'a, C> {
             *s = text.into();
         }
 
+        self
+    }
+
+    /// Overrides the file source without changing the [MsgContent]
+    pub fn set_file_source(mut self, source: CryptoFile) -> Self {
+        self.msg.file_source = Some(source);
         self
     }
 
