@@ -56,7 +56,7 @@ impl<C: ClientApi> Bot<C> {
                     user_id: user.user_id,
                 };
 
-                if let Some(auto_reply) = settings.auto_reply {
+                if let Some(welcome_message) = settings.auto_accept {
                     if user.profile.contact_link.is_none() {
                         bot.get_or_create_address().await?;
                         bot.publish_address().await?;
@@ -68,8 +68,8 @@ impl<C: ClientApi> Bot<C> {
                             accept_incognito: false,
                             undocumented: Default::default(),
                         }),
-                        auto_reply: (!auto_reply.is_empty())
-                            .then(|| MsgContent::make_text(auto_reply)),
+                        auto_reply: (!welcome_message.is_empty())
+                            .then(|| MsgContent::make_text(welcome_message)),
                         undocumented: Default::default(),
                     })
                     .await?;
@@ -125,7 +125,7 @@ impl<C: ClientApi> Bot<C> {
                     user_id: response.user.user_id,
                 };
 
-                if let Some(auto_reply) = settings.auto_reply {
+                if let Some(welcome_message) = settings.auto_accept {
                     bot.create_address().await?;
                     bot.publish_address().await?;
 
@@ -135,7 +135,7 @@ impl<C: ClientApi> Bot<C> {
                             accept_incognito: true,
                             undocumented: Default::default(),
                         }),
-                        auto_reply: Some(MsgContent::make_text(auto_reply)),
+                        auto_reply: Some(MsgContent::make_text(welcome_message)),
                         undocumented: Default::default(),
                     })
                     .await?;
@@ -143,6 +143,24 @@ impl<C: ClientApi> Bot<C> {
 
                 Ok(bot)
             }
+        }
+    }
+
+    /// This method allows ot wrap or replace the underlying bot client.
+    ///
+    /// You can define your own clients implementing the [`ClientApi`] trait and then you can
+    /// extend the bot functionalitty by implementing extension methods on `Bot<YourCustomClient>`
+    /// type.
+    pub fn wrap_client<W, F>(self, wrap: F) -> Bot<W>
+    where
+        W: ClientApi,
+        F: FnOnce(C) -> W,
+    {
+        let new_client = wrap(self.client);
+
+        Bot {
+            client: new_client,
+            user_id: self.user_id,
         }
     }
 
@@ -602,8 +620,9 @@ impl<C: ClientApi> Bot<C> {
 #[derive(Debug, Clone)]
 pub struct BotSettings {
     pub display_name: String,
-    /// If string is empty creates an auto-accepting address without a message
-    pub auto_reply: Option<String>,
+    /// If string is empty creates an auto-accepting address without a message. If string is not
+    /// empty adds a welcome message to the address
+    pub auto_accept: Option<String>,
     pub profile_settings: Option<BotProfileSettings>,
 }
 
@@ -611,20 +630,20 @@ impl BotSettings {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             display_name: name.into(),
-            auto_reply: None,
+            auto_accept: None,
             profile_settings: None,
         }
     }
 
     /// Create a public auto-accepting address during the intialisation
     pub fn auto_accept(mut self) -> Self {
-        self.auto_reply = Some(String::default());
+        self.auto_accept = Some(String::default());
         self
     }
 
     /// Create a public auto-accepting address with a welcome meesage during the intialisation
-    pub fn auto_reply(mut self, reply: impl Into<String>) -> Self {
-        self.auto_reply = Some(reply.into());
+    pub fn auto_accept_with(mut self, welcome_message: impl Into<String>) -> Self {
+        self.auto_accept = Some(welcome_message.into());
         self
     }
 

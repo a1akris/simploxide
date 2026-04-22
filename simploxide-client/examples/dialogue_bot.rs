@@ -7,7 +7,7 @@
 //! ----
 //!
 //! A chatty bot that tries to collect your personal data. This example shows how to implement a
-//! dynamic(not type-safe) dialogue state machine.
+//! dynamic(not type-safe) dialogue state machine and how to deal with custom states.
 
 use async_trait::async_trait;
 use simploxide_client::{
@@ -40,6 +40,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     let connection = events
+        // Local dispatcher processes events sequentially allowing to update dialogue via &mut ref.
+        // It creates !Send future that can be used only on the main thread or with the tokio::LocalSet
         .into_local_dispatcher(dialogue)
         .on(contact_connected)
         .on(new_msgs)

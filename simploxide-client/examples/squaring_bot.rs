@@ -1,8 +1,10 @@
+//! The examples expects that SimpleX-CLI(`simplex-chat` binary) is installed locally on the system
+//! and is available via `$PATH` or at the `simploxide/simploxide-client` directory(you can symlink
+//! it there)
+//!
 //! To compile this example pass the --features flag like this:
 //! `cargo run --example squaring_bot --features bon,cli`
 //!
-//! The examples expects that SimpleX-CLI is installed locally on the system and is available via
-//! $PATH or at the `simploxide/simploxide-client` directory(you can symlink it there)
 //!
 //! ----
 //!
@@ -19,7 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (bot, events, _cli) = ws::BotBuilder::new("SimplOxide Examples", 5225)
         .db_prefix("test_db/bot")
         // create a public bot address auto-accepting new users with a welcome message
-        .auto_reply(
+        .auto_accept_with(
             "Hello, I'm a simple squaring bot. Send me a number and I will calculate its square",
         )
         // Launch CLI, connect the client, and initialise the bot
