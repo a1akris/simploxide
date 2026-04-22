@@ -1,5 +1,5 @@
-//! The example expects that SimpleX CLI is running on port `5225`. Use `Spawn CLI with
-//! simplex-chat -p 5225 --create-bot-display-name Default`
+//! The example expects that SimpleX CLI is running on port `5225`. Run CLI with:
+//! `simplex-chat -p 5225 --create-bot-display-name Default`
 //!
 //! To compile this example pass the --features flag like this:
 //! `cargo run --example file_bot --features websocket`
@@ -7,7 +7,9 @@
 //! ----
 //!
 //! An example showing how to handle file events manually. The bot receives files and sends them
-//! back to the user.
+//! back to the user. The example also demonstrates the usage of the BotBuilder::connect method
+//! that allows to connect to running SimpleX-CLI instance instead of launching it
+//! programmatically(useful for debugging)
 
 use simploxide_client::{StreamEvents, preferences, prelude::*, ws};
 use std::{error::Error, sync::Arc};
@@ -143,11 +145,8 @@ async fn recv_file_complete(
         .chat_item
         .file
         .as_ref()
-        .unwrap()
-        .file_source
-        .as_ref()
-        .unwrap()
-        .clone();
+        .and_then(|x| x.file_source.clone())
+        .unwrap();
 
     bot.send_msg(contact, crypto_file)
         .set_text("Take it back!")
