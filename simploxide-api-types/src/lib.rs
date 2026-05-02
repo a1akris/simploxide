@@ -74,6 +74,21 @@ pub struct AChatItem {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct AddRelayResult {
+    #[serde(rename = "relay")]
+    pub relay: UserChatRelay,
+
+    #[serde(rename = "relayError", skip_serializing_if = "Option::is_none")]
+    pub relay_error: Option<ChatError>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct AddressSettings {
     #[serde(rename = "businessAddress", default)]
     pub business_address: bool,
@@ -3911,6 +3926,9 @@ pub struct DroppedMsg {
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct E2EInfo {
+    #[serde(rename = "public", skip_serializing_if = "Option::is_none")]
+    pub public: Option<bool>,
+
     #[serde(rename = "pqEnabled", skip_serializing_if = "Option::is_none")]
     pub pq_enabled: Option<bool>,
 
@@ -4360,6 +4378,9 @@ pub struct FullGroupPreferences {
     #[serde(rename = "history")]
     pub history: GroupPreference,
 
+    #[serde(rename = "support")]
+    pub support: SupportGroupPreference,
+
     #[serde(rename = "sessions")]
     pub sessions: RoleGroupPreference,
 
@@ -4586,6 +4607,8 @@ pub enum GroupFeature {
     Reports,
     #[serde(rename = "history")]
     History,
+    #[serde(rename = "support")]
+    Support,
     #[serde(rename = "sessions")]
     Sessions,
     #[serde(rename = "comments")]
@@ -4743,6 +4766,21 @@ pub struct GroupLink {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupLinkOwner {
+    #[serde(rename = "memberId")]
+    pub member_id: String,
+
+    #[serde(rename = "memberKey")]
+    pub member_key: String,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
 pub enum GroupLinkPlan {
@@ -4782,6 +4820,15 @@ pub enum GroupLinkPlan {
     Known {
         #[serde(rename = "groupInfo")]
         group_info: GroupInfo,
+
+        #[serde(rename = "groupUpdated", default)]
+        group_updated: bool,
+
+        #[serde(rename = "ownerVerification", skip_serializing_if = "Option::is_none")]
+        owner_verification: Option<OwnerVerification>,
+
+        #[serde(rename = "linkOwners")]
+        link_owners: Vec<GroupLinkOwner>,
 
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
@@ -4830,9 +4877,17 @@ impl GroupLinkPlan {
         }
     }
 
-    pub fn make_known(group_info: GroupInfo) -> Self {
+    pub fn make_known(
+        group_info: GroupInfo,
+        group_updated: bool,
+        owner_verification: Option<OwnerVerification>,
+        link_owners: Vec<GroupLinkOwner>,
+    ) -> Self {
         Self::Known {
             group_info,
+            group_updated,
+            owner_verification,
+            link_owners,
             undocumented: Default::default(),
         }
     }
@@ -4880,9 +4935,21 @@ impl GroupLinkPlan {
             None
         }
     }
-    pub fn known(&self) -> Option<&GroupInfo> {
-        if let Self::Known { group_info, .. } = self {
-            Some(group_info)
+    pub fn known(&self) -> Option<GroupLinkPlanKnownRef<'_>> {
+        if let Self::Known {
+            group_info,
+            group_updated,
+            owner_verification,
+            link_owners,
+            ..
+        } = self
+        {
+            Some(GroupLinkPlanKnownRef {
+                group_info,
+                group_updated,
+                owner_verification,
+                link_owners,
+            })
         } else {
             None
         }
@@ -4903,6 +4970,13 @@ pub struct GroupLinkPlanOkRef<'a> {
     pub group_s_link_info: &'a Option<GroupShortLinkInfo>,
     pub group_s_link_data: &'a Option<GroupShortLinkData>,
     pub owner_verification: &'a Option<OwnerVerification>,
+}
+#[derive(Clone, Copy)]
+pub struct GroupLinkPlanKnownRef<'a> {
+    pub group_info: &'a GroupInfo,
+    pub group_updated: &'a bool,
+    pub owner_verification: &'a Option<OwnerVerification>,
+    pub link_owners: &'a Vec<GroupLinkOwner>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -5159,6 +5233,9 @@ pub struct GroupPreferences {
     #[serde(rename = "history", skip_serializing_if = "Option::is_none")]
     pub history: Option<GroupPreference>,
 
+    #[serde(rename = "support", skip_serializing_if = "Option::is_none")]
+    pub support: Option<SupportGroupPreference>,
+
     #[serde(rename = "sessions", skip_serializing_if = "Option::is_none")]
     pub sessions: Option<RoleGroupPreference>,
 
@@ -5388,6 +5465,8 @@ pub enum GroupType {
     #[default]
     #[serde(rename = "channel")]
     Channel,
+    #[serde(rename = "group")]
+    Group,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -7990,6 +8069,18 @@ impl SubscriptionStatus {
     pub fn is_no_sub(&self) -> bool {
         matches!(self, Self::NoSub)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct SupportGroupPreference {
+    #[serde(rename = "enable")]
+    pub enable: GroupFeatureEnabled,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

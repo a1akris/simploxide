@@ -1,34 +1,30 @@
 # simploxide-client
 
-SimpleX-Chat WebSocket client
+SimpleX-Chat bot API client
 
 ## 🤖Try out SimplOxide bots right now!
 
 1. [Install Rust](https://www.rust-lang.org/learn/get-started) if you haven't already.
 1. [Get SimpleX chat CLI](https://github.com/simplex-chat/simplex-chat/blob/stable/docs/CLI.md#%F0%9F%9A%80-installation)
-1. Run SimpleX Chat CLI as an API server with a precreated bot account(all example bots are connecting to port `5225` by default):
-   ```bash
-   simplex-chat -p 5225 --create-bot-display-name 'SimplOxide Examples' --create-bot-allow-files
-   ```
+1. Ensure that SimpleX Chat CLI is available globally: `simplex-chat --version`
 1. Run the squaring bot:
    ```bash
-   cargo run --example squaring_bot --all-features
+   cargo run --example squaring_bot
    ```
    You can run any bot from [examples/](./examples) directory by changing the
    `--example` argument.
-    1. All example bots output their address when they start. Use this address
-       to connect to your bot in SimpleX app(always prefer the shorter one):
-       ![Addresses Screenshot](./screenshots/addresses.png)
     1. Interact with the bot:
 
        ![Interactions Screenshot](./screenshots/interactions.png)
+
+_Some examples require you to follow specific setup instructions, make sure you
+read the top-level comments of an example to setup everything correctly._
 
 ----
 
 Explore [bot sources](./examples) or read [crate
 docs](https://docs.rs/simploxide-client/latest/simploxide_client/) to learn how
 to write your own bots.
-
 ### LICENSE
 
 #### DISCLAIMER
@@ -61,4 +57,3 @@ license](../LICENSE-MIT) at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
 be dual licensed as above, without any additional terms or conditions.
-

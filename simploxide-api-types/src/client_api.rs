@@ -673,13 +673,13 @@ pub trait ClientApi: Sync {
     fn api_new_public_group(
         &self,
         command: ApiNewPublicGroup,
-    ) -> impl Future<Output = Result<Arc<PublicGroupCreatedResponse>, Self::Error>> + Send {
+    ) -> impl Future<Output = Result<ApiNewPublicGroupResponse, Self::Error>> + Send {
         async move {
             let raw = self.send_raw(command.to_command_string()).await?;
             let response_shape: Self::ResponseShape<'_, ApiNewPublicGroupResponse> =
                 serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
             let response = response_shape.extract_response()?;
-            Ok(response.into_inner())
+            Ok(response)
         }
     }
 

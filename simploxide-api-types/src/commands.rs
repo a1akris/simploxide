@@ -1382,6 +1382,7 @@ impl CommandSyntax for ApiAddContact {
 pub struct ApiConnectPlan {
     pub user_id: i64,
     pub connection_link: Option<String>,
+    pub resolve_known: bool,
     pub link_owner_sig: Option<LinkOwnerSig>,
 }
 
@@ -1391,6 +1392,7 @@ impl ApiConnectPlan {
         Self {
             user_id,
             connection_link: None,
+            resolve_known: false,
             link_owner_sig: None,
         }
     }

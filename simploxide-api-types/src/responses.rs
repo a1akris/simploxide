@@ -381,12 +381,25 @@ pub enum ApiNewPublicGroupResponse {
     /// PublicGroupCreated: Public group created.
     #[serde(rename = "publicGroupCreated")]
     PublicGroupCreated(Arc<PublicGroupCreatedResponse>),
+    /// PublicGroupCreationFailed: Public group creation failed.
+    #[serde(rename = "publicGroupCreationFailed")]
+    PublicGroupCreationFailed(Arc<PublicGroupCreationFailedResponse>),
 }
 
 impl ApiNewPublicGroupResponse {
-    pub fn into_inner(self) -> Arc<PublicGroupCreatedResponse> {
-        match self {
-            Self::PublicGroupCreated(inner) => inner,
+    pub fn public_group_created(&self) -> Option<&PublicGroupCreatedResponse> {
+        if let Self::PublicGroupCreated(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn public_group_creation_failed(&self) -> Option<&PublicGroupCreationFailedResponse> {
+        if let Self::PublicGroupCreationFailed(ret) = self {
+            Some(ret)
+        } else {
+            None
         }
     }
 }
@@ -1482,6 +1495,21 @@ pub struct PublicGroupCreatedResponse {
 
     #[serde(rename = "groupRelays")]
     pub group_relays: Vec<GroupRelay>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct PublicGroupCreationFailedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "addRelayResults")]
+    pub add_relay_results: Vec<AddRelayResult>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
