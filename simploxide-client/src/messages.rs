@@ -155,7 +155,7 @@ fn make_image_preview(file: &CryptoFile) -> ImagePreview {
     }
 }
 
-#[cfg(all(not(feature = "multimedia"), not(feature = "native_crypto")))]
+#[cfg(not(feature = "multimedia"))]
 fn make_image_preview(_: &CryptoFile) -> ImagePreview {
     ImagePreview::default()
 }
@@ -194,6 +194,17 @@ impl Video {
     pub fn with_crypto_args(mut self, args: CryptoFileArgs) -> Self {
         self.source.crypto_args = Some(args);
         self
+    }
+}
+
+impl From<CryptoFile> for Video {
+    fn from(source: CryptoFile) -> Self {
+        Self {
+            source,
+            preview: ImagePreview::default(),
+            text: String::new(),
+            duration: Duration::ZERO,
+        }
     }
 }
 

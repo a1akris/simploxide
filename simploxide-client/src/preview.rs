@@ -146,7 +146,7 @@ impl ImagePreview {
             }
             #[cfg(feature = "native_crypto")]
             PreviewSource::CryptoFile(file) => {
-                let bytes = read_crypto_file(&file, MAX_PREVIEW_BYTES).await?;
+                let bytes = read_crypto_file(file, MAX_PREVIEW_BYTES).await?;
                 try_encode_jpg_to_uri(&bytes)
             }
         }
@@ -452,8 +452,6 @@ async fn read_plain_file(path: &PathBuf, size_limit: usize) -> std::io::Result<V
             "Size exceeds {size_limit} bytes"
         )));
     }
-
-    f.seek(SeekFrom::Start(0)).await?;
 
     let mut buf = Vec::with_capacity(size_hint);
     f.read_to_end(&mut buf).await?;
