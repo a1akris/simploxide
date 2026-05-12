@@ -1,21 +1,34 @@
 use simploxide_api_types::{
     AddressSettings, AutoAccept, CIDeleteMode, ChatPeerType, Contact, CreatedConnLink, GroupInfo,
-    LocalProfile, MsgContent, NewUser, PendingContactConnection, Preferences, Profile, User,
+    GroupMember, GroupMemberRole, GroupProfile, JsonObject, LocalProfile, MsgContent, NewUser,
+    PendingContactConnection, Preferences, Profile, User,
     client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
-    commands::{ApiAddContact, ApiSetActiveUser, ApiSetProfileAddress},
+    commands::{
+        ApiAddContact, ApiConnectPlan, ApiNewGroup, ApiNewPublicGroup, ApiSetActiveUser,
+        ApiSetProfileAddress, ApiSetUserAutoAcceptMemberContacts,
+    },
     responses::{
-        AcceptingContactRequestResponse, ApiDeleteChatResponse, ApiUpdateChatItemResponse,
-        ApiUpdateProfileResponse, CancelFileResponse, ChatItemReactionResponse,
-        ChatItemsDeletedResponse, ConnectResponse, ContactPrefsUpdatedResponse,
-        ContactRequestRejectedResponse, UserProfileUpdatedResponse,
+        AcceptingContactRequestResponse, ApiDeleteChatResponse, ApiNewPublicGroupResponse,
+        ApiUpdateChatItemResponse, ApiUpdateProfileResponse, CancelFileResponse,
+        ChatItemReactionResponse, ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse,
+        ConnectionPlanResponse, ContactPrefsUpdatedResponse, ContactRequestRejectedResponse,
+        GroupCreatedResponse, GroupLinkCreatedResponse, GroupLinkDeletedResponse,
+        GroupUpdatedResponse, LeftMemberUserResponse, MemberAcceptedResponse,
+        MembersBlockedForAllUserResponse, MembersRoleUserResponse, SentGroupInvitationResponse,
+        UserAcceptedGroupSentResponse, UserDeletedMembersResponse, UserProfileUpdatedResponse,
     },
 };
 
 use std::sync::Arc;
 
 use crate::{
-    ext::{AcceptFileBuilder, ClientApiExt as _, DeleteMode, Reaction},
-    id::{ChatId, ContactId, ContactRequestId, FileId, MessageId, UserId},
+    ext::{
+        AcceptFileBuilder, ClientApiExt as _, DeleteMode, GetGroupRelaysResponse, GroupLinkResult,
+        Reaction,
+    },
+    id::{
+        ChatId, ContactId, ContactRequestId, FileId, GroupId, MemberId, MessageId, RelayId, UserId,
+    },
     messages::{MessageBuilder, MessageLike, MulticastBuilder},
     preferences,
     preview::ImagePreview,
@@ -58,7 +71,10 @@ impl<C: ClientApi> Bot<C> {
                         .await?;
                 }
 
-                let bot = Bot { client, user_id: user.user_id };
+                let bot = Bot {
+                    client,
+                    user_id: user.user_id,
+                };
 
                 bot.setup_auto_accept(settings.auto_accept, user.profile.contact_link.is_some())
                     .await?;
@@ -107,7 +123,10 @@ impl<C: ClientApi> Bot<C> {
                     })
                     .await?;
 
-                let bot = Bot { client, user_id: response.user.user_id };
+                let bot = Bot {
+                    client,
+                    user_id: response.user.user_id,
+                };
 
                 bot.setup_auto_accept(settings.auto_accept, false).await?;
 
@@ -214,6 +233,22 @@ impl<C: ClientApi> Bot<C> {
         link: impl Into<String>,
     ) -> Result<UndocumentedResponse<ConnectResponse>, C::Error> {
         self.client.initiate_connection(link).await
+    }
+
+    /// Inspect a SimpleX link before connecting: resolves its type (contact address, group link,
+    /// or 1-time invitation) and reports whether the bot is already connected via it.
+    pub async fn check_connection_plan(
+        &self,
+        link: impl Into<String>,
+    ) -> Result<Arc<ConnectionPlanResponse>, C::Error> {
+        self.client
+            .api_connect_plan(ApiConnectPlan {
+                user_id: self.user_id,
+                connection_link: Some(link.into()),
+                resolve_known: false,
+                link_owner_sig: None,
+            })
+            .await
     }
 
     /// Create one-time-invitation link. Can be used for admin-access or for private connections
@@ -599,6 +634,255 @@ impl<C: ClientApi> Bot<C> {
         mode: DeleteMode,
     ) -> Result<ApiDeleteChatResponse, C::Error> {
         self.client.delete_chat(chat_id, mode).await
+    }
+
+    /// Create a new group. The bot's user becomes the owner.
+    pub async fn create_group(
+        &self,
+        profile: GroupProfile,
+    ) -> Result<Arc<GroupCreatedResponse>, C::Error> {
+        self.client
+            .api_new_group(ApiNewGroup::new(self.user_id, profile))
+            .await
+    }
+
+    /// Create a new public group with relay members. The bot's user becomes the owner.
+    /// Relay IDs can be obtained from [`Bot::get_group_relays`]
+    pub async fn create_public_group<I: IntoIterator<Item = RelayId>>(
+        &self,
+        relay_ids: I,
+        profile: GroupProfile,
+    ) -> Result<ApiNewPublicGroupResponse, C::Error> {
+        self.client
+            .api_new_public_group(ApiNewPublicGroup::new(
+                self.user_id,
+                relay_ids.into_iter().map(|id| id.0).collect(),
+                profile,
+            ))
+            .await
+    }
+
+    /// Enable or disable automatically accepting contacts from group members.
+    pub async fn set_auto_accept_member_contacts(
+        &self,
+        on: bool,
+    ) -> Result<Arc<CmdOkResponse>, C::Error> {
+        self.client
+            .api_set_user_auto_accept_member_contacts(ApiSetUserAutoAcceptMemberContacts {
+                user_id: self.user_id,
+                on_off: on,
+            })
+            .await
+    }
+
+    pub async fn add_member<GID: Into<GroupId>, CID: Into<ContactId>>(
+        &self,
+        group_id: GID,
+        contact_id: CID,
+        role: GroupMemberRole,
+    ) -> Result<Arc<SentGroupInvitationResponse>, C::Error> {
+        self.client.add_member(group_id, contact_id, role).await
+    }
+
+    pub async fn join_group<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> Result<Arc<UserAcceptedGroupSentResponse>, C::Error> {
+        self.client.join_group(group_id).await
+    }
+
+    pub async fn accept_member<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+        role: GroupMemberRole,
+    ) -> Result<Arc<MemberAcceptedResponse>, C::Error> {
+        self.client.accept_member(group_id, member_id, role).await
+    }
+
+    pub async fn set_members_role<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+        role: GroupMemberRole,
+    ) -> Result<Arc<MembersRoleUserResponse>, C::Error> {
+        self.client
+            .set_members_role(group_id, member_ids, role)
+            .await
+    }
+
+    pub async fn set_member_role<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+        role: GroupMemberRole,
+    ) -> Result<Arc<MembersRoleUserResponse>, C::Error> {
+        self.client.set_member_role(group_id, member_id, role).await
+    }
+
+    pub async fn block_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> Result<Arc<MembersBlockedForAllUserResponse>, C::Error> {
+        self.client
+            .block_members_for_all(group_id, member_ids)
+            .await
+    }
+
+    pub async fn unblock_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> Result<Arc<MembersBlockedForAllUserResponse>, C::Error> {
+        self.client
+            .unblock_members_for_all(group_id, member_ids)
+            .await
+    }
+
+    pub async fn block_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+    ) -> Result<Arc<MembersBlockedForAllUserResponse>, C::Error> {
+        self.client.block_member_for_all(group_id, member_id).await
+    }
+
+    pub async fn unblock_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+    ) -> Result<Arc<MembersBlockedForAllUserResponse>, C::Error> {
+        self.client
+            .unblock_member_for_all(group_id, member_id)
+            .await
+    }
+
+    pub async fn remove_members<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> Result<Arc<UserDeletedMembersResponse>, C::Error> {
+        self.client.remove_members(group_id, member_ids).await
+    }
+
+    pub async fn remove_members_with_messages<
+        GID: Into<GroupId>,
+        I: IntoIterator<Item = MemberId>,
+    >(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> Result<Arc<UserDeletedMembersResponse>, C::Error> {
+        self.client
+            .remove_members_with_messages(group_id, member_ids)
+            .await
+    }
+
+    pub async fn remove_member<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+    ) -> Result<Arc<UserDeletedMembersResponse>, C::Error> {
+        self.client.remove_member(group_id, member_id).await
+    }
+
+    pub async fn remove_member_with_messages<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+    ) -> Result<Arc<UserDeletedMembersResponse>, C::Error> {
+        self.client
+            .remove_member_with_messages(group_id, member_id)
+            .await
+    }
+
+    pub async fn leave_group<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> Result<Arc<LeftMemberUserResponse>, C::Error> {
+        self.client.leave_group(group_id).await
+    }
+
+    pub async fn list_members<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> Result<Vec<GroupMember>, C::Error> {
+        self.client.list_members(group_id).await
+    }
+
+    pub async fn moderate_messages<GID: Into<GroupId>, I: IntoIterator<Item = MessageId>>(
+        &self,
+        group_id: GID,
+        message_ids: I,
+    ) -> Result<Arc<ChatItemsDeletedResponse>, C::Error> {
+        self.client.moderate_messages(group_id, message_ids).await
+    }
+
+    pub async fn moderate_message<GID: Into<GroupId>, MID: Into<MessageId>>(
+        &self,
+        group_id: GID,
+        message_id: MID,
+    ) -> Result<Arc<ChatItemsDeletedResponse>, C::Error> {
+        self.client.moderate_message(group_id, message_id).await
+    }
+
+    pub async fn update_group_profile<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        profile: GroupProfile,
+    ) -> Result<Arc<GroupUpdatedResponse>, C::Error> {
+        self.client.update_group_profile(group_id, profile).await
+    }
+
+    pub async fn set_group_custom_data<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        data: Option<JsonObject>,
+    ) -> Result<Arc<CmdOkResponse>, C::Error> {
+        self.client.set_group_custom_data(group_id, data).await
+    }
+
+    pub async fn set_contact_custom_data<CID: Into<ContactId>>(
+        &self,
+        contact_id: CID,
+        data: Option<JsonObject>,
+    ) -> Result<Arc<CmdOkResponse>, C::Error> {
+        self.client.set_contact_custom_data(contact_id, data).await
+    }
+
+    pub async fn create_group_link<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        role: GroupMemberRole,
+    ) -> Result<Arc<GroupLinkCreatedResponse>, C::Error> {
+        self.client.create_group_link(group_id, role).await
+    }
+
+    pub async fn set_group_link_role<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        role: GroupMemberRole,
+    ) -> GroupLinkResult<C> {
+        self.client.set_group_link_role(group_id, role).await
+    }
+
+    pub async fn delete_group_link<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> Result<Arc<GroupLinkDeletedResponse>, C::Error> {
+        self.client.delete_group_link(group_id).await
+    }
+
+    pub async fn get_group_link<GID: Into<GroupId>>(&self, group_id: GID) -> GroupLinkResult<C> {
+        self.client.get_group_link(group_id).await
+    }
+
+    pub async fn get_group_relays<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> GetGroupRelaysResponse<C> {
+        self.client.get_group_relays(group_id).await
     }
 }
 

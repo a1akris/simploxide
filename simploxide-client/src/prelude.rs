@@ -13,7 +13,8 @@ pub use crate::{
     types::{
         AddressSettings, CIContent, CIDeleteMode, ChatBotCommand, ChatDeleteMode, ChatInfo,
         ChatPeerType, ChatRef, ChatType, ComposedMessage, CreatedConnLink, CryptoFile,
-        CryptoFileArgs, FeatureAllowed, GroupMemberRole, GroupProfile, MsgContent, MsgReaction,
-        NewUser, Preferences, Profile, SimplePreference, UpdatedMessage, User, UserInfo,
+        CryptoFileArgs, FeatureAllowed, GroupInfo, GroupMember, GroupMemberRole, GroupProfile,
+        GroupRelay, JsonObject, MsgContent, MsgReaction, NewUser, Preferences, Profile,
+        SimplePreference, UpdatedMessage, User, UserInfo,
     },
 };

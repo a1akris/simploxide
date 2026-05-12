@@ -1,6 +1,7 @@
 use simploxide_api_types::{
-    AChatItem, CIFile, CIMeta, ChatInfo, ChatItem, ChatRef, ChatType, Contact, GroupChatScope,
-    GroupInfo, User, UserContactRequest,
+    AChatItem, CIFile, CIMeta, ChatInfo, ChatItem, ChatRef, ChatType, Contact, FileTransferMeta,
+    GroupChatScope, GroupInfo, GroupMember, GroupRelay, RcvFileTransfer, SndFileTransfer, User,
+    UserContactRequest,
 };
 
 macro_rules! typesafe_ids {
@@ -34,7 +35,8 @@ typesafe_ids!(
     GroupId,
     FileId,
     MessageId,
-    MemberId
+    MemberId,
+    RelayId
 );
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -188,3 +190,9 @@ impl_id_from_struct!(ChatItem as MessageId, item, MessageId::from(&item.meta));
 impl_id_from_struct!(AChatItem as MessageId, it, MessageId::from(&it.chat_item));
 
 impl_id_from_struct!(CIFile as FileId, file, FileId(file.file_id));
+impl_id_from_struct!(RcvFileTransfer as FileId, ft, FileId(ft.file_id));
+impl_id_from_struct!(FileTransferMeta as FileId, ft, FileId(ft.file_id));
+impl_id_from_struct!(SndFileTransfer as FileId, ft, FileId(ft.file_id));
+
+impl_id_from_struct!(GroupMember as MemberId, member, MemberId(member.group_member_id));
+impl_id_from_struct!(GroupRelay as RelayId, relay, RelayId(relay.group_relay_id));

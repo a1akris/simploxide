@@ -1,23 +1,31 @@
 use futures::FutureExt as _;
 use simploxide_api_types::{
-    AChatItem, CIDeleteMode, ChatDeleteMode, ChatItem, Contact, GroupInfo, MsgContent, MsgReaction,
-    NewUser, UpdatedMessage, UserInfo,
+    AChatItem, CIDeleteMode, ChatDeleteMode, ChatItem, Contact, GroupInfo, GroupMember,
+    GroupMemberRole, GroupProfile, JsonObject, MsgContent, MsgReaction, NewUser, UpdatedMessage,
+    UserInfo,
     client_api::{
         AllowUndocumentedResponses as _, ClientApi, ClientApiError as _, UndocumentedResponse,
     },
-    commands::{ApiChatItemReaction, ApiListGroups, ApiUpdateChatItem, Connect, ReceiveFile},
+    commands::{
+        ApiBlockMembersForAll, ApiChatItemReaction, ApiListGroups, ApiRemoveMembers,
+        ApiSetContactCustomData, ApiSetGroupCustomData, ApiUpdateChatItem, Connect, ReceiveFile,
+    },
     responses::{
         AcceptingContactRequestResponse, ActiveUserResponse, ApiDeleteChatResponse,
         ApiUpdateChatItemResponse, CancelFileResponse, ChatItemReactionResponse,
-        ChatItemsDeletedResponse, ConnectResponse, ContactRequestRejectedResponse,
-        ReceiveFileResponse,
+        ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse, ContactRequestRejectedResponse,
+        GroupLinkCreatedResponse, GroupLinkDeletedResponse, GroupLinkResponse, GroupRelaysResponse,
+        GroupUpdatedResponse,
+        LeftMemberUserResponse, MemberAcceptedResponse, MembersBlockedForAllUserResponse,
+        MembersRoleUserResponse, ReceiveFileResponse, SentGroupInvitationResponse,
+        UserAcceptedGroupSentResponse, UserDeletedMembersResponse,
     },
 };
 
 use std::{pin::Pin, sync::Arc};
 
 use crate::{
-    id::{ChatId, ContactRequestId, FileId, MessageId, UserId},
+    id::{ChatId, ContactId, ContactRequestId, FileId, GroupId, MemberId, MessageId, UserId},
     messages::{MessageBuilder, MessageLike, MulticastBuilder},
 };
 
@@ -43,6 +51,23 @@ pub type UpdateMessageResponse<C> = Result<ApiUpdateChatItemResponse, <C as Clie
 
 pub type NewUserResponse<C> = Result<Arc<ActiveUserResponse>, <C as ClientApi>::Error>;
 pub type UsersResponse<C> = Result<Vec<UserInfo>, <C as ClientApi>::Error>;
+
+pub type AddMemberResponse<C> = Result<Arc<SentGroupInvitationResponse>, <C as ClientApi>::Error>;
+pub type JoinGroupResponse<C> = Result<Arc<UserAcceptedGroupSentResponse>, <C as ClientApi>::Error>;
+pub type AcceptMemberResponse<C> = Result<Arc<MemberAcceptedResponse>, <C as ClientApi>::Error>;
+pub type SetMembersRoleResponse<C> = Result<Arc<MembersRoleUserResponse>, <C as ClientApi>::Error>;
+pub type BlockMembersResponse<C> =
+    Result<Arc<MembersBlockedForAllUserResponse>, <C as ClientApi>::Error>;
+pub type RemoveMembersResponse<C> = Result<Arc<UserDeletedMembersResponse>, <C as ClientApi>::Error>;
+pub type LeaveGroupResponse<C> = Result<Arc<LeftMemberUserResponse>, <C as ClientApi>::Error>;
+pub type ListMembersResponse<C> = Result<Vec<GroupMember>, <C as ClientApi>::Error>;
+pub type UpdateGroupProfileResponse<C> = Result<Arc<GroupUpdatedResponse>, <C as ClientApi>::Error>;
+pub type SetContactCustomDataResponse<C> = Result<Arc<CmdOkResponse>, <C as ClientApi>::Error>;
+pub type SetGroupCustomDataResponse<C> = Result<Arc<CmdOkResponse>, <C as ClientApi>::Error>;
+pub type CreateGroupLinkResult<C> = Result<Arc<GroupLinkCreatedResponse>, <C as ClientApi>::Error>;
+pub type GroupLinkResult<C> = Result<Arc<GroupLinkResponse>, <C as ClientApi>::Error>;
+pub type DeleteGroupLinkResult<C> = Result<Arc<GroupLinkDeletedResponse>, <C as ClientApi>::Error>;
+pub type GetGroupRelaysResponse<C> = Result<Arc<GroupRelaysResponse>, <C as ClientApi>::Error>;
 
 pub trait ClientApiExt: ClientApi {
     fn users(&self) -> impl Future<Output = UsersResponse<Self>>;
@@ -148,6 +173,166 @@ pub trait ClientApiExt: ClientApi {
         chat_id: CID,
         mode: DeleteMode,
     ) -> impl Future<Output = DeleteChatResponse<Self>>;
+
+    fn add_member<GID: Into<GroupId>, CID: Into<ContactId>>(
+        &self,
+        group_id: GID,
+        contact_id: CID,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = AddMemberResponse<Self>>;
+
+    fn join_group<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = JoinGroupResponse<Self>>;
+
+    fn accept_member<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = AcceptMemberResponse<Self>>;
+
+    fn set_members_role<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = SetMembersRoleResponse<Self>>;
+
+    fn set_member_role<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = SetMembersRoleResponse<Self>> {
+        self.set_members_role(group_id, std::iter::once(member_id.into()), role)
+    }
+
+    fn block_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> impl Future<Output = BlockMembersResponse<Self>>;
+
+    fn unblock_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> impl Future<Output = BlockMembersResponse<Self>>;
+
+    fn block_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+    ) -> impl Future<Output = BlockMembersResponse<Self>> {
+        self.block_members_for_all(group_id, std::iter::once(member_id.into()))
+    }
+
+    fn unblock_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+    ) -> impl Future<Output = BlockMembersResponse<Self>> {
+        self.unblock_members_for_all(group_id, std::iter::once(member_id.into()))
+    }
+
+    fn remove_members<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> impl Future<Output = RemoveMembersResponse<Self>>;
+
+    fn remove_members_with_messages<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> impl Future<Output = RemoveMembersResponse<Self>>;
+
+    fn remove_member<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+    ) -> impl Future<Output = RemoveMembersResponse<Self>> {
+        self.remove_members(group_id, std::iter::once(member_id.into()))
+    }
+
+    fn remove_member_with_messages<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+    ) -> impl Future<Output = RemoveMembersResponse<Self>> {
+        self.remove_members_with_messages(group_id, std::iter::once(member_id.into()))
+    }
+
+    fn leave_group<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = LeaveGroupResponse<Self>>;
+
+    fn list_members<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = ListMembersResponse<Self>>;
+
+    fn moderate_messages<GID: Into<GroupId>, I: IntoIterator<Item = MessageId>>(
+        &self,
+        group_id: GID,
+        message_ids: I,
+    ) -> impl Future<Output = DeleteMessageResponse<Self>>;
+
+    fn moderate_message<GID: Into<GroupId>, MID: Into<MessageId>>(
+        &self,
+        group_id: GID,
+        message_id: MID,
+    ) -> impl Future<Output = DeleteMessageResponse<Self>> {
+        self.moderate_messages(group_id, std::iter::once(message_id.into()))
+    }
+
+    fn update_group_profile<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        profile: GroupProfile,
+    ) -> impl Future<Output = UpdateGroupProfileResponse<Self>>;
+
+    fn set_group_custom_data<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        data: Option<JsonObject>,
+    ) -> impl Future<Output = SetGroupCustomDataResponse<Self>>;
+
+    fn set_contact_custom_data<CID: Into<ContactId>>(
+        &self,
+        contact_id: CID,
+        data: Option<JsonObject>,
+    ) -> impl Future<Output = SetContactCustomDataResponse<Self>>;
+
+    fn create_group_link<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = CreateGroupLinkResult<Self>>;
+
+    fn set_group_link_role<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = GroupLinkResult<Self>>;
+
+    fn delete_group_link<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = DeleteGroupLinkResult<Self>>;
+
+    fn get_group_link<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = GroupLinkResult<Self>>;
+
+    fn get_group_relays<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = GetGroupRelaysResponse<Self>>;
 }
 
 impl<C> ClientApiExt for C
@@ -331,6 +516,186 @@ where
         mode: DeleteMode,
     ) -> impl Future<Output = DeleteChatResponse<Self>> {
         self.api_delete_chat(chat_id.into().into_chat_ref(), mode.into())
+    }
+
+    fn add_member<GID: Into<GroupId>, CID: Into<ContactId>>(
+        &self,
+        group_id: GID,
+        contact_id: CID,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = AddMemberResponse<Self>> {
+        self.api_add_member(group_id.into().0, contact_id.into().0, role)
+    }
+
+    fn join_group<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = JoinGroupResponse<Self>> {
+        self.api_join_group(group_id.into().0)
+    }
+
+    fn accept_member<GID: Into<GroupId>, MID: Into<MemberId>>(
+        &self,
+        group_id: GID,
+        member_id: MID,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = AcceptMemberResponse<Self>> {
+        self.api_accept_member(group_id.into().0, member_id.into().0, role)
+    }
+
+    fn set_members_role<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = SetMembersRoleResponse<Self>> {
+        self.api_members_role(
+            group_id.into().0,
+            member_ids.into_iter().map(|id| id.0).collect(),
+            role,
+        )
+    }
+
+    fn block_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> impl Future<Output = BlockMembersResponse<Self>> {
+        self.api_block_members_for_all(ApiBlockMembersForAll {
+            group_id: group_id.into().0,
+            group_member_ids: member_ids.into_iter().map(|id| id.0).collect(),
+            blocked: true,
+        })
+    }
+
+    fn unblock_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> impl Future<Output = BlockMembersResponse<Self>> {
+        self.api_block_members_for_all(ApiBlockMembersForAll {
+            group_id: group_id.into().0,
+            group_member_ids: member_ids.into_iter().map(|id| id.0).collect(),
+            blocked: false,
+        })
+    }
+
+    fn remove_members<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> impl Future<Output = RemoveMembersResponse<Self>> {
+        self.api_remove_members(ApiRemoveMembers {
+            group_id: group_id.into().0,
+            group_member_ids: member_ids.into_iter().map(|id| id.0).collect(),
+            with_messages: false,
+        })
+    }
+
+    fn remove_members_with_messages<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+        &self,
+        group_id: GID,
+        member_ids: I,
+    ) -> impl Future<Output = RemoveMembersResponse<Self>> {
+        self.api_remove_members(ApiRemoveMembers {
+            group_id: group_id.into().0,
+            group_member_ids: member_ids.into_iter().map(|id| id.0).collect(),
+            with_messages: true,
+        })
+    }
+
+    fn leave_group<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = LeaveGroupResponse<Self>> {
+        self.api_leave_group(group_id.into().0)
+    }
+
+    async fn list_members<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> ListMembersResponse<Self> {
+        let mut response = self.api_list_members(group_id.into().0).await?;
+        let response = Arc::get_mut(&mut response).unwrap();
+        Ok(std::mem::take(&mut response.group.members))
+    }
+
+    fn moderate_messages<GID: Into<GroupId>, I: IntoIterator<Item = MessageId>>(
+        &self,
+        group_id: GID,
+        message_ids: I,
+    ) -> impl Future<Output = DeleteMessageResponse<Self>> {
+        self.api_delete_member_chat_item(
+            group_id.into().0,
+            message_ids.into_iter().map(|id| id.0).collect(),
+        )
+    }
+
+    fn update_group_profile<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        profile: GroupProfile,
+    ) -> impl Future<Output = UpdateGroupProfileResponse<Self>> {
+        self.api_update_group_profile(group_id.into().0, profile)
+    }
+
+    fn set_group_custom_data<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        data: Option<JsonObject>,
+    ) -> impl Future<Output = SetGroupCustomDataResponse<Self>> {
+        self.api_set_group_custom_data(ApiSetGroupCustomData {
+            group_id: group_id.into().0,
+            custom_data: data,
+        })
+    }
+
+    fn set_contact_custom_data<CID: Into<ContactId>>(
+        &self,
+        contact_id: CID,
+        data: Option<JsonObject>,
+    ) -> impl Future<Output = SetContactCustomDataResponse<Self>> {
+        self.api_set_contact_custom_data(ApiSetContactCustomData {
+            contact_id: contact_id.into().0,
+            custom_data: data,
+        })
+    }
+
+    fn create_group_link<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = CreateGroupLinkResult<Self>> {
+        self.api_create_group_link(group_id.into().0, role)
+    }
+
+    fn set_group_link_role<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        role: GroupMemberRole,
+    ) -> impl Future<Output = GroupLinkResult<Self>> {
+        self.api_group_link_member_role(group_id.into().0, role)
+    }
+
+    fn delete_group_link<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = DeleteGroupLinkResult<Self>> {
+        self.api_delete_group_link(group_id.into().0)
+    }
+
+    fn get_group_link<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = GroupLinkResult<Self>> {
+        self.api_get_group_link(group_id.into().0)
+    }
+
+    fn get_group_relays<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = GetGroupRelaysResponse<Self>> {
+        self.api_get_group_relays(group_id.into().0)
     }
 }
 
