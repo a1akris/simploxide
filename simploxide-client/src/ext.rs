@@ -76,10 +76,14 @@ pub trait ClientApiExt: ClientApi {
         &self,
         chat_id: CID,
         msg: M,
-    ) -> MessageBuilder<'_, Self>;
+    ) -> MessageBuilder<'_, Self, M::Kind>;
 
     /// Deliver the same message to multiple recepients
-    fn multicast_message<I, M>(&self, chat_ids: I, msg: M) -> MulticastBuilder<'_, I, Self>
+    fn multicast_message<I, M>(
+        &self,
+        chat_ids: I,
+        msg: M,
+    ) -> MulticastBuilder<'_, I, Self, M::Kind>
     where
         I: IntoIterator<Item = ChatId>,
         M: MessageLike;
@@ -207,26 +211,30 @@ where
         &self,
         cid: CID,
         msg: M,
-    ) -> MessageBuilder<'_, Self> {
+    ) -> MessageBuilder<'_, Self, M::Kind> {
+        let (composed, kind) = msg.into_builder_parts();
         MessageBuilder {
             client: self,
             chat_id: cid.into(),
             live: false,
             ttl: None,
-            msg: msg.into_composed_message(),
+            msg: composed,
+            kind,
         }
     }
 
-    fn multicast_message<I, M>(&self, chat_ids: I, msg: M) -> MulticastBuilder<'_, I, Self>
+    fn multicast_message<I, M>(&self, chat_ids: I, msg: M) -> MulticastBuilder<'_, I, Self, M::Kind>
     where
         I: IntoIterator<Item = ChatId>,
         M: MessageLike,
     {
+        let (msg, kind) = msg.into_builder_parts();
         MulticastBuilder {
             client: self,
             chat_ids,
             ttl: None,
-            msg: msg.into_composed_message(),
+            msg,
+            kind,
         }
     }
 

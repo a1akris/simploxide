@@ -23,8 +23,6 @@ use std::{collections::BTreeMap, error::Error, sync::Arc};
 async fn main() -> Result<(), Box<dyn Error>> {
     let (bot, events) =
         ffi::BotBuilder::new("SimplOxide Examples", DbOpts::unencrypted("./test_db/bot"))
-            // Auto accept users without a welcome message
-            .auto_accept()
             .launch()
             .await?;
 
@@ -39,48 +37,51 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Default::default(),
     );
 
-    let connection = events
+    events
         // Local dispatcher processes events sequentially allowing to update dialogue via &mut ref.
         // It creates !Send future that can be used only on the main thread or with the tokio::LocalSet
         .into_local_dispatcher(dialogue)
-        .on(contact_connected)
-        .on(new_msgs)
-        .dispatch()
+        // An example of processing contact connections manually
+        .on(async |ev: Arc<ReceivedContactRequest>, dialogue| {
+            dialogue.bot.accept_contact(&ev.contact_request).await?;
+            println!(
+                "Accepted user: {} ({})",
+                ev.contact_request.profile.display_name, ev.contact_request.profile.full_name
+            );
+            Ok(StreamEvents::Continue)
+        })
+        .on(async |ev: Arc<ContactConnected>, dialogue| {
+            dialogue.query_data(ChatId::from(&ev.contact)).await?;
+            Ok(StreamEvents::Continue)
+        })
+        // Inline lambdas are useful to pass some additional data/context to the particular handler
+        // using async move(no data in really passed in this example)
+        .on(
+            async move |ev: Arc<NewChatItems>, dialogue| -> ffi::ClientResult<StreamEvents> {
+                for (cid, it, _content) in ev.chat_items.filter_messages() {
+                    let input = it.meta.item_text.trim().to_owned();
+
+                    if input == "/die" {
+                        return Ok(StreamEvents::Break);
+                    }
+
+                    if dialogue.process_input(cid, input).await?.has_terminated() {
+                        println!("USER DATA DUMP:\n{:#?}", dialogue.state_map[&cid].inputs);
+
+                        dialogue
+                            .bot
+                            .send_msg(cid, "You're absolutely the best!")
+                            .await?;
+                    }
+                }
+
+                Ok(StreamEvents::Continue)
+            },
+        )
+        .sequential_dispatch()
         .await?;
 
-    drop(connection);
-
     Ok(())
-}
-
-async fn contact_connected(
-    ev: Arc<ContactConnected>,
-    dialogue: &mut Dialogue,
-) -> ClientResult<StreamEvents> {
-    dialogue.query_data(ChatId::from(&ev.contact)).await?;
-
-    Ok(StreamEvents::Continue)
-}
-
-async fn new_msgs(ev: Arc<NewChatItems>, dialogue: &mut Dialogue) -> ClientResult<StreamEvents> {
-    for (cid, it, _content) in ev.chat_items.filter_messages() {
-        let input = it.meta.item_text.trim().to_owned();
-
-        if input == "/die" {
-            return Ok(StreamEvents::Break);
-        }
-
-        if dialogue.process_input(cid, input).await?.has_terminated() {
-            println!("USER DATA DUMP:\n{:#?}", dialogue.state_map[&cid].inputs);
-
-            dialogue
-                .bot
-                .send_msg(cid, "You're absolutely the best!")
-                .await?;
-        }
-    }
-
-    Ok(StreamEvents::Continue)
 }
 
 /// A dynamic dialogue system. It's easy to implement and it's easy to change but it's also easy to

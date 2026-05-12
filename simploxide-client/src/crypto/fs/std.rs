@@ -51,8 +51,7 @@ impl<S: SimplexSecretBox> EncryptedFile<S> {
             .create(false)
             .open(path)?;
 
-        let size = file.seek(SeekFrom::End(0))?;
-        file.seek(SeekFrom::Start(0))?;
+        let size = size_hint(&mut file)?;
 
         Ok(Self {
             file,
@@ -60,7 +59,7 @@ impl<S: SimplexSecretBox> EncryptedFile<S> {
         })
     }
 
-    /// Opens file in a read only mode, shouldn't be used with [prepare_for_overwrite] as all
+    /// Opens file in a read only mode, shouldn't be used with [prepare_for_overwrite] because
     /// writes will return IO errors.
     pub fn open_read_only<P: AsRef<Path>>(
         path: P,
@@ -72,8 +71,7 @@ impl<S: SimplexSecretBox> EncryptedFile<S> {
             .create(false)
             .open(path)?;
 
-        let size = file.seek(SeekFrom::End(0))?;
-        file.seek(SeekFrom::Start(0))?;
+        let size = size_hint(&mut file)?;
 
         Ok(Self {
             file,
@@ -207,6 +205,10 @@ impl PlainFileOps for ::std::fs::File {
             .truncate(true)
             .open(path)
     }
+
+    fn size_hint(&mut self) -> ::std::io::Result<usize> {
+        size_hint(self)
+    }
 }
 
 impl<S: SimplexSecretBox> EncryptedFileOps for EncryptedFile<S> {
@@ -231,4 +233,15 @@ impl<S: SimplexSecretBox> EncryptedFileOps for EncryptedFile<S> {
     fn crypto_args(&self) -> &FileCryptoArgs {
         self.crypto_args()
     }
+
+    fn size_hint(&self) -> usize {
+        self.plaintext_size_hint()
+    }
+}
+
+fn size_hint(file: &mut ::std::fs::File) -> ::std::io::Result<usize> {
+    let size = file.seek(SeekFrom::End(0))?;
+    file.seek(SeekFrom::Start(0))?;
+
+    crate::util::cast_file_size(size)
 }

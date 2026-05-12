@@ -64,6 +64,8 @@ pub trait PlainFileOps: Sized {
     fn open<P: AsRef<::std::path::Path>>(path: P) -> ::std::io::Result<Self>;
 
     fn create<P: AsRef<::std::path::Path>>(path: P) -> ::std::io::Result<Self>;
+
+    fn size_hint(&mut self) -> ::std::io::Result<usize>;
 }
 
 pub trait AsyncPlainFileOps: Sized {
@@ -72,6 +74,8 @@ pub trait AsyncPlainFileOps: Sized {
     fn create<P: AsRef<::std::path::Path>>(
         path: P,
     ) -> impl Future<Output = ::std::io::Result<Self>>;
+
+    fn size_hint(&mut self) -> impl Future<Output = ::std::io::Result<usize>>;
 }
 
 pub trait EncryptedFileOps: Sized {
@@ -89,6 +93,8 @@ pub trait EncryptedFileOps: Sized {
     ) -> ::std::io::Result<Self>;
 
     fn crypto_args(&self) -> &FileCryptoArgs;
+
+    fn size_hint(&self) -> usize;
 }
 
 pub trait AsyncEncryptedFileOps: Sized {
@@ -108,6 +114,8 @@ pub trait AsyncEncryptedFileOps: Sized {
     ) -> impl Future<Output = ::std::io::Result<Self>>;
 
     fn crypto_args(&self) -> &FileCryptoArgs;
+
+    fn size_hint(&self) -> usize;
 }
 
 pub enum MaybeCryptoFile<P, E> {
@@ -136,13 +144,20 @@ impl<P: PlainFileOps, E: EncryptedFileOps> MaybeCryptoFile<P, E> {
         }
     }
 
-    pub fn reader(crypto_file: SxcCryptoFile) -> ::std::io::Result<Self> {
+    pub fn from_crypto_file(crypto_file: SxcCryptoFile) -> ::std::io::Result<Self> {
         match crypto_file.crypto_args {
             Some(args) => {
                 let crypto_args = FileCryptoArgs::try_from(args)?;
                 Self::open(&crypto_file.file_path, Some(crypto_args))
             }
             None => Self::open(&crypto_file.file_path, None),
+        }
+    }
+
+    pub fn size_hint(&mut self) -> ::std::io::Result<usize> {
+        match self {
+            MaybeCryptoFile::Plain(f) => f.size_hint(),
+            MaybeCryptoFile::Encrypted(f) => Ok(f.size_hint()),
         }
     }
 }
@@ -168,13 +183,20 @@ impl<P: AsyncPlainFileOps, E: AsyncEncryptedFileOps> MaybeCryptoFile<P, E> {
         }
     }
 
-    pub async fn reader_async(crypto_file: SxcCryptoFile) -> ::std::io::Result<Self> {
+    pub async fn from_crypto_file_async(crypto_file: SxcCryptoFile) -> ::std::io::Result<Self> {
         match crypto_file.crypto_args {
             Some(args) => {
                 let crypto_args = FileCryptoArgs::try_from(args)?;
                 Self::open_async(&crypto_file.file_path, Some(crypto_args)).await
             }
             None => Self::open_async(&crypto_file.file_path, None).await,
+        }
+    }
+
+    pub async fn size_hint_async(&mut self) -> ::std::io::Result<usize> {
+        match self {
+            MaybeCryptoFile::Plain(f) => f.size_hint().await,
+            MaybeCryptoFile::Encrypted(f) => Ok(f.size_hint()),
         }
     }
 }
@@ -314,11 +336,10 @@ impl<S: SimplexSecretBox> EncryptedFileState<S> {
         }
     }
 
-    fn from_size_and_args(file_size: u64, crypto_args: FileCryptoArgs) -> ::std::io::Result<Self> {
-        let file_size: usize = file_size
-            .try_into()
-            .map_err(|e| ::std::io::Error::new(::std::io::ErrorKind::FileTooLarge, e))?;
-
+    fn from_size_and_args(
+        file_size: usize,
+        crypto_args: FileCryptoArgs,
+    ) -> ::std::io::Result<Self> {
         let mut state = Self::from_args(crypto_args);
         if file_size < ::std::mem::size_of::<Poly1305Tag>() {
             return Err(InvalidAuthTag::io_error());

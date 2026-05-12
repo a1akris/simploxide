@@ -152,7 +152,7 @@ where
     ///
     /// This method returns `Future: !Send`, it should be used either with the [`tokio::task::LocalSet`],
     /// on the tokio main thread, or with a single-threaded runtime.
-    pub async fn dispatch(self) -> Result<(EventStream<P>, Ctx), D::Error>
+    pub async fn sequential_dispatch(self) -> Result<(EventStream<P>, Ctx), D::Error>
     where
         P: EventParser,
         D::Error: From<P::Error>,
@@ -180,7 +180,7 @@ where
     /// triggering the [CancellationToken]. The behaviour of triggering the cancellation token is
     /// equivalent of returning [StreamEvents::Break].
     #[cfg(feature = "cancellation")]
-    pub async fn dispatch_with_cancellation(
+    pub async fn sequential_dispatch_with_cancellation(
         self,
         token: CancellationToken,
     ) -> Result<(EventStream<P>, Ctx), D::Error>

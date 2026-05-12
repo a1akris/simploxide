@@ -7,7 +7,7 @@ use simploxide_api_types::{
         AcceptingContactRequestResponse, ApiDeleteChatResponse, ApiUpdateChatItemResponse,
         ApiUpdateProfileResponse, CancelFileResponse, ChatItemReactionResponse,
         ChatItemsDeletedResponse, ConnectResponse, ContactPrefsUpdatedResponse,
-        ContactRequestRejectedResponse, NewChatItemsResponse, UserProfileUpdatedResponse,
+        ContactRequestRejectedResponse, UserProfileUpdatedResponse,
     },
 };
 
@@ -132,10 +132,11 @@ impl<C: ClientApi> Bot<C> {
                     bot.configure_address(AddressSettings {
                         business_address: false,
                         auto_accept: Some(AutoAccept {
-                            accept_incognito: true,
+                            accept_incognito: false,
                             undocumented: Default::default(),
                         }),
-                        auto_reply: Some(MsgContent::make_text(welcome_message)),
+                        auto_reply: (!welcome_message.is_empty())
+                            .then(|| MsgContent::make_text(welcome_message)),
                         undocumented: Default::default(),
                     })
                     .await?;
@@ -440,12 +441,12 @@ impl<C: ClientApi> Bot<C> {
         &self,
         chat_id: CID,
         msg: M,
-    ) -> MessageBuilder<'_, C> {
+    ) -> MessageBuilder<'_, C, M::Kind> {
         self.client.send_message(chat_id.into(), msg)
     }
 
     /// Send the same message to multiple recepients
-    pub fn multicast<I, M>(&self, chat_ids: I, msg: M) -> MulticastBuilder<'_, I, C>
+    pub fn multicast<I, M>(&self, chat_ids: I, msg: M) -> MulticastBuilder<'_, I, C, M::Kind>
     where
         I: IntoIterator<Item = ChatId>,
         M: MessageLike,
@@ -453,89 +454,70 @@ impl<C: ClientApi> Bot<C> {
         self.client.multicast_message(chat_ids, msg)
     }
 
-    /// Broadcast the same message to all existing contacts(groups included)
-    pub async fn broadcast<M>(
-        &self,
-        msg: M,
-    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
-    where
-        C: 'static,
-        C::Error: 'static + Send,
-        M: MessageLike,
-    {
-        self.bcst(msg, None, |_| true).await
+    /// Returns a list of all known chat IDs
+    pub async fn chat_ids(&self) -> Result<impl Iterator<Item = ChatId>, C::Error> {
+        self.chat_ids_with(|_| true).await
     }
 
-    /// Broadcast the same message to all existing contacts(groups included) matching the filter
-    pub async fn broadcast_filter<M, F>(
+    /// Returns a list of all known chat IDs matching the filter `f`.
+    pub async fn chat_ids_with<F>(
         &self,
-        msg: M,
         f: F,
-    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
+    ) -> Result<impl 'static + Send + Iterator<Item = ChatId>, C::Error>
     where
-        C: 'static,
-        C::Error: 'static + Send,
-        M: MessageLike,
-        F: FnMut(&ChatId) -> bool,
-    {
-        self.bcst(msg, None, f).await
-    }
-
-    /// Broadcast the same message with TTL to all existing contacts(groups included)
-    pub async fn broadcast_with_ttl<M>(
-        &self,
-        msg: M,
-        ttl: std::time::Duration,
-    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
-    where
-        C: 'static,
-        C::Error: 'static + Send,
-        M: MessageLike,
-    {
-        self.bcst(msg, Some(ttl), |_| true).await
-    }
-
-    /// Broadcast the same message with TTL to all existing contacts(groups included) matching the
-    /// filter
-    pub async fn broadcast_filter_with_ttl<M, F>(
-        &self,
-        msg: M,
-        ttl: std::time::Duration,
-        f: F,
-    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
-    where
-        C: 'static,
-        C::Error: 'static + Send,
-        M: MessageLike,
-        F: FnMut(&ChatId) -> bool,
-    {
-        self.bcst(msg, Some(ttl), f).await
-    }
-
-    async fn bcst<F, M>(
-        &self,
-        msg: M,
-        ttl: Option<std::time::Duration>,
-        f: F,
-    ) -> Result<Vec<Result<Arc<NewChatItemsResponse>, C::Error>>, C::Error>
-    where
-        F: FnMut(&ChatId) -> bool,
-        M: MessageLike,
-        C: 'static,
-        C::Error: 'static + Send,
+        F: 'static + Send + FnMut(&ChatId) -> bool,
     {
         let (contacts, groups) = futures::future::try_join(self.contacts(), self.groups()).await?;
 
-        let ids = contacts
-            .iter()
+        Ok(contacts
+            .into_iter()
             .map(ChatId::from)
-            .chain(groups.iter().map(ChatId::from))
-            .filter(f);
+            .chain(groups.into_iter().map(ChatId::from))
+            .filter(f))
+    }
 
-        match ttl {
-            Some(ttl) => Ok(self.multicast(ids, msg).with_ttl(ttl).await),
-            None => Ok(self.multicast(ids, msg).await),
-        }
+    /// Generate a [MulticastBuilder] that is ready to send messages to all known chats
+    pub async fn prepare_broadcast<M: MessageLike>(
+        &self,
+        msg: M,
+    ) -> Result<
+        MulticastBuilder<'_, impl 'static + Send + Iterator<Item = ChatId>, C, M::Kind>,
+        C::Error,
+    > {
+        self.prepare_broadcast_with(msg, |_| true).await
+    }
+
+    /// Generate a [MulticastBuilder] that is ready to send messages to chats matching the filter
+    ///
+    /// ```rust
+    /// bot.prepare_broadcast_with(, |id| id.is_group())
+    ///    .await
+    ///    .with_image(Image::new("logo.jpg"))
+    ///    .send()
+    ///    .await?;
+    /// ```
+    pub async fn prepare_broadcast_with<M, F>(
+        &self,
+        msg: M,
+        f: F,
+    ) -> Result<
+        MulticastBuilder<'_, impl 'static + Send + Iterator<Item = ChatId>, C, M::Kind>,
+        C::Error,
+    >
+    where
+        F: 'static + Send + FnMut(&ChatId) -> bool,
+        M: MessageLike,
+    {
+        let ids = self.chat_ids_with(f).await?;
+        let (msg, kind) = msg.into_builder_parts();
+
+        Ok(MulticastBuilder {
+            client: self.client(),
+            chat_ids: ids,
+            ttl: None,
+            msg,
+            kind,
+        })
     }
 
     pub async fn update_msg<CID: Into<ChatId>, MID: Into<MessageId>>(

@@ -11,6 +11,9 @@ pub mod ext;
 pub mod id;
 pub mod messages;
 pub mod prelude;
+pub mod preview;
+
+mod util;
 
 pub use simploxide_api_types::{
     self as types,
@@ -302,22 +305,23 @@ pub mod preferences {
 
         pub const TTL_MAX: std::time::Duration = std::time::Duration::from_hours(8784);
 
-        pub fn always(ttl: std::time::Duration) -> Option<TimedMessagesPreference> {
+        pub fn ttl_to_secs(ttl: std::time::Duration) -> i32 {
             let clamped = std::cmp::min(ttl, TTL_MAX);
+            clamped.as_secs() as i32
+        }
 
+        pub fn always(ttl: std::time::Duration) -> Option<TimedMessagesPreference> {
             Some(TimedMessagesPreference {
                 allow: FeatureAllowed::Always,
-                ttl: Some(clamped.as_secs() as i32),
+                ttl: Some(ttl_to_secs(ttl)),
                 undocumented: serde_json::Value::Null,
             })
         }
 
         pub fn yes(ttl: std::time::Duration) -> Option<TimedMessagesPreference> {
-            let clamped = std::cmp::min(ttl, TTL_MAX);
-
             Some(TimedMessagesPreference {
                 allow: FeatureAllowed::Yes,
-                ttl: Some(clamped.as_secs() as i32),
+                ttl: Some(ttl_to_secs(ttl)),
                 undocumented: serde_json::Value::Null,
             })
         }

@@ -28,6 +28,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             commands: None,
             undocumented: Default::default(),
         })
+        .auto_accept()
         .connect()
         .await?;
 
@@ -36,36 +37,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     events
         .into_dispatcher(bot)
-        // An example of processing user connections manually
-        .on(
-            async |ev: Arc<ContactConnected>, bot| -> ws::ClientResult<_> {
-                println!("{} connected", ev.contact.profile.display_name);
-
-                bot.send_msg(
-                    &ev.contact,
-                    "Hello! I am a simple file bot - if you send me a file, I will send it back!",
-                )
-                .await?;
-
-                Ok(StreamEvents::Continue)
-            },
-        )
-        .on(async |ev: Arc<ReceivedContactRequest>, bot| {
-            bot.accept_contact(&ev.contact_request).await?;
-
-            println!(
-                "Accepted user: {} ({})",
-                ev.contact_request.profile.display_name, ev.contact_request.profile.full_name
-            );
-
-            Ok(StreamEvents::Continue)
-        })
-        .on(recv_file_warning)
         .on(recv_file_error)
-        .on(send_file_warning)
-        .on(send_file_error)
-        .on(recv_file_ready)
+        .on(recv_file_cancelled)
         .on(recv_file_complete)
+        .on(send_file_error)
         .on(send_file_complete)
         .on(new_msgs)
         .dispatch()
@@ -85,46 +60,39 @@ async fn new_msgs(ev: Arc<NewChatItems>, bot: ws::Bot) -> ws::ClientResult<Strea
             return Ok(StreamEvents::Break);
         }
 
-        // Initially, you will receive a file as a new chat item. Then you will start to receive
-        // RcvFile* events.
-        //
-        // You can call receive/cancel file directly here without waiting for the RcvFileDescrReady
-        // event but you may get `RcvFileAcceptedSndCancelled` response if the user cancels the
-        // transmission at this stage. Calling receive after the `RcvFileDescrReady` should
-        // succeed.
-        if it.file.is_none() {
+        let Some(file) = &it.file else {
             bot.send_msg(cid, "Hey, send me some files!").await?;
+            return Ok(StreamEvents::Continue);
+        };
+
+        if file.file_size > 5 * 1024 * 1024 {
+            bot.send_msg(cid, "Sorry, but the file must be <5MiB")
+                .await?;
+
+            bot.reject_file(file).await?;
+        } else {
+            bot.accept_file(file).await?;
         }
     }
 
     Ok(StreamEvents::Continue)
 }
 
-async fn recv_file_ready(
-    ev: Arc<RcvFileDescrReady>,
+async fn recv_file_cancelled(
+    ev: Arc<RcvFileSndCancelled>,
     bot: ws::Bot,
 ) -> ws::ClientResult<StreamEvents> {
-    let file_info = ev
-        .chat_item
-        .chat_item
-        .file
-        .as_ref()
-        .expect("The file field must be present in RcvFileDescrReady event");
-
     let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info else {
         // Cannot operate in groups
         return Ok(StreamEvents::Continue);
     };
 
-    if file_info.file_size > 5 * 1024 * 1024 {
-        bot.send_msg(contact, "Sorry, but the file must be <5MiB")
-            .await?;
-
-        bot.reject_file(file_info).await?;
-    } else {
-        // Spawns a background file download. File will be encrypted locally
-        bot.accept_file(file_info).store_encrypted().await?;
-    }
+    bot.send_msg(
+        contact,
+        "I cannot process files if you keep cancelling them!",
+    )
+    .reply_to(&ev.chat_item)
+    .await?;
 
     Ok(StreamEvents::Continue)
 }
@@ -148,30 +116,11 @@ async fn recv_file_complete(
         .and_then(|x| x.file_source.clone())
         .unwrap();
 
-    bot.send_msg(contact, crypto_file)
-        .set_text("Take it back!")
+    bot.send_msg(contact, "Take it back!")
+        .attach(crypto_file)
         .reply_to(&ev.chat_item)
         .await?;
 
-    Ok(StreamEvents::Continue)
-}
-
-async fn recv_file_warning(
-    ev: Arc<RcvFileWarning>,
-    bot: ws::Bot,
-) -> ws::ClientResult<StreamEvents> {
-    eprintln!("Failure receiving a file:\n{ev:#?}");
-
-    if let Some(ChatInfo::Direct { contact, .. }) = ev.chat_item.as_ref().map(|c| &c.chat_info) {
-        bot.send_msg(
-            contact,
-            format!(
-                "Failed to receive the {} due to {:?}",
-                ev.rcv_file_transfer.file_invitation.file_name, ev.agent_error
-            ),
-        )
-        .await?;
-    }
     Ok(StreamEvents::Continue)
 }
 
@@ -196,7 +145,7 @@ async fn send_file_complete(
     ev: Arc<SndFileCompleteXftp>,
     bot: ws::Bot,
 ) -> ws::ClientResult<StreamEvents> {
-    println!("Returned file to a user:\n{:#?}", ev.file_transfer_meta);
+    println!("Sent file to a user:\n{:#?}", ev.file_transfer_meta);
 
     let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info else {
         // Cannot operate in groups
@@ -204,27 +153,6 @@ async fn send_file_complete(
     };
 
     bot.send_msg(contact, "Gimme more!").await?;
-
-    Ok(StreamEvents::Continue)
-}
-
-async fn send_file_warning(
-    ev: Arc<SndFileWarning>,
-    bot: ws::Bot,
-) -> ws::ClientResult<StreamEvents> {
-    eprintln!("Failure sending a file:\n{ev:#?}");
-
-    if let Some(ChatInfo::Direct { contact, .. }) = ev.chat_item.as_ref().map(|c| &c.chat_info) {
-        bot.send_msg(
-            contact,
-            format!(
-                "Failed to send back the {} due to {:?}",
-                ev.file_transfer_meta.file_name, ev.error_message
-            ),
-        )
-        .await?;
-    }
-
     Ok(StreamEvents::Continue)
 }
 
@@ -235,7 +163,7 @@ async fn send_file_error(ev: Arc<SndFileError>, bot: ws::Bot) -> ws::ClientResul
         bot.send_msg(
             contact,
             format!(
-                "Failed to send back the {} due to this horrible error {:#?}",
+                "Failed to send back the {} due to an error {:#?}",
                 ev.file_transfer_meta.file_name, ev.error_message
             ),
         )

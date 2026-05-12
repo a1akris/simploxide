@@ -58,8 +58,7 @@ impl<S: SimplexSecretBox> EncryptedFile<S> {
             .open(path)
             .await?;
 
-        let size = file.seek(SeekFrom::End(0)).await?;
-        file.seek(SeekFrom::Start(0)).await?;
+        let size = size_hint(&mut file).await?;
 
         Ok(Self {
             file,
@@ -80,8 +79,7 @@ impl<S: SimplexSecretBox> EncryptedFile<S> {
             .open(path)
             .await?;
 
-        let size = file.seek(SeekFrom::End(0)).await?;
-        file.seek(SeekFrom::Start(0)).await?;
+        let size = size_hint(&mut file).await?;
 
         Ok(Self {
             file,
@@ -337,6 +335,10 @@ impl AsyncPlainFileOps for ::tokio::fs::File {
             .open(path)
             .await
     }
+
+    fn size_hint(&mut self) -> impl Future<Output = ::std::io::Result<usize>> {
+        size_hint(self)
+    }
 }
 
 impl<S: SimplexSecretBox> AsyncEncryptedFileOps for EncryptedFile<S> {
@@ -363,4 +365,15 @@ impl<S: SimplexSecretBox> AsyncEncryptedFileOps for EncryptedFile<S> {
     fn crypto_args(&self) -> &FileCryptoArgs {
         self.crypto_args()
     }
+
+    fn size_hint(&self) -> usize {
+        self.plaintext_size_hint()
+    }
+}
+
+async fn size_hint(file: &mut ::tokio::fs::File) -> ::std::io::Result<usize> {
+    let size = file.seek(SeekFrom::End(0)).await?;
+    file.seek(SeekFrom::Start(0)).await?;
+
+    crate::util::cast_file_size(size)
 }
