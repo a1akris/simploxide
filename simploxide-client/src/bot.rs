@@ -18,6 +18,7 @@ use crate::{
     id::{ChatId, ContactId, ContactRequestId, FileId, MessageId, UserId},
     messages::{MessageBuilder, MessageLike, MulticastBuilder},
     preferences,
+    preview::ImagePreview,
 };
 
 /// A cheaply cloneable handle to initialized SimpleX bot.
@@ -39,6 +40,12 @@ impl<C> Bot<C> {
 
 impl<C: ClientApi> Bot<C> {
     pub async fn init(client: C, settings: BotSettings) -> Result<Self, C::Error> {
+        let avatar = if let Some(preview) = settings.avatar {
+            Some(preview.resolve().await)
+        } else {
+            None
+        };
+
         let mut users = client.users().await?;
 
         match users.iter_mut().find_map(|info| {
@@ -51,42 +58,13 @@ impl<C: ClientApi> Bot<C> {
                         .await?;
                 }
 
-                let bot = Bot {
-                    client,
-                    user_id: user.user_id,
-                };
+                let bot = Bot { client, user_id: user.user_id };
 
-                if let Some(welcome_message) = settings.auto_accept {
-                    if user.profile.contact_link.is_none() {
-                        bot.get_or_create_address().await?;
-                        bot.publish_address().await?;
-                    }
-
-                    bot.configure_address(AddressSettings {
-                        business_address: false,
-                        auto_accept: Some(AutoAccept {
-                            accept_incognito: false,
-                            undocumented: Default::default(),
-                        }),
-                        auto_reply: (!welcome_message.is_empty())
-                            .then(|| MsgContent::make_text(welcome_message)),
-                        undocumented: Default::default(),
-                    })
+                bot.setup_auto_accept(settings.auto_accept, user.profile.contact_link.is_some())
                     .await?;
-                } else {
-                    if user.profile.contact_link.is_some() {
-                        bot.configure_address(AddressSettings {
-                            business_address: false,
-                            auto_accept: None,
-                            auto_reply: None,
-                            undocumented: Default::default(),
-                        })
-                        .await?;
-                    }
-                }
 
                 if let Some(profile_settings) = settings.profile_settings {
-                    let profile = match profile_settings {
+                    let mut profile = match profile_settings {
                         BotProfileSettings::Preferences(preferences) => {
                             let mut current_profile = extract_profile(&mut user.profile);
                             current_profile.preferences = Some(preferences);
@@ -94,14 +72,20 @@ impl<C: ClientApi> Bot<C> {
                         }
                         BotProfileSettings::FullProfile(profile) => profile,
                     };
-
+                    if let Some(image) = avatar {
+                        profile.image = Some(image);
+                    }
+                    bot.client.api_update_profile(user.user_id, profile).await?;
+                } else if let Some(image) = avatar {
+                    let mut profile = extract_profile(&mut user.profile);
+                    profile.image = Some(image);
                     bot.client.api_update_profile(user.user_id, profile).await?;
                 }
 
                 Ok(bot)
             }
             None => {
-                let bot_profile = match settings.profile_settings {
+                let mut bot_profile = match settings.profile_settings {
                     Some(BotProfileSettings::Preferences(preferences)) => {
                         let mut profile = Self::default_profile(settings.display_name.clone());
                         profile.preferences = Some(preferences);
@@ -110,6 +94,9 @@ impl<C: ClientApi> Bot<C> {
                     Some(BotProfileSettings::FullProfile(profile)) => profile,
                     None => Self::default_profile(settings.display_name.clone()),
                 };
+                if let Some(image) = avatar {
+                    bot_profile.image = Some(image);
+                }
 
                 let response = client
                     .new_user(NewUser {
@@ -120,31 +107,48 @@ impl<C: ClientApi> Bot<C> {
                     })
                     .await?;
 
-                let bot = Bot {
-                    client,
-                    user_id: response.user.user_id,
-                };
+                let bot = Bot { client, user_id: response.user.user_id };
 
-                if let Some(welcome_message) = settings.auto_accept {
-                    bot.create_address().await?;
-                    bot.publish_address().await?;
-
-                    bot.configure_address(AddressSettings {
-                        business_address: false,
-                        auto_accept: Some(AutoAccept {
-                            accept_incognito: false,
-                            undocumented: Default::default(),
-                        }),
-                        auto_reply: (!welcome_message.is_empty())
-                            .then(|| MsgContent::make_text(welcome_message)),
-                        undocumented: Default::default(),
-                    })
-                    .await?;
-                }
+                bot.setup_auto_accept(settings.auto_accept, false).await?;
 
                 Ok(bot)
             }
         }
+    }
+
+    async fn setup_auto_accept(
+        &self,
+        auto_accept: Option<String>,
+        has_existing_address: bool,
+    ) -> Result<(), C::Error> {
+        if let Some(welcome_message) = auto_accept {
+            if !has_existing_address {
+                self.get_or_create_address().await?;
+                self.publish_address().await?;
+            }
+
+            self.configure_address(AddressSettings {
+                business_address: false,
+                auto_accept: Some(AutoAccept {
+                    accept_incognito: false,
+                    undocumented: Default::default(),
+                }),
+                auto_reply: (!welcome_message.is_empty())
+                    .then(|| MsgContent::make_text(welcome_message)),
+                undocumented: Default::default(),
+            })
+            .await?;
+        } else if has_existing_address {
+            self.configure_address(AddressSettings {
+                business_address: false,
+                auto_accept: None,
+                auto_reply: None,
+                undocumented: Default::default(),
+            })
+            .await?;
+        }
+
+        Ok(())
     }
 
     /// This method allows ot wrap or replace the underlying bot client.
@@ -333,12 +337,11 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Set the bot/user avatar
-    pub async fn set_image(
+    pub async fn set_avatar(
         &self,
-        // TODO: Make a helper type InlineImage type
-        image: impl Into<String>,
+        avatar: ImagePreview,
     ) -> Result<ApiUpdateProfileResponse, C::Error> {
-        let image = image.into();
+        let image = avatar.resolve().await;
         self.update_profile(move |profile| profile.image = Some(image))
             .await
     }
@@ -606,6 +609,7 @@ pub struct BotSettings {
     /// empty adds a welcome message to the address
     pub auto_accept: Option<String>,
     pub profile_settings: Option<BotProfileSettings>,
+    pub avatar: Option<ImagePreview>,
 }
 
 impl BotSettings {
@@ -614,7 +618,13 @@ impl BotSettings {
             display_name: name.into(),
             auto_accept: None,
             profile_settings: None,
+            avatar: None,
         }
+    }
+
+    pub fn with_avatar(mut self, avatar: ImagePreview) -> Self {
+        self.avatar = Some(avatar);
+        self
     }
 
     /// Create a public auto-accepting address during the intialisation

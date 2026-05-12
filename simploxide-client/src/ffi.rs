@@ -12,6 +12,7 @@ use std::sync::Arc;
 use crate::{
     BadResponseError, ClientApi, ClientApiError, EventParser,
     bot::{BotProfileSettings, BotSettings},
+    preview::ImagePreview,
 };
 
 pub type Bot = crate::bot::Bot<Client>;
@@ -122,6 +123,7 @@ pub struct BotBuilder {
     auto_accept: Option<String>,
     profile: Option<Profile>,
     preferences: Option<Preferences>,
+    avatar: Option<ImagePreview>,
     worker_config: WorkerConfig,
 }
 
@@ -135,6 +137,7 @@ impl BotBuilder {
             auto_accept: None,
             profile: None,
             preferences: None,
+            avatar: None,
             worker_config: WorkerConfig::default(),
         }
     }
@@ -157,6 +160,12 @@ impl BotBuilder {
     /// [Self::auto_accept] with a welcome message
     pub fn auto_accept_with(mut self, welcome_message: impl Into<String>) -> Self {
         self.auto_accept = Some(welcome_message.into());
+        self
+    }
+
+    /// Set the bot avatar during initialisation
+    pub fn with_avatar(mut self, avatar: ImagePreview) -> Self {
+        self.avatar = Some(avatar);
         self
     }
 
@@ -208,6 +217,7 @@ impl BotBuilder {
                 (None, Some(preferences)) => Some(BotProfileSettings::Preferences(preferences)),
                 (None, None) => None,
             },
+            avatar: self.avatar,
         };
 
         let bot = Bot::init(client, settings).await?;

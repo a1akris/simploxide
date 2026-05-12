@@ -17,6 +17,7 @@ use simploxide_ws_core::RawClient;
 use crate::{
     BadResponseError, ClientApi, ClientApiError, EventParser,
     bot::{BotProfileSettings, BotSettings},
+    preview::ImagePreview,
 };
 
 pub type Bot = crate::bot::Bot<Client>;
@@ -230,6 +231,7 @@ pub struct BotBuilder {
     auto_accept: Option<String>,
     profile: Option<Profile>,
     preferences: Option<Preferences>,
+    avatar: Option<ImagePreview>,
     #[cfg(feature = "cli")]
     db_prefix: String,
     #[cfg(feature = "cli")]
@@ -250,6 +252,7 @@ impl BotBuilder {
             auto_accept: None,
             profile: None,
             preferences: None,
+            avatar: None,
             #[cfg(feature = "cli")]
             extra_args: Vec::new(),
         }
@@ -296,6 +299,12 @@ impl BotBuilder {
         self
     }
 
+    /// Set the bot avatar during initialisation
+    pub fn with_avatar(mut self, avatar: ImagePreview) -> Self {
+        self.avatar = Some(avatar);
+        self
+    }
+
     /// Update/create the whole bot profile on launch
     pub fn with_profile(mut self, profile: Profile) -> Self {
         self.profile = Some(profile);
@@ -339,6 +348,7 @@ impl BotBuilder {
                 (None, Some(preferences)) => Some(BotProfileSettings::Preferences(preferences)),
                 (None, None) => None,
             },
+            avatar: self.avatar,
         };
 
         let bot = Bot::init(client, settings).await?;
