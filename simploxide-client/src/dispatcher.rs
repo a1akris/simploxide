@@ -492,7 +492,10 @@ where
 
         let _ = cancellator.send(());
         while let Some(res) = join_set.join_next().await {
-            result = result.and(res);
+            // returns either the last Ok or the first encountered error
+            if matches!(result, Ok(Ok(_))) {
+                result = res;
+            }
         }
 
         match result {
@@ -563,7 +566,10 @@ where
 
         let _ = cancellator.send(());
         while let Some(res) = join_set.join_next().await {
-            result = result.and(res);
+            // returns either the last Ok or the first encountered error
+            if matches!(result, Ok(Ok(_))) {
+                result = res;
+            }
         }
 
         match result {
