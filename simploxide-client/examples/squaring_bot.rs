@@ -38,8 +38,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn new_msgs(ev: Arc<NewChatItems>, bot: ws::Bot) -> ClientResult<StreamEvents> {
     // SimpleX sends a lot of utility messages like changed preferences and connection events.
     // These fake messages must be filtered out, we're interested only in real user messages
-    for (cid, it, content) in ev.chat_items.filter_messages() {
-        if it.meta.item_text.trim() == "/die" {
+    for (chat, msg, content) in ev.chat_items.filter_messages() {
+        if msg.meta.item_text.trim() == "/die" {
             return Ok(StreamEvents::Break);
         }
 
@@ -48,13 +48,13 @@ async fn new_msgs(ev: Arc<NewChatItems>, bot: ws::Bot) -> ClientResult<StreamEve
             .and_then(|txt| txt.trim().parse::<i64>().ok())
         {
             let square = num.saturating_mul(num);
-            bot.send_msg(cid, format!("Squared: {square}"))
-                .reply_to(it)
+            bot.send_msg(chat, format!("Squared: {square}"))
+                .reply_to(msg)
                 .send()
                 .await?;
         } else {
-            bot.send_msg(cid, "Me understands only numbers!")
-                .reply_to(it)
+            bot.send_msg(chat, "Me understands only numbers!")
+                .reply_to(msg)
                 .send()
                 .await?;
         }

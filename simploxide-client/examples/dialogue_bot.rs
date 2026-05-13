@@ -55,22 +55,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Ok(StreamEvents::Continue)
         })
         // Inline lambdas are useful to pass some additional data/context to the particular handler
-        // using async move(no data in really passed in this example)
+        // via async move(no data is really passed in this example)
         .on(
             async move |ev: Arc<NewChatItems>, dialogue| -> ffi::ClientResult<StreamEvents> {
-                for (cid, it, _content) in ev.chat_items.filter_messages() {
-                    let input = it.meta.item_text.trim().to_owned();
+                for (chat, msg, _content) in ev.chat_items.filter_messages() {
+                    let input = msg.meta.item_text.trim().to_owned();
 
                     if input == "/die" {
                         return Ok(StreamEvents::Break);
                     }
 
-                    if dialogue.process_input(cid, input).await?.has_terminated() {
-                        println!("USER DATA DUMP:\n{:#?}", dialogue.state_map[&cid].inputs);
+                    if dialogue.process_input(chat, input).await?.has_terminated() {
+                        println!("USER DATA DUMP:\n{:#?}", dialogue.state_map[&chat].inputs);
 
                         dialogue
                             .bot
-                            .send_msg(cid, "You're absolutely the best!")
+                            .send_msg(chat, "You're absolutely the best!")
                             .await?;
                     }
                 }

@@ -515,6 +515,13 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Generate a [MulticastBuilder] that is ready to send messages to all known chats
+    ///
+    /// ```rust
+    /// bot.prepare_broadcast("Hey, what's up?!")
+    ///    .await
+    ///    .send()
+    ///    .await?;
+    /// ```
     pub async fn prepare_broadcast<M: MessageLike>(
         &self,
         msg: M,
@@ -528,7 +535,7 @@ impl<C: ClientApi> Bot<C> {
     /// Generate a [MulticastBuilder] that is ready to send messages to chats matching the filter
     ///
     /// ```rust
-    /// bot.prepare_broadcast_with(, |id| id.is_group())
+    /// bot.prepare_broadcast_with("What do you think about this logo?", |chat| chat.is_direct())
     ///    .await
     ///    .with_image(Image::new("logo.jpg"))
     ///    .send()

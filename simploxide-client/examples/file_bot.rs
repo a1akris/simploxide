@@ -50,23 +50,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn new_msgs(ev: Arc<NewChatItems>, bot: ws::Bot) -> ws::ClientResult<StreamEvents> {
-    for (cid, it, _) in ev.chat_items.filter_messages() {
-        if !cid.is_direct() {
+    for (chat, msg, _) in ev.chat_items.filter_messages() {
+        if !chat.is_direct() {
             // Support only direct conversations.
             return Ok(StreamEvents::Continue);
         }
 
-        if it.meta.item_text.trim() == "/die" {
+        if msg.meta.item_text.trim() == "/die" {
             return Ok(StreamEvents::Break);
         }
 
-        let Some(file) = &it.file else {
-            bot.send_msg(cid, "Hey, send me some files!").await?;
+        let Some(file) = &msg.file else {
+            bot.send_msg(chat, "Hey, send me some files!").await?;
             return Ok(StreamEvents::Continue);
         };
 
         if file.file_size > 5 * 1024 * 1024 {
-            bot.send_msg(cid, "Sorry, but the file must be <5MiB")
+            bot.send_msg(chat, "Sorry, but the file must be <5MiB")
+                .reply_to(msg)
                 .await?;
 
             bot.reject_file(file).await?;
@@ -147,12 +148,10 @@ async fn send_file_complete(
 ) -> ws::ClientResult<StreamEvents> {
     println!("Sent file to a user:\n{:#?}", ev.file_transfer_meta);
 
-    let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info else {
-        // Cannot operate in groups
-        return Ok(StreamEvents::Continue);
-    };
+    if let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info {
+        bot.send_msg(contact, "Gimme more!").await?;
+    }
 
-    bot.send_msg(contact, "Gimme more!").await?;
     Ok(StreamEvents::Continue)
 }
 
@@ -163,7 +162,7 @@ async fn send_file_error(ev: Arc<SndFileError>, bot: ws::Bot) -> ws::ClientResul
         bot.send_msg(
             contact,
             format!(
-                "Failed to send back the {} due to an error {:#?}",
+                "Failed to send back _{}_ due to an error: !1 {:#}!",
                 ev.file_transfer_meta.file_name, ev.error_message
             ),
         )
