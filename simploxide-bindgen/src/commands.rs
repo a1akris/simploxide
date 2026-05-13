@@ -153,17 +153,8 @@ impl<'a> std::fmt::Display for CommandResponseTraitMethod<'a> {
 
         writeln!(
             f,
-            "        let raw = self.send_raw(command.to_command_string()).await?;"
-        )?;
-        writeln!(
-            f,
-            "        let response_shape: Self::ResponseShape<'_, {}> = serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;",
-            self.response.name,
-        )?;
-
-        writeln!(
-            f,
-            "        let response = response_shape.extract_response()?;"
+            "        let response: {} = self.send(command).await?;",
+            self.response.name
         )?;
 
         let into_inner = if is_response_inlined {

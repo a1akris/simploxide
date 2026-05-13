@@ -238,6 +238,27 @@ fn generate_commands(commands_md: &str) -> Result<(), Box<dyn Error>> {
         "    fn send_raw(&self, command: String) -> impl Future<Output = Result<String, Self::Error>> + Send;"
     )?;
     writeln!(client_api_rs)?;
+    writeln!(
+        client_api_rs,
+        "    fn send<C, R>(&self, cmd: C) -> impl Future<Output = Result<R, Self::Error>> + Send where C: Send + CommandSyntax, R: for<'de> Deserialize<'de> {{"
+    )?;
+    writeln!(client_api_rs, "       async move {{")?;
+    writeln!(
+        client_api_rs,
+        "           let raw = self.send_raw(cmd.to_command_string()).await?;"
+    )?;
+    writeln!(
+        client_api_rs,
+        "           let response_shape: Self::ResponseShape<'_, R> = serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;"
+    )?;
+    writeln!(
+        client_api_rs,
+        "           let response = response_shape.extract_response()?;"
+    )?;
+    writeln!(client_api_rs, "           Ok(response)")?;
+    writeln!(client_api_rs, "       }}")?;
+    writeln!(client_api_rs, "   }}")?;
+    writeln!(client_api_rs)?;
 
     let mut unique_response_shapes: BTreeMap<String, RecordType> = BTreeMap::new();
 
