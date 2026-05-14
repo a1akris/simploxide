@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 pub use simploxide_ws_core::{
-    self as core, Error as CoreError, Event as CoreEvent, Result as CoreResult,
-    tungstenite::Error as WsError,
+    self as core, Error as CoreError, Event as CoreEvent, Result as CoreResult, SimplexVersion,
+    VersionError, tungstenite::Error as WsError,
 };
 
 #[cfg(feature = "cli")]
@@ -12,6 +14,7 @@ use simploxide_api_types::{
     client_api::{ExtractResponse, WebSocketResponseShape, WebSocketResponseShapeInner},
     events::{Event, EventKind},
 };
+use simploxide_core::{MAX_SUPPORTED_VERSION, MIN_SUPPORTED_VERSION};
 use simploxide_ws_core::RawClient;
 
 use crate::{
@@ -37,8 +40,18 @@ pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
 ///     // Process events...
 /// }
 /// ```
-pub async fn connect<S: AsRef<str>>(uri: S) -> Result<(Client, EventStream), WsError> {
+pub async fn connect<S: AsRef<str>>(uri: S) -> Result<(Client, EventStream), ConnectError> {
     let (raw_client, raw_event_queue) = simploxide_ws_core::connect(uri.as_ref()).await?;
+
+    let version = raw_client
+        .version()
+        .await
+        .map_err(ConnectError::VersionError)?;
+
+    if !version.is_supported() {
+        return Err(ConnectError::VersionMismatch(version));
+    }
+
     Ok((
         Client::from(raw_client),
         EventStream::from(raw_event_queue.into_receiver()),
@@ -63,11 +76,11 @@ pub async fn retry_connect<S: AsRef<str>>(
     uri: S,
     retry_delay: std::time::Duration,
     mut retries_count: usize,
-) -> Result<(Client, EventStream), WsError> {
+) -> Result<(Client, EventStream), ConnectError> {
     loop {
         match connect(uri.as_ref()).await {
             Ok(connection) => break Ok(connection),
-            Err(e) if retries_count == 0 => break Err(e),
+            Err(e) if !e.is_server() || retries_count == 0 => break Err(e),
             Err(_) => {
                 retries_count -= 1;
                 tokio::time::sleep(retry_delay).await
@@ -143,6 +156,10 @@ impl From<RawClient> for Client {
 }
 
 impl Client {
+    pub fn version(&self) -> impl Future<Output = Result<SimplexVersion, VersionError>> {
+        self.inner.version()
+    }
+
     /// Initiates a graceful shutdown for the underlying web socket connection. See
     /// [`simploxide_ws_core::RawClient::disconnect`] for details.
     pub fn disconnect(self) -> impl Future<Output = ()> {
@@ -223,6 +240,55 @@ impl ClientApiError for ClientError {
     }
 }
 
+#[derive(Debug)]
+pub enum ConnectError {
+    /// Failure to establish the connection to the server
+    Server(CoreError),
+    /// Failure to get the server version
+    VersionError(VersionError),
+    /// Unsupported server version
+    VersionMismatch(SimplexVersion),
+}
+
+impl ConnectError {
+    pub fn is_server(&self) -> bool {
+        matches!(self, Self::Server(_))
+    }
+
+    pub fn is_version_mismatch(&self) -> bool {
+        matches!(self, Self::VersionMismatch(_))
+    }
+}
+
+impl From<WsError> for ConnectError {
+    fn from(value: WsError) -> Self {
+        Self::Server(Arc::new(value))
+    }
+}
+
+impl std::fmt::Display for ConnectError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Server(error) => write!(f, "Cannot connect to the server: {error}"),
+            Self::VersionError(error) => write!(f, "Cannot get the server version: {error}"),
+            Self::VersionMismatch(v) => write!(
+                f,
+                "Version {v} is unsupported by the current client. Supported versions are {MIN_SUPPORTED_VERSION}..{MAX_SUPPORTED_VERSION}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ConnectError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Server(error) => Some(error),
+            Self::VersionError(error) => Some(error),
+            Self::VersionMismatch(_) => None,
+        }
+    }
+}
+
 pub struct BotBuilder {
     name: String,
     port: u16,
@@ -261,8 +327,8 @@ impl BotBuilder {
     #[cfg(feature = "cli")]
     /// Path prefix for the SimpleX database
     ///
-    /// "{dir}/{prefix}" creates a {dir} with `{prefix}_agent.db` and `{prefix}_chat.db` {prefix}
-    /// creates `{prefix}_agent.db` and `{prefix}_chat.db` at the current dir
+    /// "{dir}/{prefix}" creates a {dir} with `{prefix}_agent.db` and `{prefix}_chat.db`;
+    /// "{prefix}" creates `{prefix}_agent.db` and `{prefix}_chat.db` at the current dir
     pub fn db_prefix(mut self, prefix: impl Into<String>) -> Self {
         self.db_prefix = prefix.into();
         self
@@ -382,7 +448,7 @@ impl BotBuilder {
 /// Error returned by [`BotBuilder::connect`] and [`BotBuilder::launch`].
 #[derive(Debug)]
 pub enum BotInitError {
-    Connect(WsError),
+    Connect(ConnectError),
     Api(ClientError),
     #[cfg(feature = "cli")]
     CliSpawn(std::io::Error),

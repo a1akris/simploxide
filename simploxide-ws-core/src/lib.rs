@@ -31,12 +31,13 @@ mod dispatcher;
 mod router;
 mod transmission;
 
-use std::sync::{
-    Arc,
-    atomic::{AtomicUsize, Ordering},
-};
+pub use dispatcher::{EventQueue, EventReceiver};
+pub use simploxide_core::SimplexVersion;
+pub use tokio_tungstenite::{self, tungstenite};
 
 use futures::StreamExt;
+use serde::Deserialize;
+use simploxide_core::VersionInfo;
 use tokio::sync::{oneshot, watch};
 use tokio_tungstenite::{
     MaybeTlsStream, WebSocketStream, connect_async,
@@ -46,8 +47,10 @@ use tokio_util::sync::CancellationToken;
 
 use {router::ClientRouter, transmission::Transmitter};
 
-pub use dispatcher::{EventQueue, EventReceiver};
-pub use tokio_tungstenite::{self, tungstenite};
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+};
 
 pub type Event = String;
 pub type Response = Event;
@@ -159,6 +162,29 @@ impl RawClient {
             .expect("Registered responders always deliver")
     }
 
+    /// Returns the version of the underlying SimpleX runtime.
+    pub async fn version(&self) -> std::result::Result<SimplexVersion, VersionError> {
+        #[derive(Deserialize)]
+        struct VersionResponse<'a> {
+            #[serde(borrow)]
+            resp: VersionInfo<'a>,
+        }
+
+        let output = self.send("/v".to_owned()).await?;
+
+        let response = serde_json::from_str::<VersionResponse>(&output)
+            .map_err(VersionError::InvalidJson)?
+            .resp
+            .version_info
+            .version;
+
+        let version = response
+            .parse()
+            .map_err(|_| VersionError::ParseError(response.to_owned()))?;
+
+        Ok(version)
+    }
+
     /// Initiates a graceful shutdown and waits until it is complete. Returns only after the
     /// connection is fully closed.
     ///
@@ -197,6 +223,44 @@ impl RawClient {
         self.router.shutdown();
         async move {
             let _ = self.shutdown.wait_for(|done| *done).await;
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum VersionError {
+    Ws(Error),
+    InvalidJson(serde_json::Error),
+    ParseError(String),
+}
+
+impl From<Error> for VersionError {
+    fn from(value: Error) -> Self {
+        Self::Ws(value)
+    }
+}
+
+impl std::fmt::Display for VersionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Ws(e) => e.fmt(f),
+            Self::InvalidJson(e) => write!(f, "Cannot parse the version json: {e}"),
+            Self::ParseError(s) => {
+                write!(
+                    f,
+                    "Cannot parse version, expected format: '<major>.<minor>.<patch>.<hotfix>', got {s:?}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for VersionError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Ws(e) => Some(e),
+            Self::InvalidJson(e) => Some(e),
+            Self::ParseError(_) => None,
         }
     }
 }

@@ -1,11 +1,14 @@
-pub use simploxide_ffi_core::{CallError, DbOpts, DefaultUser, InitError, WorkerConfig};
+pub use simploxide_ffi_core::{
+    CallError, DbOpts, DefaultUser, InitError as CoreInitError, SimplexVersion, WorkerConfig,
+};
 
 use simploxide_api_types::{
     Preferences, Profile,
     client_api::{ExtractResponse as _, FfiResponseShape},
     events::{Event, EventKind},
 };
-use simploxide_ffi_core::{Event as CoreEvent, RawClient, Result as CoreResult};
+use simploxide_core::{MAX_SUPPORTED_VERSION, MIN_SUPPORTED_VERSION};
+use simploxide_ffi_core::{Event as CoreEvent, RawClient, Result as CoreResult, VersionError};
 
 use std::sync::Arc;
 
@@ -33,6 +36,16 @@ pub async fn init_with_config(
 ) -> Result<(Client, EventStream), InitError> {
     let (raw_client, raw_event_queue) =
         simploxide_ffi_core::init_with_config(default_user, db_opts, config).await?;
+
+    let version = raw_client
+        .version()
+        .await
+        .map_err(InitError::VersionError)?;
+
+    if !version.is_supported() {
+        return Err(InitError::VersionMismatch(version));
+    }
+
     Ok((
         Client::from(raw_client),
         EventStream::from(raw_event_queue.into_receiver()),
@@ -54,6 +67,10 @@ impl From<RawClient> for Client {
 /// A high level SimpleX-Chat client which provides typed API methods with automatic command
 /// serialization and response deserialization.
 impl Client {
+    pub fn version(&self) -> impl Future<Output = Result<SimplexVersion, VersionError>> {
+        self.inner.version()
+    }
+
     /// Initiates a graceful shutdown for the underlying web socket connection. See
     /// [`simploxide_ffi_core::RawClient::disconnect`] for details.
     pub fn disconnect(self) -> impl Future<Output = ()> {
@@ -273,6 +290,55 @@ impl ClientApiError for ClientError {
             Some(resp)
         } else {
             None
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum InitError {
+    /// Failure to init the FFI instance
+    Ffi(CoreInitError),
+    /// Failure to get the backend version
+    VersionError(VersionError),
+    /// Unsupported backend version
+    VersionMismatch(SimplexVersion),
+}
+
+impl InitError {
+    pub fn is_ffi(&self) -> bool {
+        matches!(self, Self::Ffi(_))
+    }
+
+    pub fn is_version_mismatch(&self) -> bool {
+        matches!(self, Self::VersionMismatch(_))
+    }
+}
+
+impl From<CoreInitError> for InitError {
+    fn from(value: CoreInitError) -> Self {
+        Self::Ffi(value)
+    }
+}
+
+impl std::fmt::Display for InitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Ffi(error) => write!(f, "Cannot initialize the FFI backend: {error}"),
+            Self::VersionError(error) => write!(f, "Cannot get FFI version {error}"),
+            Self::VersionMismatch(v) => write!(
+                f,
+                "Version {v} is unsupported by the current client. Supported versions are {MIN_SUPPORTED_VERSION}..{MAX_SUPPORTED_VERSION}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for InitError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Ffi(error) => Some(error),
+            Self::VersionError(error) => Some(error),
+            Self::VersionMismatch(_) => None,
         }
     }
 }

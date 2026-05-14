@@ -24,14 +24,15 @@
 //! _Current implementation heavily depends on `tokio` runtime and won't work with other
 //! executors._
 
-pub use simploxide_core::SimplexVersion;
-pub use simploxide_sxcrt_sys::{CallError, InitError, MigrationConfirmation};
-
 pub mod default;
 
 mod worker;
 
+pub use simploxide_core::SimplexVersion;
+pub use simploxide_sxcrt_sys::{CallError, InitError, MigrationConfirmation};
+
 use serde::Deserialize;
+use simploxide_core::VersionInfo;
 
 use std::{path::Path, sync::Arc, time::Duration};
 
@@ -172,18 +173,6 @@ impl RawClient {
         struct VersionResult<'a> {
             #[serde(borrow)]
             result: VersionInfo<'a>,
-        }
-
-        #[derive(Deserialize)]
-        struct VersionInfo<'a> {
-            #[serde(borrow, rename = "versionInfo")]
-            version_info: VersionData<'a>,
-        }
-
-        #[derive(Deserialize)]
-        struct VersionData<'a> {
-            #[serde(borrow)]
-            version: &'a str,
         }
 
         let output = self.send("/v".to_owned()).await?;

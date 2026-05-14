@@ -5,8 +5,13 @@
 
 use std::str::FromStr;
 
+use serde::Deserialize;
+
+pub const MIN_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 0, 0);
+pub const MAX_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 1, 0);
+
 /// Parses SimpleX version numbers in the form `MAJOR.MINOR.PATCH.HOTFIX`.
-#[derive(PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct SimplexVersion {
     major: u8,
     minor: u8,
@@ -38,6 +43,10 @@ impl SimplexVersion {
 
     pub fn hotfix(&self) -> u8 {
         self.hotfix
+    }
+
+    pub fn is_supported(self) -> bool {
+        self >= MIN_SUPPORTED_VERSION && self <= MAX_SUPPORTED_VERSION
     }
 }
 
@@ -78,6 +87,19 @@ impl std::fmt::Debug for SimplexVersion {
         write!(f, "{self}")?;
         write!(f, ")")
     }
+}
+
+/// A helper to parse version from SimpleX response
+#[derive(Deserialize)]
+pub struct VersionInfo<'a> {
+    #[serde(borrow, rename = "versionInfo")]
+    pub version_info: VersionData<'a>,
+}
+
+#[derive(Deserialize)]
+pub struct VersionData<'a> {
+    #[serde(borrow)]
+    pub version: &'a str,
 }
 
 #[cfg(test)]
