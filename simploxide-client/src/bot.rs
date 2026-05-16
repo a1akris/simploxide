@@ -88,13 +88,11 @@ impl<C: ClientApi> Bot<C> {
                         }
                         BotProfileSettings::FullProfile(profile) => profile,
                     };
-                    if let Some(image) = avatar {
-                        profile.image = Some(image);
-                    }
+                    profile.image = avatar;
                     bot.client.api_update_profile(user.user_id, profile).await?;
-                } else if let Some(image) = avatar {
-                    let mut profile = extract_profile(&mut user.profile);
-                    profile.image = Some(image);
+                } else {
+                    let mut profile = Self::default_profile(settings.display_name);
+                    profile.image = avatar;
                     bot.client.api_update_profile(user.user_id, profile).await?;
                 }
 
@@ -110,9 +108,7 @@ impl<C: ClientApi> Bot<C> {
                     Some(BotProfileSettings::FullProfile(profile)) => profile,
                     None => Self::default_profile(settings.display_name.clone()),
                 };
-                if let Some(image) = avatar {
-                    bot_profile.image = Some(image);
-                }
+                bot_profile.image = avatar;
 
                 let response = client
                     .new_user(NewUser {
@@ -165,6 +161,8 @@ impl<C: ClientApi> Bot<C> {
                 undocumented: Default::default(),
             })
             .await?;
+
+            self.hide_address().await?;
         }
 
         Ok(())
@@ -890,6 +888,30 @@ impl<C: ClientApi> Bot<C> {
         group_id: GID,
     ) -> GetGroupRelaysResponse<C> {
         self.client.get_group_relays(group_id).await
+    }
+}
+
+#[cfg(feature = "xftp")]
+impl<C: crate::xftp::XftpExt> Bot<C> {
+    pub fn download_file<FID: Into<FileId>>(
+        &self,
+        file_id: FID,
+    ) -> crate::xftp::DownloadFileBuilder<'_, C> {
+        self.client.download_file(file_id)
+    }
+}
+
+#[cfg(feature = "websocket")]
+impl crate::ws::Bot {
+    pub fn shutdown(self) -> impl Future<Output = ()> {
+        self.client.disconnect()
+    }
+}
+
+#[cfg(feature = "ffi")]
+impl crate::ffi::Bot {
+    pub fn shutdown(self) -> impl Future<Output = ()> {
+        self.client.disconnect()
     }
 }
 

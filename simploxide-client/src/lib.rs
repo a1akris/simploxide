@@ -4,6 +4,8 @@ pub mod crypto;
 pub mod ffi;
 #[cfg(feature = "websocket")]
 pub mod ws;
+#[cfg(feature = "xftp")]
+pub mod xftp;
 
 pub mod bot;
 pub mod dispatcher;
@@ -53,6 +55,7 @@ use std::{
 pub struct EventStream<P> {
     filter: [bool; EventKind::COUNT],
     receiver: tokio::sync::mpsc::UnboundedReceiver<P>,
+    hooks: Vec<Box<dyn Hook>>,
 }
 
 impl<P> From<tokio::sync::mpsc::UnboundedReceiver<P>> for EventStream<P> {
@@ -60,11 +63,25 @@ impl<P> From<tokio::sync::mpsc::UnboundedReceiver<P>> for EventStream<P> {
         Self {
             filter: [true; EventKind::COUNT],
             receiver,
+            hooks: Vec::new(),
         }
     }
 }
 
 impl<P> EventStream<P> {
+    pub fn add_hook(&mut self, hook: Box<dyn Hook>) {
+        self.hooks.push(hook);
+    }
+
+    #[cfg(feature = "xftp")]
+    pub fn hook_xftp<C: 'static + Clone + ClientApi>(&mut self, client: C) -> xftp::XftpClient<C> {
+        let xftp_client = xftp::XftpClient::from(client);
+        let hook = xftp_client.clone();
+        self.add_hook(Box::new(hook));
+
+        xftp_client
+    }
+
     pub fn set_filter<I: IntoIterator<Item = EventKind>>(&mut self, f: Filter<I>) -> &mut Self {
         match f {
             Filter::Accept(kinds) => {
@@ -106,12 +123,6 @@ impl<P> EventStream<P> {
             *old = new;
         }
     }
-}
-
-pub enum Filter<I: IntoIterator<Item = EventKind>> {
-    Accept(I),
-    AcceptAll,
-    AcceptAllExcept(I),
 }
 
 impl<P: EventParser> EventStream<P> {
@@ -224,6 +235,12 @@ impl<P: EventParser> EventStream<P> {
     }
 }
 
+pub enum Filter<I: IntoIterator<Item = EventKind>> {
+    Accept(I),
+    AcceptAll,
+    AcceptAllExcept(I),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum StreamEvents {
     Break,
@@ -242,8 +259,25 @@ impl<P: EventParser> Stream for EventStream<P> {
                         Err(e) => break Poll::Ready(Some(Err(e))),
                     };
 
-                    if self.filter[kind.as_usize()] {
-                        break Poll::Ready(Some(raw_event.parse_event()));
+                    if !self.hooks.iter().any(|h| h.should_intercept(kind))
+                        && !self.filter[kind.as_usize()]
+                    {
+                        continue;
+                    }
+
+                    match raw_event.parse_event() {
+                        Ok(event) => {
+                            for hook in self.hooks.iter_mut() {
+                                if hook.should_intercept(kind) {
+                                    hook.intercept_event(event.clone());
+                                }
+                            }
+
+                            if self.filter[kind.as_usize()] {
+                                break Poll::Ready(Some(Ok(event)));
+                            }
+                        }
+                        Err(e) => break Poll::Ready(Some(Err(e))),
                     }
                 }
                 Poll::Ready(None) => break Poll::Ready(None),
@@ -275,6 +309,14 @@ impl EventParser for Event {
         // Cheap Arc Clone
         Ok(self.clone())
     }
+}
+
+pub trait Hook {
+    fn should_intercept(&self, kind: EventKind) -> bool;
+
+    /// Hooks shouldn't block the event stream so this method is supposed to be a cheap
+    /// sync call. You can delegate work to another thread or spawn async tasks internally.
+    fn intercept_event(&mut self, event: Event);
 }
 
 /// Syntactic sugar for preferences

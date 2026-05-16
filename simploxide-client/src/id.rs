@@ -194,5 +194,9 @@ impl_id_from_struct!(RcvFileTransfer as FileId, ft, FileId(ft.file_id));
 impl_id_from_struct!(FileTransferMeta as FileId, ft, FileId(ft.file_id));
 impl_id_from_struct!(SndFileTransfer as FileId, ft, FileId(ft.file_id));
 
-impl_id_from_struct!(GroupMember as MemberId, member, MemberId(member.group_member_id));
+impl_id_from_struct!(
+    GroupMember as MemberId,
+    member,
+    MemberId(member.group_member_id)
+);
 impl_id_from_struct!(GroupRelay as RelayId, relay, RelayId(relay.group_relay_id));

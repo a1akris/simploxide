@@ -148,7 +148,8 @@ where
     /// Dispatch events sequentially. Handlers block the event stream allowing them to exclusively
     /// mutate `Ctx` by the `&mut` reference. Returning [StreamEvents::Break] stops the dispatcher
     /// and returns the event stream and the `ctx` for further processing. The returned
-    /// [EventStream]'s filters are reset([EventStream::accept_all]).
+    /// [EventStream]'s filters should be with reset([EventStream::accept_all]) to accept all
+    /// events normally.
     ///
     /// This method returns `Future: !Send`, it should be used either with the [`tokio::task::LocalSet`],
     /// on the tokio main thread, or with a single-threaded runtime.
@@ -163,17 +164,14 @@ where
             mut chain,
         } = self;
 
-        let (mut stream, ctx) = events.stream_events_with_ctx_mut(async move |ev, ctx| {
+        events.stream_events_with_ctx_mut(async move |ev, ctx| {
             let Ok(handler) = chain.dispatch_event(ev, ctx) else {
                 unreachable!("EventStream filters set by on/fallback methods drop events without handlers during parsing");
             };
 
             handler.await
 
-        }, ctx).await?;
-
-        stream.accept_all();
-        Ok((stream, ctx))
+        }, ctx).await
     }
 
     /// Like [Self::dispatch] but allows to cancel the dispatching by some external signal
@@ -219,7 +217,6 @@ where
             }
         }
 
-        events.accept_all();
         Ok((events, ctx))
     }
 }
@@ -378,17 +375,14 @@ where
         let events = self.events;
         let chain = self.chain;
 
-        let (mut stream, ctx) = events.stream_events_with_ctx_cloned(async move |ev, ctx| {
+        events.stream_events_with_ctx_cloned(async move |ev, ctx| {
             let Ok(handler) = chain.concurrent_dispatch_event(ev, ctx) else {
                 unreachable!("EventStream filtering set by on/fallback methods drops events without handlers before parsing them");
             };
 
             handler.await
 
-        }, ctx).await?;
-
-        stream.accept_all();
-        Ok((stream, ctx))
+        }, ctx).await
     }
 
     #[cfg(feature = "cancellation")]
@@ -430,14 +424,14 @@ where
             }
         }
 
-        events.accept_all();
         Ok((events, ctx))
     }
 
     /// Spawns handlers as tokio tasks. Handlers will execute and resolve in arbitrary order.
     /// [StreamEvents::Break] eventually stops the dispatcher but it doesn't stop spawning new
     /// event handlers until it is observed so assumptions about the resulting Ctx state must not
-    /// rely on [StreamEvents::Break]. The returned [EventStream]'s filters are reset([EventStream::accept_all]).
+    /// rely on [StreamEvents::Break]. The returned [EventStream]'s filters should be
+    /// reset([EventStream::accept_all]) to accept all events normally.
     ///
     /// # Errors and panics
     ///
@@ -499,10 +493,7 @@ where
         }
 
         match result {
-            Ok(inner) => inner.map(move |_| {
-                events.accept_all();
-                (events, ctx)
-            }),
+            Ok(inner) => inner.map(move |_| (events, ctx)),
             Err(e) => std::panic::resume_unwind(e.into_panic()),
         }
     }
@@ -516,7 +507,7 @@ where
     pub async fn dispatch_with_cancellation(
         self,
         token: CancellationToken,
-    ) -> Result<(EventStream<P>, Ctx), D::Error> {
+    ) -> Result<(EventStream<P>, Ctx, Vec<Event>), D::Error> {
         let chain = Arc::new(self.chain);
         let ctx = self.ctx;
 
@@ -565,18 +556,33 @@ where
         };
 
         let _ = cancellator.send(());
-        while let Some(res) = join_set.join_next().await {
-            // returns either the last Ok or the first encountered error
-            if matches!(result, Ok(Ok(_))) {
-                result = res;
+        let mut event_buffer = Vec::new();
+
+        loop {
+            tokio::select! {
+                joined = join_set.join_next() => match joined {
+                    Some(next)=> {
+                        if matches!(result, Ok(Ok(_))) {
+                            result = next;
+                        }
+                    }
+                    None => break,
+                },
+
+                event = events.try_next() => match event {
+                    Ok(Some(ev)) => event_buffer.push(ev),
+                    Ok(None) => (),
+                    Err(e) => {
+                        eprintln!("Hello?");
+                        result = Ok(Err(e.into()));
+                        break;
+                    },
+                }
             }
         }
 
         match result {
-            Ok(inner) => inner.map(move |_| {
-                events.accept_all();
-                (events, ctx)
-            }),
+            Ok(inner) => inner.map(move |_| (events, ctx, event_buffer)),
             Err(e) => std::panic::resume_unwind(e.into_panic()),
         }
     }

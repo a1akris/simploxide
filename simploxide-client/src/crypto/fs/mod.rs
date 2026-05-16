@@ -160,6 +160,13 @@ impl<P: PlainFileOps, E: EncryptedFileOps> MaybeCryptoFile<P, E> {
             MaybeCryptoFile::Encrypted(f) => Ok(f.size_hint()),
         }
     }
+
+    pub fn crypto_args(&self) -> Option<&FileCryptoArgs> {
+        match self {
+            MaybeCryptoFile::Plain(_) => None,
+            MaybeCryptoFile::Encrypted(f) => Some(f.crypto_args()),
+        }
+    }
 }
 
 impl<P: AsyncPlainFileOps, E: AsyncEncryptedFileOps> MaybeCryptoFile<P, E> {
@@ -197,6 +204,13 @@ impl<P: AsyncPlainFileOps, E: AsyncEncryptedFileOps> MaybeCryptoFile<P, E> {
         match self {
             MaybeCryptoFile::Plain(f) => f.size_hint().await,
             MaybeCryptoFile::Encrypted(f) => Ok(f.size_hint()),
+        }
+    }
+
+    pub fn crypto_args_async(&self) -> Option<&FileCryptoArgs> {
+        match self {
+            MaybeCryptoFile::Plain(_) => None,
+            MaybeCryptoFile::Encrypted(f) => Some(f.crypto_args()),
         }
     }
 }

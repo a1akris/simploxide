@@ -15,10 +15,9 @@ use simploxide_api_types::{
         ApiUpdateChatItemResponse, CancelFileResponse, ChatItemReactionResponse,
         ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse, ContactRequestRejectedResponse,
         GroupLinkCreatedResponse, GroupLinkDeletedResponse, GroupLinkResponse, GroupRelaysResponse,
-        GroupUpdatedResponse,
-        LeftMemberUserResponse, MemberAcceptedResponse, MembersBlockedForAllUserResponse,
-        MembersRoleUserResponse, ReceiveFileResponse, SentGroupInvitationResponse,
-        UserAcceptedGroupSentResponse, UserDeletedMembersResponse,
+        GroupUpdatedResponse, LeftMemberUserResponse, MemberAcceptedResponse,
+        MembersBlockedForAllUserResponse, MembersRoleUserResponse, ReceiveFileResponse,
+        SentGroupInvitationResponse, UserAcceptedGroupSentResponse, UserDeletedMembersResponse,
     },
 };
 
@@ -58,7 +57,8 @@ pub type AcceptMemberResponse<C> = Result<Arc<MemberAcceptedResponse>, <C as Cli
 pub type SetMembersRoleResponse<C> = Result<Arc<MembersRoleUserResponse>, <C as ClientApi>::Error>;
 pub type BlockMembersResponse<C> =
     Result<Arc<MembersBlockedForAllUserResponse>, <C as ClientApi>::Error>;
-pub type RemoveMembersResponse<C> = Result<Arc<UserDeletedMembersResponse>, <C as ClientApi>::Error>;
+pub type RemoveMembersResponse<C> =
+    Result<Arc<UserDeletedMembersResponse>, <C as ClientApi>::Error>;
 pub type LeaveGroupResponse<C> = Result<Arc<LeftMemberUserResponse>, <C as ClientApi>::Error>;
 pub type ListMembersResponse<C> = Result<Vec<GroupMember>, <C as ClientApi>::Error>;
 pub type UpdateGroupProfileResponse<C> = Result<Arc<GroupUpdatedResponse>, <C as ClientApi>::Error>;
@@ -611,10 +611,7 @@ where
         self.api_leave_group(group_id.into().0)
     }
 
-    async fn list_members<GID: Into<GroupId>>(
-        &self,
-        group_id: GID,
-    ) -> ListMembersResponse<Self> {
+    async fn list_members<GID: Into<GroupId>>(&self, group_id: GID) -> ListMembersResponse<Self> {
         let mut response = self.api_list_members(group_id.into().0).await?;
         let response = Arc::get_mut(&mut response).unwrap();
         Ok(std::mem::take(&mut response.group.members))

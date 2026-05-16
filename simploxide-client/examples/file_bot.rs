@@ -51,18 +51,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn new_msgs(ev: Arc<NewChatItems>, bot: ws::Bot) -> ws::ClientResult<StreamEvents> {
     for (chat, msg, _) in ev.chat_items.filter_messages() {
-        if !chat.is_direct() {
-            // Support only direct conversations.
-            return Ok(StreamEvents::Continue);
-        }
-
         if msg.meta.item_text.trim() == "/die" {
             return Ok(StreamEvents::Break);
         }
 
+        if !chat.is_direct() {
+            // Support only direct conversations.
+            continue;
+        }
+
         let Some(file) = &msg.file else {
             bot.send_msg(chat, "Hey, send me some files!").await?;
-            return Ok(StreamEvents::Continue);
+            continue;
         };
 
         if file.file_size > 5 * 1024 * 1024 {

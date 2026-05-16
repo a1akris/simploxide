@@ -18,7 +18,12 @@ use crate::{
     preview::ImagePreview,
 };
 
+#[cfg(not(feature = "xftp"))]
 pub type Bot = crate::bot::Bot<Client>;
+
+#[cfg(feature = "xftp")]
+pub type Bot = crate::bot::Bot<crate::xftp::XftpClient<Client>>;
+
 pub type EventStream = crate::EventStream<CoreResult<CoreEvent>>;
 pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
 
@@ -221,6 +226,13 @@ impl BotBuilder {
         let (client, events) = init_with_config(default_user, self.db_opts, self.worker_config)
             .await
             .map_err(BotInitError::Init)?;
+
+        #[cfg(feature = "xftp")]
+        let (client, events) = {
+            let mut events = events;
+            let client = events.hook_xftp(client);
+            (client, events)
+        };
 
         let settings = BotSettings {
             display_name: self.display_name,

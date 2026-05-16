@@ -23,8 +23,8 @@ crypto = ["dep:zeroize", "dep:rand"]
 native_crypto = ["crypto", "dep:salsa20", "dep:poly1305", "dep:subtle"]
 cancellation = ["dep:tokio-util"]
 multimedia = ["dep:image"]
-fullcli = ["cli", "bon", "native_crypto", "cancellation", "multimedia"]
-fullffi = ["ffi", "bon", "native_crypto", "cancellation", "multimedia"]
+fullcli = ["cli", "native_crypto", "cancellation", "multimedia", "xftp"]
+fullffi = ["ffi", "native_crypto", "cancellation", "multimedia", "xftp"]
 xftp = ["dep:dashmap"]
 
 [dependencies]
@@ -50,5 +50,5 @@ image = { version = "0.25", default-features = false, features = ["default-forma
 dashmap = { version = "6.1.0", optional = true }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "signal"] }
 async-trait = "0.1.89"

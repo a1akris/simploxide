@@ -346,7 +346,7 @@ impl<S: SimplexSecretBox> AsyncEncryptedFileOps for EncryptedFile<S> {
         path: P,
         crypto_args: FileCryptoArgs,
     ) -> impl Future<Output = ::std::io::Result<Self>> {
-        Self::open_read_only(path, crypto_args)
+        Self::open(path, crypto_args)
     }
 
     fn create<P: AsRef<::std::path::Path>>(

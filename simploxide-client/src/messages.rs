@@ -58,6 +58,120 @@ impl MessageLike for &str {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum Text<'a> {
+    Bold(&'a str),
+    Italic(&'a str),
+    Strike(&'a str),
+    Monospace(&'a str),
+    Secret(&'a str),
+    Red(&'a str),
+    Green(&'a str),
+    Blue(&'a str),
+    Yellow(&'a str),
+    Cyan(&'a str),
+    Magenta(&'a str),
+}
+
+impl std::fmt::Display for Text<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (start, text, end) = match self {
+            Self::Bold(s) => ("*", s, "*"),
+            Self::Italic(s) => ("_", s, "_"),
+            Self::Strike(s) => ("~", s, "~"),
+            Self::Monospace(s) => ("`", s, "`"),
+            Self::Secret(s) => ("#", s, "#"),
+            Self::Red(s) => ("!1 ", s, "!"),
+            Self::Green(s) => ("!2 ", s, "!"),
+            Self::Blue(s) => ("!3, ", s, "!"),
+            Self::Yellow(s) => ("!4 ", s, "!"),
+            Self::Cyan(s) => ("!5 ", s, "!"),
+            Self::Magenta(s) => ("!6 ", s, "!"),
+        };
+
+        for line in text.lines() {
+            if line.trim().is_empty() {
+                writeln!(f, "{line}")?;
+            } else {
+                writeln!(f, "{start}{}{end}", line.trim())?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+pub trait TextExt {
+    fn bold(&self) -> Text<'_>;
+    fn italic(&self) -> Text<'_>;
+    fn strike(&self) -> Text<'_>;
+    fn monospace(&self) -> Text<'_>;
+    fn secret(&self) -> Text<'_>;
+    fn red(&self) -> Text<'_>;
+    fn green(&self) -> Text<'_>;
+    fn blue(&self) -> Text<'_>;
+    fn yellow(&self) -> Text<'_>;
+    fn cyan(&self) -> Text<'_>;
+    fn magenta(&self) -> Text<'_>;
+}
+
+impl<S> TextExt for S
+where
+    S: std::ops::Deref<Target = str>,
+{
+    fn bold(&self) -> Text<'_> {
+        Text::Bold(self)
+    }
+
+    fn italic(&self) -> Text<'_> {
+        Text::Italic(self)
+    }
+
+    fn strike(&self) -> Text<'_> {
+        Text::Strike(self)
+    }
+
+    fn monospace(&self) -> Text<'_> {
+        Text::Monospace(self)
+    }
+
+    fn secret(&self) -> Text<'_> {
+        Text::Secret(self)
+    }
+
+    fn red(&self) -> Text<'_> {
+        Text::Red(self)
+    }
+
+    fn green(&self) -> Text<'_> {
+        Text::Green(self)
+    }
+
+    fn blue(&self) -> Text<'_> {
+        Text::Blue(self)
+    }
+
+    fn yellow(&self) -> Text<'_> {
+        Text::Yellow(self)
+    }
+
+    fn cyan(&self) -> Text<'_> {
+        Text::Cyan(self)
+    }
+
+    fn magenta(&self) -> Text<'_> {
+        Text::Magenta(self)
+    }
+}
+
+impl MessageLike for Text<'_> {
+    type Kind = TextKind;
+
+    fn into_builder_parts(self) -> (ComposedMessage, Self::Kind) {
+        self.to_string().into_builder_parts()
+    }
+}
+
 impl MessageLike for CryptoFile {
     type Kind = RichKind;
     fn into_builder_parts(self) -> (ComposedMessage, RichKind) {
@@ -74,6 +188,7 @@ impl MessageLike for CryptoFile {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Image {
     source: CryptoFile,
     custom_preview: ImagePreview,
@@ -160,6 +275,7 @@ fn make_image_preview(_: &CryptoFile) -> ImagePreview {
     ImagePreview::default()
 }
 
+#[derive(Debug, Clone)]
 pub struct Video {
     source: CryptoFile,
     preview: ImagePreview,
@@ -228,6 +344,7 @@ impl MessageLike for Video {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Link {
     uri: String,
     title: String,
@@ -410,6 +527,7 @@ impl MessageLike for ReportReason {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Chat {
     pub text: String,
     pub link: MsgChatLink,
@@ -446,6 +564,7 @@ impl MessageLike for Chat {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Custom {
     pub tag: String,
     pub text: String,
