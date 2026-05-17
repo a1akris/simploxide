@@ -30,18 +30,6 @@ pub trait SimplexSecretBox {
     fn verify_tag(&mut self, tag_to_verify: &Poly1305Tag) -> bool;
 }
 
-#[cfg(feature = "native_crypto")]
-pub type StdEncryptedFile = fs::std::EncryptedFile<native::SecretBox>;
-
-#[cfg(feature = "native_crypto")]
-pub type TokioEncryptedFile = fs::tokio::EncryptedFile<native::SecretBox>;
-
-#[cfg(feature = "native_crypto")]
-pub type StdMaybeCryptoFile = fs::std::StdMaybeCryptoFile<native::SecretBox>;
-
-#[cfg(feature = "native_crypto")]
-pub type TokioMaybeCryptoFile = fs::tokio::TokioMaybeCryptoFile<native::SecretBox>;
-
 #[derive(Debug, Clone, Copy)]
 pub struct InvalidAuthTag;
 

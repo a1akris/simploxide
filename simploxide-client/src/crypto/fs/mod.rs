@@ -10,6 +10,18 @@ use super::{InvalidAuthTag, Poly1305Tag, SimplexSecretBox, XSalsa20Key, XSalsa20
 pub mod std;
 pub mod tokio;
 
+#[cfg(feature = "native_crypto")]
+pub type StdEncryptedFile = std::EncryptedFile<super::native::SecretBox>;
+
+#[cfg(feature = "native_crypto")]
+pub type TokioEncryptedFile = tokio::EncryptedFile<super::native::SecretBox>;
+
+#[cfg(feature = "native_crypto")]
+pub type StdMaybeCryptoFile = std::StdMaybeCryptoFile<super::native::SecretBox>;
+
+#[cfg(feature = "native_crypto")]
+pub type TokioMaybeCryptoFile = tokio::TokioMaybeCryptoFile<super::native::SecretBox>;
+
 #[derive(ZeroizeOnDrop)]
 pub struct FileCryptoArgs {
     key: XSalsa20Key,
