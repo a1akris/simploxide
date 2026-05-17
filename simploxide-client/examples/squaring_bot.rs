@@ -18,7 +18,7 @@ use std::{error::Error, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (bot, events, _cli) = ws::BotBuilder::new("SimplOxide Examples", 5225)
+    let (bot, events, mut cli) = ws::BotBuilder::new("SimplOxide Examples", 5225)
         .db_prefix("test_db/bot")
         // create a public bot address auto-accepting new users with a welcome message
         .auto_accept_with(
@@ -32,6 +32,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Bot address: {address}");
 
     events.into_dispatcher(bot).on(new_msgs).dispatch().await?;
+    cli.kill().await?;
     Ok(())
 }
 

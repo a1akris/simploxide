@@ -79,22 +79,17 @@ impl<C: ClientApi> Bot<C> {
                 bot.setup_auto_accept(settings.auto_accept, user.profile.contact_link.is_some())
                     .await?;
 
-                if let Some(profile_settings) = settings.profile_settings {
-                    let mut profile = match profile_settings {
-                        BotProfileSettings::Preferences(preferences) => {
-                            let mut current_profile = extract_profile(&mut user.profile);
-                            current_profile.preferences = Some(preferences);
-                            current_profile
-                        }
-                        BotProfileSettings::FullProfile(profile) => profile,
-                    };
-                    profile.image = avatar;
-                    bot.client.api_update_profile(user.user_id, profile).await?;
-                } else {
-                    let mut profile = Self::default_profile(settings.display_name);
-                    profile.image = avatar;
-                    bot.client.api_update_profile(user.user_id, profile).await?;
-                }
+                let mut profile = match settings.profile_settings {
+                    Some(BotProfileSettings::Preferences(preferences)) => {
+                        let mut current_profile = extract_profile(&mut user.profile);
+                        current_profile.preferences = Some(preferences);
+                        current_profile
+                    }
+                    Some(BotProfileSettings::FullProfile(profile)) => profile,
+                    None => Self::default_profile(settings.display_name),
+                };
+                profile.image = avatar;
+                bot.client.api_update_profile(user.user_id, profile).await?;
 
                 Ok(bot)
             }

@@ -1,22 +1,21 @@
+use simploxide_api_types::CryptoFile as SxcCryptoFile;
 use tokio::io::{AsyncRead, AsyncSeekExt as _, AsyncWrite, AsyncWriteExt as _};
 
 use std::{io::SeekFrom, path::Path, pin::Pin, task::Poll};
 
-use super::{
-    AsyncEncryptedFileOps, AsyncPlainFileOps, EncryptedFileState, FileCryptoArgs, InvalidAuthTag,
-    Mode, SimplexSecretBox,
-};
+use super::{EncryptedFileState, FileCryptoArgs, InvalidAuthTag, Mode, SimplexSecretBox};
 
-/// Async wrapper over file with SimpleX-SecretBox encryption.
+/// Async wrapper over a file with SimpleX-SecretBox encryption.
 ///
 /// # Security
 ///
 /// - All bytes returned from `read()` are unauthenticated until the file is fully read. The caller
 ///   must never act on streamed content until `read()` has returned `Ok(0)`. If reading a file
-///   returns Err() all previoulsy read data cannot be trusted and must be discarded.
+///   returns Err() all previously read data cannot be trusted and must be discarded.
 ///
-/// - The caller is responsible to call [put_auth_tag] manually. The `AsyncWrite` implementation does its best
-///   to write the authentication tag but it can silently fail leaving the file unauthenticated.
+/// - The caller is responsible to call [`put_auth_tag`] manually. The `AsyncWrite` implementation
+///   does its best to write the authentication tag but it can silently fail leaving the file
+///   unauthenticated.
 pub struct EncryptedFile<S: SimplexSecretBox> {
     file: ::tokio::fs::File,
     state: Box<EncryptedFileState<S>>,
@@ -45,8 +44,8 @@ impl<S: SimplexSecretBox> EncryptedFile<S> {
     }
 
     /// Note: this call requires write permissions on the file system for
-    /// [Self::prepare_for_overwrite] to work efficiently. Use [open_read_only] if it is important
-    /// for your use-case
+    /// [`Self::prepare_for_overwrite`] to work. Use [`Self::open_read_only`] when write access is
+    /// not needed or not available.
     pub async fn open<P: AsRef<Path>>(
         path: P,
         crypto_args: FileCryptoArgs,
@@ -66,8 +65,7 @@ impl<S: SimplexSecretBox> EncryptedFile<S> {
         })
     }
 
-    /// Opens file in a read only mode, shouldn't be used with [prepare_for_overwrite] as all
-    /// writes will return IO errors.
+    /// Opens file in a read-only mode. [`Self::prepare_for_overwrite`] will return an IO error.
     pub async fn open_read_only<P: AsRef<Path>>(
         path: P,
         crypto_args: FileCryptoArgs,
@@ -317,57 +315,171 @@ impl<S: SimplexSecretBox> Drop for EncryptedFile<S> {
     }
 }
 
-impl AsyncPlainFileOps for ::tokio::fs::File {
-    async fn open<P: AsRef<::std::path::Path>>(path: P) -> ::std::io::Result<Self> {
-        tokio::fs::OpenOptions::new()
-            .write(false)
-            .read(true)
-            .create(false)
-            .open(path)
-            .await
+/// An async file that is either plaintext or SimpleX-SecretBox encrypted.
+pub enum TokioMaybeCryptoFile<S: SimplexSecretBox> {
+    Plain(::tokio::fs::File),
+    Encrypted(EncryptedFile<S>),
+}
+
+impl<S: SimplexSecretBox> TokioMaybeCryptoFile<S> {
+    /// Opens the file read+write so that [`Self::prepare_for_overwrite`] works.
+    /// Use [`Self::open_read_only`] when write access is not needed or not available.
+    pub async fn open<P: AsRef<Path>>(
+        path: P,
+        crypto_args: Option<FileCryptoArgs>,
+    ) -> std::io::Result<Self> {
+        match crypto_args {
+            Some(args) => Ok(Self::Encrypted(EncryptedFile::open(path, args).await?)),
+            None => Ok(Self::Plain(
+                tokio::fs::OpenOptions::new()
+                    .write(true)
+                    .read(true)
+                    .create(false)
+                    .open(path)
+                    .await?,
+            )),
+        }
     }
 
-    async fn create<P: AsRef<::std::path::Path>>(path: P) -> ::std::io::Result<Self> {
-        tokio::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(path)
-            .await
+    pub async fn open_read_only<P: AsRef<Path>>(
+        path: P,
+        crypto_args: Option<FileCryptoArgs>,
+    ) -> std::io::Result<Self> {
+        match crypto_args {
+            Some(args) => Ok(Self::Encrypted(
+                EncryptedFile::open_read_only(path, args).await?,
+            )),
+            None => Ok(Self::Plain(
+                tokio::fs::OpenOptions::new()
+                    .write(false)
+                    .read(true)
+                    .create(false)
+                    .open(path)
+                    .await?,
+            )),
+        }
     }
 
-    fn size_hint(&mut self) -> impl Future<Output = ::std::io::Result<usize>> {
-        size_hint(self)
+    pub async fn create<P: AsRef<Path>>(
+        path: P,
+        crypto_args: Option<FileCryptoArgs>,
+    ) -> std::io::Result<Self> {
+        match crypto_args {
+            Some(args) => Ok(Self::Encrypted(
+                EncryptedFile::create_with_args(path, args).await?,
+            )),
+            None => Ok(Self::Plain(
+                tokio::fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open(path)
+                    .await?,
+            )),
+        }
+    }
+
+    pub async fn from_crypto_file(crypto_file: SxcCryptoFile) -> std::io::Result<Self> {
+        match crypto_file.crypto_args {
+            Some(args) => {
+                let crypto_args = FileCryptoArgs::try_from(args)?;
+                Self::open(&crypto_file.file_path, Some(crypto_args)).await
+            }
+            None => Self::open(&crypto_file.file_path, None).await,
+        }
+    }
+
+    pub async fn from_crypto_file_read_only(crypto_file: SxcCryptoFile) -> std::io::Result<Self> {
+        match crypto_file.crypto_args {
+            Some(args) => {
+                let crypto_args = FileCryptoArgs::try_from(args)?;
+                Self::open_read_only(&crypto_file.file_path, Some(crypto_args)).await
+            }
+            None => Self::open_read_only(&crypto_file.file_path, None).await,
+        }
+    }
+
+    pub async fn size_hint(&mut self) -> std::io::Result<usize> {
+        match self {
+            Self::Plain(f) => size_hint(f).await,
+            Self::Encrypted(f) => Ok(f.plaintext_size_hint()),
+        }
+    }
+
+    pub fn crypto_args(&self) -> Option<&FileCryptoArgs> {
+        match self {
+            Self::Plain(_) => None,
+            Self::Encrypted(f) => Some(f.crypto_args()),
+        }
+    }
+
+    pub async fn prepare_for_overwrite(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::Plain(f) => {
+                f.seek(SeekFrom::Start(0)).await?;
+                f.set_len(0).await?;
+                Ok(())
+            }
+            Self::Encrypted(f) => f.prepare_for_overwrite().await,
+        }
+    }
+
+    /// Writes the AEAD auth tag for encrypted files; no-op for plain files.
+    pub async fn put_auth_tag(self) -> std::io::Result<()> {
+        match self {
+            Self::Plain(_) => Ok(()),
+            Self::Encrypted(f) => f.put_auth_tag().await,
+        }
     }
 }
 
-impl<S: SimplexSecretBox> AsyncEncryptedFileOps for EncryptedFile<S> {
-    fn open<P: AsRef<::std::path::Path>>(
-        path: P,
-        crypto_args: FileCryptoArgs,
-    ) -> impl Future<Output = ::std::io::Result<Self>> {
-        Self::open(path, crypto_args)
+impl<S: SimplexSecretBox> AsyncRead for TokioMaybeCryptoFile<S> {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        let this = self.get_mut();
+        match this {
+            Self::Plain(f) => Pin::new(f).poll_read(cx, buf),
+            Self::Encrypted(e) => Pin::new(e).poll_read(cx, buf),
+        }
+    }
+}
+
+impl<S: SimplexSecretBox> AsyncWrite for TokioMaybeCryptoFile<S> {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        let this = self.get_mut();
+        match this {
+            Self::Plain(f) => Pin::new(f).poll_write(cx, buf),
+            Self::Encrypted(e) => Pin::new(e).poll_write(cx, buf),
+        }
     }
 
-    fn create<P: AsRef<::std::path::Path>>(
-        path: P,
-    ) -> impl Future<Output = ::std::io::Result<Self>> {
-        Self::create(path)
+    fn poll_flush(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        let this = self.get_mut();
+        match this {
+            Self::Plain(f) => Pin::new(f).poll_flush(cx),
+            Self::Encrypted(e) => Pin::new(e).poll_flush(cx),
+        }
     }
 
-    fn create_with_args<P: AsRef<::std::path::Path>>(
-        path: P,
-        crypto_args: FileCryptoArgs,
-    ) -> impl Future<Output = ::std::io::Result<Self>> {
-        Self::create_with_args(path, crypto_args)
-    }
-
-    fn crypto_args(&self) -> &FileCryptoArgs {
-        self.crypto_args()
-    }
-
-    fn size_hint(&self) -> usize {
-        self.plaintext_size_hint()
+    fn poll_shutdown(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        let this = self.get_mut();
+        match this {
+            Self::Plain(f) => Pin::new(f).poll_shutdown(cx),
+            Self::Encrypted(e) => Pin::new(e).poll_shutdown(cx),
+        }
     }
 }
 

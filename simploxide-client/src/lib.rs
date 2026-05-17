@@ -29,7 +29,7 @@ pub use simploxide_api_types::{
 #[cfg(feature = "cancellation")]
 pub use tokio_util::{self, sync::CancellationToken};
 
-pub use dispatcher::{DispatchChain, LocalDispatchChain};
+pub use dispatcher::DispatchChain;
 
 use futures::{Stream, TryStreamExt as _};
 
@@ -49,9 +49,9 @@ use std::{
 /// By default filters are disabled and no events are dropped. Use [`Self::set_filter`] to only
 /// receive events you're interested in.
 ///
-/// Use [`Self::into_dispatcher`] and [`Self::into_local_dispatcher`] methods to handle events
-/// conveniently. Dispatchers are completely zerocost, manage filters internally, and provide a
-/// high-level easy to use APIs covering the absolute majority of use cases.
+/// Use [`Self::into_dispatcher`] to handle events conveniently. Dispatchers are completely
+/// zerocost, manage filters internally, and provide a high-level easy to use API covering the
+/// absolute majority of use cases.
 pub struct EventStream<P> {
     filter: [bool; EventKind::COUNT],
     receiver: tokio::sync::mpsc::UnboundedReceiver<P>,
@@ -126,16 +126,12 @@ impl<P> EventStream<P> {
 }
 
 impl<P: EventParser> EventStream<P> {
-    /// Truns stream into [Dispatcher] builder with the provided `ctx`. The `ctx` is an
-    /// arbitrary type that can be used within event handlers. See [Dispatcher::on] for details
-    pub fn into_dispatcher<C: 'static + Send>(self, ctx: C) -> DispatchChain<P, C> {
+    /// Turns stream into a [`DispatchChain`] builder with the provided `ctx`. The `ctx` is an
+    /// arbitrary type that can be used within event handlers. Use [`Dispatcher::seq`] to add
+    /// sequential handlers: `AsyncFnMut(Arc<Ev>, &mut Ctx)`; or [`Dispatcher::on`] for concurrent
+    /// ones: `AsyncFn(Arc<Ev>, Ctx) where Ctx: 'static + Clone + Send`.
+    pub fn into_dispatcher<C>(self, ctx: C) -> DispatchChain<P, C> {
         DispatchChain::with_ctx(self, ctx)
-    }
-
-    /// Truns stream into [LocalDispatcher] builder with the provided `ctx`. The `ctx` is an
-    /// arbitrary type that can be used within event handlers. See [LocalDispatcher::on] for details
-    pub fn into_local_dispatcher<C>(self, ctx: C) -> LocalDispatchChain<P, C> {
-        LocalDispatchChain::with_ctx(self, ctx)
     }
 
     /// Waits for a particular event `Ev` **dropping** other events in the process. This method is
@@ -177,24 +173,6 @@ impl<P: EventParser> EventStream<P> {
         }
 
         Ok(self)
-    }
-
-    pub async fn stream_events_with_ctx<E, Ctx, F>(
-        mut self,
-        mut f: F,
-        ctx: Ctx,
-    ) -> Result<(Self, Ctx), E>
-    where
-        F: AsyncFnMut(Event, &Ctx) -> Result<StreamEvents, E>,
-        E: From<P::Error>,
-    {
-        while let Some(event) = self.try_next().await? {
-            if let StreamEvents::Break = f(event, &ctx).await? {
-                break;
-            }
-        }
-
-        Ok((self, ctx))
     }
 
     pub async fn stream_events_with_ctx_mut<E, Ctx, F>(

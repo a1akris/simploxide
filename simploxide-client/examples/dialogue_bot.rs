@@ -38,11 +38,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     events
-        // Local dispatcher processes events sequentially allowing to update dialogue via &mut ref.
-        // It creates !Send future that can be used only on the main thread or with the tokio::LocalSet
-        .into_local_dispatcher(dialogue)
+        // Sequential handlers get exclusive &mut access to the context — events are processed one at
+        // a time. The resulting future is !Send and can be used only on the main thread or
+        // LocalSet
+        .into_dispatcher(dialogue)
         // An example of processing contact connections manually
-        .on(async |ev: Arc<ReceivedContactRequest>, dialogue| {
+        .seq(async |ev: Arc<ReceivedContactRequest>, dialogue| {
             dialogue.bot.accept_contact(&ev.contact_request).await?;
             println!(
                 "Accepted user: {} ({})",
@@ -50,13 +51,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             );
             Ok(StreamEvents::Continue)
         })
-        .on(async |ev: Arc<ContactConnected>, dialogue| {
+        .seq(async |ev: Arc<ContactConnected>, dialogue| {
             dialogue.query_data(ChatId::from(&ev.contact)).await?;
             Ok(StreamEvents::Continue)
         })
         // Inline lambdas are useful to pass some additional data/context to the particular handler
         // via async move(no data is really passed in this example)
-        .on(
+        .seq(
             async move |ev: Arc<NewChatItems>, dialogue| -> ffi::ClientResult<StreamEvents> {
                 for (chat, msg, _content) in ev.chat_items.filter_messages() {
                     let input = msg.meta.item_text.trim().to_owned();

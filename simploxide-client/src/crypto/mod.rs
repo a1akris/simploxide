@@ -37,10 +37,10 @@ pub type StdEncryptedFile = fs::std::EncryptedFile<native::SecretBox>;
 pub type TokioEncryptedFile = fs::tokio::EncryptedFile<native::SecretBox>;
 
 #[cfg(feature = "native_crypto")]
-pub type StdMaybeCryptoFile = fs::MaybeCryptoFile<std::fs::File, StdEncryptedFile>;
+pub type StdMaybeCryptoFile = fs::std::StdMaybeCryptoFile<native::SecretBox>;
 
 #[cfg(feature = "native_crypto")]
-pub type TokioMaybeCryptoFile = fs::MaybeCryptoFile<tokio::fs::File, TokioEncryptedFile>;
+pub type TokioMaybeCryptoFile = fs::tokio::TokioMaybeCryptoFile<native::SecretBox>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct InvalidAuthTag;

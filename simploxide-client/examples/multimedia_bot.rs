@@ -7,7 +7,8 @@
 //!
 //! ----
 //!
-//! An example showcasing the power of simploxide high level APIs.
+//! A bot applying a negative filter on incoming images. This example tries to showcase and
+//! document all advanced simploxide features
 
 use futures::TryStreamExt as _;
 use simploxide_client::{
@@ -31,13 +32,6 @@ const MAX_FILE_SIZE: usize = 32 * 1024 * 1024;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let result = run().await;
-    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-
-    result
-}
-
-async fn run() -> Result<(), Box<dyn Error>> {
     let (bot, events, mut cli) = ws::BotBuilder::new("SimplOxide Examples", 5225)
         .db_prefix("test_db/bot")
         // create a public bot address auto-accepting new users with a welcome message
@@ -71,24 +65,25 @@ async fn run() -> Result<(), Box<dyn Error>> {
     let cancellation = CancellationToken::new();
     let token = cancellation.clone();
 
-    // Ctrl-C graceful shutdown
+    // Intercept Ctrl-C to run graceful shutdown
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
         token.cancel();
     });
 
-    let (mut events, ctx, mut buffer) = events
+    let (mut events, ctx, mut buffered_events) = events
         .into_dispatcher(Ctx::new(bot, MAX_CONCURRENT_PROCESSORS))
         .on(new_msgs)
         .on(file_cancelled)
         .on(send_error)
+        // Gracefully process the Ctrl-C event executing all in-flight handlers to completion
+        // before exiting
         .dispatch_with_cancellation(cancellation)
         .await?;
 
-    println!("Exited");
-    // Graceful shutdown sequence. Dispatchers guarantee that all handlers are executed to
-    // completion before return so all is left is to save the buffered events somehwere for future
-    // processing.
+    // ---- Graceful shutdown sequence ----
+    // Dispatchers guarantee that all handlers are executed to completion before return so all is
+    // left is to save the buffered events somehwere for future processing.
 
     // Shutdown the internal backend
     ctx.bot.shutdown().await;
@@ -98,7 +93,7 @@ async fn run() -> Result<(), Box<dyn Error>> {
         match events.try_next().await {
             Ok(Some(ev)) => {
                 // Real impl should dump the events from the buf somewhere to process them on the next launch
-                println!("Unhandled event: {:?}", ev);
+                buffered_events.push(ev);
             }
             Ok(None) => break,
             Err(e) => {
@@ -107,8 +102,16 @@ async fn run() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // Not strictly necessarry in this example but gracefully kill SimplexCLI instance as soon as
-    // it's not needed
+    if !buffered_events.is_empty() {
+        println!("Unandled events: ");
+        for ev in buffered_events {
+            print!("{:?}, ", ev.kind())
+        }
+    }
+
+    // Always try to call cli.kill().await? explicitly to ensure that CLI process is properly
+    // reaped by the system. The Drop impl does it best to kill the process but it doesn't
+    // guarantee success
     cli.kill().await?;
 
     Ok(())
@@ -117,6 +120,8 @@ async fn run() -> Result<(), Box<dyn Error>> {
 async fn new_msgs(ev: Arc<NewChatItems>, ctx: Ctx) -> ws::ClientResult<StreamEvents> {
     for (chat, msg, content) in ev.chat_items.filter_messages() {
         if msg.meta.item_text == "/die" {
+            // Break drains all in-flight handlers to completion before the dispatcher returns,
+            // so any ongoing downloads/uploads finish cleanly.
             return Ok(StreamEvents::Break);
         }
 
@@ -128,7 +133,7 @@ async fn new_msgs(ev: Arc<NewChatItems>, ctx: Ctx) -> ws::ClientResult<StreamEve
             continue;
         }
 
-        if !content.image().is_some() {
+        if content.image().is_none() {
             ctx.bot
                 .send_msg(
                     chat,
@@ -154,7 +159,12 @@ async fn new_msgs(ev: Arc<NewChatItems>, ctx: Ctx) -> ws::ClientResult<StreamEve
             continue;
         }
 
-        let permit = ctx.semaphore.acquire().await;
+        // Bound how many images are processed at once across all concurrent handler invocations.
+        let _permit = ctx
+            .semaphore
+            .acquire()
+            .await
+            .expect("semaphore is never closed");
 
         if let Err(e) = process_image(chat, &ctx.bot, file)
             .await
@@ -168,8 +178,6 @@ async fn new_msgs(ev: Arc<NewChatItems>, ctx: Ctx) -> ws::ClientResult<StreamEve
                 .reply_to(msg)
                 .await?;
         }
-
-        drop(permit);
     }
 
     Ok(StreamEvents::Continue)
@@ -251,6 +259,8 @@ async fn process_image(
     let mut buf = Vec::with_capacity(file.plaintext_size_hint());
     file.read_to_end(&mut buf).await?;
 
+    // Image decoding and encoding are CPU-bound; offload to the blocking thread pool so the
+    // async runtime is not stalled.
     let transcoded = tokio::task::spawn_blocking(move || -> image::ImageResult<Vec<u8>> {
         let mut img = image::ImageReader::new(Cursor::new(&buf))
             .with_guessed_format()?
@@ -266,11 +276,16 @@ async fn process_image(
     })
     .await??;
 
+    // Re-encrypt the processed image in place. prepare_for_overwrite re-keys the file so the
+    // new content gets a fresh key/nonce; crypto_args must be re-read afterwards because they
+    // changed.
     file.prepare_for_overwrite().await?;
-    // Crypto args have changed after prepare_for_overwrite call
     let crypto_args = file.crypto_args().expose();
 
     file.write_all(&transcoded).await?;
+    // Finalise the AEAD tag after all plaintext bytes are written. The callers must always do it
+    // explicitly because the Drop impl works on the best effort basis potentially leaving the file
+    // unauthenticated
     file.put_auth_tag().await?;
 
     bot.send_msg(chat, Image::new(path).with_crypto_args(crypto_args))

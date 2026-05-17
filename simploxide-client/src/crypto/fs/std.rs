@@ -1,23 +1,23 @@
+use simploxide_api_types::CryptoFile as SxcCryptoFile;
+
 use std::{
     io::{Read, Seek as _, SeekFrom, Write},
     path::Path,
 };
 
-use super::{
-    EncryptedFileOps, EncryptedFileState, FileCryptoArgs, InvalidAuthTag, Mode, PlainFileOps,
-    SimplexSecretBox,
-};
+use super::{EncryptedFileState, FileCryptoArgs, InvalidAuthTag, Mode, SimplexSecretBox};
 
-/// Sync wrapper over file with SimpleX-SecretBox encryption.
+/// Sync wrapper over a file with SimpleX-SecretBox encryption.
 ///
 /// # Security
 ///
 /// - All bytes returned from `read()` are unauthenticated until the file is fully read. The caller
 ///   must never act on streamed content until `read()` has returned `Ok(0)`. If reading a file
-///   returns Err() all previoulsy read data cannot be trusted and must be discarded.
+///   returns Err() all previously read data cannot be trusted and must be discarded.
 ///
-/// - The caller is responsible to call [put_auth_tag] manually. The `Drop` implementation does its best
-///   to write the authentication tag but it can silently fail leaving the file unauthenticated.
+/// - The caller is responsible to call [`Self::put_auth_tag`] manually. The `Drop` implementation does
+///   its best to write the authentication tag but it can silently fail leaving the file
+///   unauthenticated.
 pub struct EncryptedFile<S: SimplexSecretBox> {
     file: ::std::fs::File,
     state: Box<EncryptedFileState<S>>,
@@ -42,8 +42,8 @@ impl<S: SimplexSecretBox> EncryptedFile<S> {
     }
 
     /// Note: this call requires write permissions on the file system for
-    /// [Self::prepare_for_overwrite] to work efficiently. Use [open_read_only] if it is important
-    /// for your use-case
+    /// [`Self::prepare_for_overwrite`] to work. Use [`Self::open_read_only`] when write access is
+    /// not needed or not available.
     pub fn open<P: AsRef<Path>>(path: P, crypto_args: FileCryptoArgs) -> std::io::Result<Self> {
         let mut file = std::fs::OpenOptions::new()
             .write(true)
@@ -59,8 +59,7 @@ impl<S: SimplexSecretBox> EncryptedFile<S> {
         })
     }
 
-    /// Opens file in a read only mode, shouldn't be used with [prepare_for_overwrite] because
-    /// writes will return IO errors.
+    /// Opens file in a read-only mode. [`Self::prepare_for_overwrite`] will return an IO error.
     pub fn open_read_only<P: AsRef<Path>>(
         path: P,
         crypto_args: FileCryptoArgs,
@@ -189,53 +188,148 @@ impl<S: SimplexSecretBox> Drop for EncryptedFile<S> {
     }
 }
 
-impl PlainFileOps for ::std::fs::File {
-    fn open<P: AsRef<::std::path::Path>>(path: P) -> ::std::io::Result<Self> {
-        ::std::fs::OpenOptions::new()
-            .write(false)
-            .read(true)
-            .create(false)
-            .open(path)
+/// A sync file that is either plaintext or SimpleX-SecretBox encrypted.
+pub enum StdMaybeCryptoFile<S: SimplexSecretBox> {
+    Plain(::std::fs::File),
+    Encrypted(EncryptedFile<S>),
+}
+
+impl<S: SimplexSecretBox> StdMaybeCryptoFile<S> {
+    /// Opens the file read+write so that [`Self::prepare_for_overwrite`] works.
+    /// Use [`Self::open_read_only`] when write access is not needed or not available.
+    pub fn open<P: AsRef<Path>>(
+        path: P,
+        crypto_args: Option<FileCryptoArgs>,
+    ) -> std::io::Result<Self> {
+        match crypto_args {
+            Some(args) => Ok(Self::Encrypted(EncryptedFile::open(path, args)?)),
+            None => Ok(Self::Plain(
+                std::fs::OpenOptions::new()
+                    .write(true)
+                    .read(true)
+                    .create(false)
+                    .open(path)?,
+            )),
+        }
     }
 
-    fn create<P: AsRef<::std::path::Path>>(path: P) -> ::std::io::Result<Self> {
-        ::std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(path)
+    pub fn open_read_only<P: AsRef<Path>>(
+        path: P,
+        crypto_args: Option<FileCryptoArgs>,
+    ) -> std::io::Result<Self> {
+        match crypto_args {
+            Some(args) => Ok(Self::Encrypted(EncryptedFile::open_read_only(path, args)?)),
+            None => Ok(Self::Plain(
+                std::fs::OpenOptions::new()
+                    .write(false)
+                    .read(true)
+                    .create(false)
+                    .open(path)?,
+            )),
+        }
     }
 
-    fn size_hint(&mut self) -> ::std::io::Result<usize> {
-        size_hint(self)
+    pub fn create<P: AsRef<Path>>(
+        path: P,
+        crypto_args: Option<FileCryptoArgs>,
+    ) -> std::io::Result<Self> {
+        match crypto_args {
+            Some(args) => Ok(Self::Encrypted(EncryptedFile::create_with_args(
+                path, args,
+            )?)),
+            None => Ok(Self::Plain(
+                std::fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open(path)?,
+            )),
+        }
+    }
+
+    pub fn from_crypto_file(crypto_file: SxcCryptoFile) -> std::io::Result<Self> {
+        match crypto_file.crypto_args {
+            Some(args) => {
+                let crypto_args = FileCryptoArgs::try_from(args)?;
+                Self::open(&crypto_file.file_path, Some(crypto_args))
+            }
+            None => Self::open(&crypto_file.file_path, None),
+        }
+    }
+
+    pub fn from_crypto_file_read_only(crypto_file: SxcCryptoFile) -> std::io::Result<Self> {
+        match crypto_file.crypto_args {
+            Some(args) => {
+                let crypto_args = FileCryptoArgs::try_from(args)?;
+                Self::open_read_only(&crypto_file.file_path, Some(crypto_args))
+            }
+            None => Self::open_read_only(&crypto_file.file_path, None),
+        }
+    }
+
+    pub fn size_hint(&mut self) -> std::io::Result<usize> {
+        match self {
+            Self::Plain(f) => size_hint(f),
+            Self::Encrypted(f) => Ok(f.plaintext_size_hint()),
+        }
+    }
+
+    pub fn crypto_args(&self) -> Option<&FileCryptoArgs> {
+        match self {
+            Self::Plain(_) => None,
+            Self::Encrypted(f) => Some(f.crypto_args()),
+        }
+    }
+
+    pub fn prepare_for_overwrite(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::Plain(f) => {
+                f.seek(SeekFrom::Start(0))?;
+                f.set_len(0)?;
+                Ok(())
+            }
+            Self::Encrypted(f) => f.prepare_for_overwrite(),
+        }
+    }
+
+    /// Writes the AEAD auth tag for encrypted files; no-op for plain files.
+    pub fn put_auth_tag(self) -> std::io::Result<()> {
+        match self {
+            Self::Plain(_) => Ok(()),
+            Self::Encrypted(f) => f.put_auth_tag(),
+        }
     }
 }
 
-impl<S: SimplexSecretBox> EncryptedFileOps for EncryptedFile<S> {
-    fn open<P: AsRef<::std::path::Path>>(
-        path: P,
-        crypto_args: FileCryptoArgs,
-    ) -> ::std::io::Result<Self> {
-        Self::open(path, crypto_args)
+impl<S: SimplexSecretBox> Read for StdMaybeCryptoFile<S> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        match self {
+            Self::Plain(f) => f.read(buf),
+            Self::Encrypted(e) => e.read(buf),
+        }
+    }
+}
+
+impl<S: SimplexSecretBox> Write for StdMaybeCryptoFile<S> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        match self {
+            Self::Plain(f) => f.write(buf),
+            Self::Encrypted(e) => e.write(buf),
+        }
     }
 
-    fn create<P: AsRef<::std::path::Path>>(path: P) -> ::std::io::Result<Self> {
-        Self::create(path)
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::Plain(f) => f.flush(),
+            Self::Encrypted(e) => e.flush(),
+        }
     }
 
-    fn create_with_args<P: AsRef<::std::path::Path>>(
-        path: P,
-        crypto_args: FileCryptoArgs,
-    ) -> ::std::io::Result<Self> {
-        Self::create_with_args(path, crypto_args)
-    }
-
-    fn crypto_args(&self) -> &FileCryptoArgs {
-        self.crypto_args()
-    }
-
-    fn size_hint(&self) -> usize {
-        self.plaintext_size_hint()
+    fn write_all(&mut self, buf: &[u8]) -> std::io::Result<()> {
+        match self {
+            Self::Plain(f) => f.write_all(buf),
+            Self::Encrypted(e) => e.write_all(buf),
+        }
     }
 }
 
