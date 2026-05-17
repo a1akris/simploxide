@@ -422,6 +422,35 @@ impl ApiGetGroupRelaysResponse {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
+pub enum ApiAddGroupRelaysResponse {
+    /// GroupRelaysAdded: Group relays added.
+    #[serde(rename = "groupRelaysAdded")]
+    GroupRelaysAdded(Arc<GroupRelaysAddedResponse>),
+    /// GroupRelaysAddFailed: Group relays add failed.
+    #[serde(rename = "groupRelaysAddFailed")]
+    GroupRelaysAddFailed(Arc<GroupRelaysAddFailedResponse>),
+}
+
+impl ApiAddGroupRelaysResponse {
+    pub fn group_relays_added(&self) -> Option<&GroupRelaysAddedResponse> {
+        if let Self::GroupRelaysAdded(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    pub fn group_relays_add_failed(&self) -> Option<&GroupRelaysAddFailedResponse> {
+        if let Self::GroupRelaysAddFailed(ret) = self {
+            Some(ret)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum ApiUpdateGroupProfileResponse {
     /// GroupUpdated: Group updated.
     #[serde(rename = "groupUpdated")]
@@ -672,6 +701,22 @@ impl ApiListGroupsResponse {
     pub fn into_inner(self) -> Arc<GroupsListResponse> {
         match self {
             Self::GroupsList(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ApiGetChatsResponse {
+    /// ApiChats: Chat previews (paginated). Use this instead of CRContactsList / CRGroupsList when scanning at scale..
+    #[serde(rename = "apiChats")]
+    ApiChats(Arc<ApiChatsResponse>),
+}
+
+impl ApiGetChatsResponse {
+    pub fn into_inner(self) -> Arc<ApiChatsResponse> {
+        match self {
+            Self::ApiChats(inner) => inner,
         }
     }
 }
@@ -982,6 +1027,21 @@ pub struct AcceptingContactRequestResponse {
 pub struct ActiveUserResponse {
     #[serde(rename = "user")]
     pub user: User,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct ApiChatsResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "chats")]
+    pub chats: Vec<AChat>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -1303,6 +1363,42 @@ pub struct GroupMembersResponse {
 
     #[serde(rename = "group")]
     pub group: Group,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupRelaysAddFailedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "addRelayResults")]
+    pub add_relay_results: Vec<AddRelayResult>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct GroupRelaysAddedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
+
+    #[serde(rename = "groupLink")]
+    pub group_link: GroupLink,
+
+    #[serde(rename = "groupRelays")]
+    pub group_relays: Vec<GroupRelay>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]

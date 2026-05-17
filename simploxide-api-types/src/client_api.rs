@@ -231,7 +231,7 @@ pub trait ClientApi: Sync {
     /// *Syntax:*
     ///
     /// ```
-    /// /_delete item <str(chatRef)> <chatItemIds[0]>[,<chatItemIds[1]>...] broadcast|internal|internalMark
+    /// /_delete item <str(chatRef)> <chatItemIds[0]>[,<chatItemIds[1]>...] broadcast|internal|internalMark|history
     /// ```
     fn api_delete_chat_item(
         &self,
@@ -663,6 +663,36 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
+    /// Add relays to group.
+    ///
+    /// *Network usage*: interactive.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_add relays #<groupId> <relayIds[0]>[,<relayIds[1]>...]
+    /// ```
+    fn api_add_group_relays(
+        &self,
+        group_id: i64,
+        relay_ids: Vec<i64>,
+    ) -> impl Future<Output = Result<ApiAddGroupRelaysResponse, Self::Error>> + Send {
+        async move {
+            let command = ApiAddGroupRelays {
+                group_id,
+                relay_ids,
+            };
+            let response: ApiAddGroupRelaysResponse = self.send(command).await?;
+            Ok(response)
+        }
+    }
+
+    /// ### Group commands
+    ///
+    /// Commands to manage and moderate groups. These commands can be used with business chats as well - they are groups. E.g., a common scenario would be to add human agents to business chat with the customer who connected via business address.
+    ///
+    /// ----
+    ///
     /// Update group profile.
     ///
     /// *Network usage*: background.
@@ -999,6 +1029,31 @@ pub trait ClientApi: Sync {
     ) -> impl Future<Output = Result<Arc<GroupsListResponse>, Self::Error>> + Send {
         async move {
             let response: ApiListGroupsResponse = self.send(command).await?;
+            Ok(response.into_inner())
+        }
+    }
+
+    /// ### Chat commands
+    ///
+    /// Commands to list and delete conversations.
+    ///
+    /// ----
+    ///
+    /// Get chat previews. Supports time-based pagination — use this instead of APIListContacts / APIListGroups when scanning at scale (those load every record into memory and fail on large databases).
+    ///
+    /// *Network usage*: no.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_get chats <userId>[ pcc=on] <str(pagination)> <json(query)>
+    /// ```
+    fn api_get_chats(
+        &self,
+        command: ApiGetChats,
+    ) -> impl Future<Output = Result<Arc<ApiChatsResponse>, Self::Error>> + Send {
+        async move {
+            let response: ApiGetChatsResponse = self.send(command).await?;
             Ok(response.into_inner())
         }
     }

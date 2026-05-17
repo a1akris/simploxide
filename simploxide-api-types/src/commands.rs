@@ -307,7 +307,7 @@ impl CommandSyntax for ApiUpdateChatItem {
 /// *Syntax:*
 ///
 /// ```
-/// /_delete item <str(chatRef)> <chatItemIds[0]>[,<chatItemIds[1]>...] broadcast|internal|internalMark
+/// /_delete item <str(chatRef)> <chatItemIds[0]>[,<chatItemIds[1]>...] broadcast|internal|internalMark|history
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
@@ -343,6 +343,9 @@ impl CommandSyntax for ApiDeleteChatItem {
             }
             CIDeleteMode::InternalMark => {
                 buf.push_str("internalMark");
+            }
+            CIDeleteMode::History => {
+                buf.push_str("history");
             }
         }
     }
@@ -1106,6 +1109,48 @@ impl CommandSyntax for ApiGetGroupRelays {
 ///
 /// ----
 ///
+/// Add relays to group.
+///
+/// *Network usage*: interactive.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_add relays #<groupId> <relayIds[0]>[,<relayIds[1]>...]
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct ApiAddGroupRelays {
+    pub group_id: i64,
+    pub relay_ids: Vec<i64>,
+}
+
+impl CommandSyntax for ApiAddGroupRelays {
+    const COMMAND_BUF_SIZE: usize = 256;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_add ");
+        buf.push_str("relays ");
+        buf.push('#');
+        write!(buf, "{}", self.group_id).unwrap();
+        buf.push(' ');
+        let mut iter = self.relay_ids.iter();
+        if let Some(el) = iter.next() {
+            write!(buf, "{el}").unwrap();
+        }
+        for el in iter {
+            buf.push(',');
+            write!(buf, "{el}").unwrap();
+        }
+    }
+}
+
+/// ### Group commands
+///
+/// Commands to manage and moderate groups. These commands can be used with business chats as well - they are groups. E.g., a common scenario would be to add human agents to business chat with the customer who connected via business address.
+///
+/// ----
+///
 /// Update group profile.
 ///
 /// *Network usage*: background.
@@ -1644,6 +1689,64 @@ impl CommandSyntax for ApiListGroups {
         if let Some(search) = &self.search {
             buf.push(' ');
             write!(buf, "{}", search).unwrap();
+        }
+    }
+}
+
+/// ### Chat commands
+///
+/// Commands to list and delete conversations.
+///
+/// ----
+///
+/// Get chat previews. Supports time-based pagination — use this instead of APIListContacts / APIListGroups when scanning at scale (those load every record into memory and fail on large databases).
+///
+/// *Network usage*: no.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_get chats <userId>[ pcc=on] <str(pagination)> <json(query)>
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct ApiGetChats {
+    pub user_id: i64,
+    pub pending_connections: bool,
+    pub pagination: PaginationByTime,
+    pub query: ChatListQuery,
+}
+
+impl ApiGetChats {
+    /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
+    pub fn new(user_id: i64, pagination: PaginationByTime, query: ChatListQuery) -> Self {
+        Self {
+            user_id,
+            pending_connections: false,
+            pagination,
+            query,
+        }
+    }
+}
+
+impl CommandSyntax for ApiGetChats {
+    const COMMAND_BUF_SIZE: usize = 1024;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_get ");
+        buf.push_str("chats ");
+        write!(buf, "{}", self.user_id).unwrap();
+        if self.pending_connections {
+            buf.push(' ');
+            buf.push_str("pcc=");
+            buf.push_str("on");
+        }
+        buf.push(' ');
+        self.pagination.append_command_syntax(buf);
+        buf.push(' ');
+        // SAFETY: serde_json guarantees to produce valid UTF-8 sequences
+        unsafe {
+            serde_json::to_writer(buf.as_mut_vec(), &self.query).unwrap();
         }
     }
 }

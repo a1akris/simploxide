@@ -1179,6 +1179,8 @@ pub enum CIDeleteMode {
     Internal,
     #[serde(rename = "internalMark")]
     InternalMark,
+    #[serde(rename = "history")]
+    History,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2702,6 +2704,75 @@ pub struct ChatItemDeletion {
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
+pub enum ChatListQuery {
+    #[serde(rename = "filters")]
+    Filters {
+        #[serde(rename = "favorite", default)]
+        favorite: bool,
+
+        #[serde(rename = "unread", default)]
+        unread: bool,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "search")]
+    Search {
+        #[serde(rename = "search")]
+        search: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl ChatListQuery {
+    pub fn make_filters(favorite: bool, unread: bool) -> Self {
+        Self::Filters {
+            favorite,
+            unread,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn make_search(search: String) -> Self {
+        Self::Search {
+            search,
+            undocumented: Default::default(),
+        }
+    }
+}
+
+impl ChatListQuery {
+    pub fn filters(&self) -> Option<ChatListQueryFiltersRef<'_>> {
+        if let Self::Filters {
+            favorite, unread, ..
+        } = self
+        {
+            Some(ChatListQueryFiltersRef { favorite, unread })
+        } else {
+            None
+        }
+    }
+    pub fn search(&self) -> Option<&String> {
+        if let Self::Search { search, .. } = self {
+            Some(search)
+        } else {
+            None
+        }
+    }
+}
+#[derive(Clone, Copy)]
+pub struct ChatListQueryFiltersRef<'a> {
+    pub favorite: &'a bool,
+    pub unread: &'a bool,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -6473,6 +6544,63 @@ impl OwnerVerification {
     pub fn failed(&self) -> Option<&String> {
         if let Self::Failed { reason, .. } = self {
             Some(reason)
+        } else {
+            None
+        }
+    }
+}
+
+/// *Syntax:*
+///
+/// ```
+/// count=<count>
+/// ```
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
+pub enum PaginationByTime {
+    #[serde(rename = "last")]
+    Last {
+        #[serde(rename = "count", deserialize_with = "deserialize_number_from_string")]
+        count: i32,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl CommandSyntax for PaginationByTime {
+    const COMMAND_BUF_SIZE: usize = 32;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        match self {
+            Self::Last {
+                count,
+                undocumented: _,
+            } => {
+                buf.push_str("count=");
+                write!(buf, "{count}").unwrap();
+            }
+            Self::Undocumented(_) => {}
+        }
+    }
+}
+
+impl PaginationByTime {
+    pub fn make_last(count: i32) -> Self {
+        Self::Last {
+            count,
+            undocumented: Default::default(),
+        }
+    }
+}
+
+impl PaginationByTime {
+    pub fn last(&self) -> Option<&i32> {
+        if let Self::Last { count, .. } = self {
+            Some(count)
         } else {
             None
         }

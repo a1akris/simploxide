@@ -424,6 +424,25 @@ impl CommandSyntax for ChatDeleteMode {
 "#
             .to_owned(),
         )
+    } else if du.name == "PaginationByTime" {
+        Some(
+            r#"
+impl CommandSyntax for PaginationByTime {
+    const COMMAND_BUF_SIZE: usize = 32;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        match self {
+            Self::Last { count, undocumented: _ } => {
+                buf.push_str("count=");
+                write!(buf, "{count}").unwrap();
+            },
+            Self::Undocumented(_) => {}
+        }
+    }
+}
+"#
+            .to_owned(),
+        )
     } else {
         None
     }
