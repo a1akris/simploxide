@@ -10,7 +10,7 @@ use std::{
 };
 
 /// An instance representing the running SimpleX CLI. Ensure to call [`SimplexCli::kill`] manually
-/// to avoid zombie processes on Linux. The Drop impl tries its best to reap the process if it
+/// to avoid zombie/hang processes on Linux. The Drop impl tries its best to reap the process if it
 /// wasn't killed by the user but it is not guarnteed to succeed.
 ///
 /// # Security
@@ -25,8 +25,8 @@ pub struct SimplexCli {
 }
 
 impl SimplexCli {
-    const MIN_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 0, 9);
-    const MAX_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 1, 0);
+    const MIN_SUPPORTED_VERSION: SimplexVersion = simploxide_core::MIN_SUPPORTED_VERSION;
+    const MAX_SUPPORTED_VERSION: SimplexVersion = simploxide_core::MAX_SUPPORTED_VERSION;
 
     /// Begin building a [`SimplexCli`] that will spawn a `simplex-chat` process.
     ///
@@ -164,9 +164,7 @@ where
             ))
         })?;
 
-        if version < SimplexCli::MIN_SUPPORTED_VERSION
-            || version > SimplexCli::MAX_SUPPORTED_VERSION
-        {
+        if !version.is_supported() {
             return Err(io::Error::other(format!(
                 "The Simplex CLI {version} is incompatible with current simploxide version\n\
                 Supported CLI versions: {}...{}",
@@ -178,8 +176,16 @@ where
         let mut cmd = Command::new(sxc_cmd);
         cmd.stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .arg("-d")
+            .stderr(Stdio::null());
+
+        // `simploxide` users may install Ctrl-C handlers to handle graceful shutdown. However,
+        // Ctrl-C still kills all child processes on Linux by default dropping the web socket
+        // connection interrupting the graceful shutdown logic. This call "unlinks" CLI from its
+        // parent process allowing the graceful shutdown phase to complete
+        #[cfg(unix)]
+        cmd.process_group(0);
+
+        cmd.arg("-d")
             .arg(&self.db_path)
             .arg("-p")
             .arg(self.port.to_string())
