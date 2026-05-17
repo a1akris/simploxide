@@ -11,8 +11,9 @@ use simploxide_api_types::{
         ApiSetContactCustomData, ApiSetGroupCustomData, ApiUpdateChatItem, Connect, ReceiveFile,
     },
     responses::{
-        AcceptingContactRequestResponse, ActiveUserResponse, ApiDeleteChatResponse,
-        ApiUpdateChatItemResponse, CancelFileResponse, ChatItemReactionResponse,
+        AcceptingContactRequestResponse, ActiveUserResponse, ApiAddGroupRelaysResponse,
+        ApiDeleteChatResponse, ApiUpdateChatItemResponse, CancelFileResponse,
+        ChatItemReactionResponse,
         ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse, ContactRequestRejectedResponse,
         GroupLinkCreatedResponse, GroupLinkDeletedResponse, GroupLinkResponse, GroupRelaysResponse,
         GroupUpdatedResponse, LeftMemberUserResponse, MemberAcceptedResponse,
@@ -24,7 +25,7 @@ use simploxide_api_types::{
 use std::{pin::Pin, sync::Arc};
 
 use crate::{
-    id::{ChatId, ContactId, ContactRequestId, FileId, GroupId, MemberId, MessageId, UserId},
+    id::{ChatId, ContactId, ContactRequestId, FileId, GroupId, MemberId, MessageId, RelayId, UserId},
     messages::{MessageBuilder, MessageLike, MulticastBuilder},
 };
 
@@ -68,6 +69,7 @@ pub type CreateGroupLinkResult<C> = Result<Arc<GroupLinkCreatedResponse>, <C as 
 pub type GroupLinkResult<C> = Result<Arc<GroupLinkResponse>, <C as ClientApi>::Error>;
 pub type DeleteGroupLinkResult<C> = Result<Arc<GroupLinkDeletedResponse>, <C as ClientApi>::Error>;
 pub type GetGroupRelaysResponse<C> = Result<Arc<GroupRelaysResponse>, <C as ClientApi>::Error>;
+pub type AddGroupRelaysResponse<C> = Result<ApiAddGroupRelaysResponse, <C as ClientApi>::Error>;
 
 pub trait ClientApiExt: ClientApi {
     fn users(&self) -> impl Future<Output = UsersResponse<Self>>;
@@ -333,6 +335,20 @@ pub trait ClientApiExt: ClientApi {
         &self,
         group_id: GID,
     ) -> impl Future<Output = GetGroupRelaysResponse<Self>>;
+
+    fn add_group_relays<GID: Into<GroupId>, I: IntoIterator<Item = RelayId>>(
+        &self,
+        group_id: GID,
+        relay_ids: I,
+    ) -> impl Future<Output = AddGroupRelaysResponse<Self>>;
+
+    fn add_group_relay<GID: Into<GroupId>, RID: Into<RelayId>>(
+        &self,
+        group_id: GID,
+        relay_id: RID,
+    ) -> impl Future<Output = AddGroupRelaysResponse<Self>> {
+        self.add_group_relays(group_id, std::iter::once(relay_id.into()))
+    }
 }
 
 impl<C> ClientApiExt for C
@@ -693,6 +709,17 @@ where
         group_id: GID,
     ) -> impl Future<Output = GetGroupRelaysResponse<Self>> {
         self.api_get_group_relays(group_id.into().0)
+    }
+
+    fn add_group_relays<GID: Into<GroupId>, I: IntoIterator<Item = RelayId>>(
+        &self,
+        group_id: GID,
+        relay_ids: I,
+    ) -> impl Future<Output = AddGroupRelaysResponse<Self>> {
+        self.api_add_group_relays(
+            group_id.into().0,
+            relay_ids.into_iter().map(|id| id.0).collect(),
+        )
     }
 }
 

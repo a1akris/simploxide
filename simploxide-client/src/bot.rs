@@ -1,14 +1,15 @@
 use simploxide_api_types::{
-    AddressSettings, AutoAccept, CIDeleteMode, ChatPeerType, Contact, CreatedConnLink, GroupInfo,
-    GroupMember, GroupMemberRole, GroupProfile, JsonObject, LocalProfile, MsgContent, NewUser,
-    PendingContactConnection, Preferences, Profile, User,
+    AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, Contact, CreatedConnLink,
+    GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject, LocalProfile, MsgContent,
+    NewUser, PaginationByTime, PendingContactConnection, Preferences, Profile, User,
     client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
     commands::{
-        ApiAddContact, ApiConnectPlan, ApiNewGroup, ApiNewPublicGroup, ApiSetActiveUser,
+        ApiAddContact, ApiConnectPlan, ApiGetChats, ApiNewGroup, ApiNewPublicGroup, ApiSetActiveUser,
         ApiSetProfileAddress, ApiSetUserAutoAcceptMemberContacts,
     },
     responses::{
-        AcceptingContactRequestResponse, ApiDeleteChatResponse, ApiNewPublicGroupResponse,
+        AcceptingContactRequestResponse, ApiChatsResponse, ApiDeleteChatResponse,
+        ApiNewPublicGroupResponse,
         ApiUpdateChatItemResponse, ApiUpdateProfileResponse, CancelFileResponse,
         ChatItemReactionResponse, ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse,
         ConnectionPlanResponse, ContactPrefsUpdatedResponse, ContactRequestRejectedResponse,
@@ -23,8 +24,8 @@ use std::sync::Arc;
 
 use crate::{
     ext::{
-        AcceptFileBuilder, ClientApiExt as _, DeleteMode, GetGroupRelaysResponse, GroupLinkResult,
-        Reaction,
+        AcceptFileBuilder, AddGroupRelaysResponse, ClientApiExt as _, DeleteMode,
+        GetGroupRelaysResponse, GroupLinkResult, Reaction,
     },
     id::{
         ChatId, ContactId, ContactRequestId, FileId, GroupId, MemberId, MessageId, RelayId, UserId,
@@ -883,6 +884,34 @@ impl<C: ClientApi> Bot<C> {
         group_id: GID,
     ) -> GetGroupRelaysResponse<C> {
         self.client.get_group_relays(group_id).await
+    }
+
+    pub async fn add_group_relays<GID: Into<GroupId>, I: IntoIterator<Item = RelayId>>(
+        &self,
+        group_id: GID,
+        relay_ids: I,
+    ) -> AddGroupRelaysResponse<C> {
+        self.client.add_group_relays(group_id, relay_ids).await
+    }
+
+    pub async fn add_group_relay<GID: Into<GroupId>, RID: Into<RelayId>>(
+        &self,
+        group_id: GID,
+        relay_id: RID,
+    ) -> AddGroupRelaysResponse<C> {
+        self.client.add_group_relay(group_id, relay_id).await
+    }
+
+    /// Get chats with time-based pagination. Prefer this over [`Bot::contacts`] / [`Bot::groups`]
+    /// for large databases as it avoids loading all records into memory at once.
+    pub async fn get_chats(
+        &self,
+        pagination: PaginationByTime,
+        query: ChatListQuery,
+    ) -> Result<Arc<ApiChatsResponse>, C::Error> {
+        self.client
+            .api_get_chats(ApiGetChats::new(self.user_id, pagination, query))
+            .await
     }
 }
 
