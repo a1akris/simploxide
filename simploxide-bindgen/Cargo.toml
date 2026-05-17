@@ -11,7 +11,7 @@ readme = "README.md"
 repository = "https://github.com/a1akris/simploxide"
 documentation = "https://docs.rs/simploxide-bindgen"
 categories = ["development-tools", "api-bindings", "data-structures"]
-keywords = ["simplex", "chat", "bindgen", "types", "codegen"]
+keywords = ["simplex-chat", "bindgen", "codegen"]
 
 [dependencies]
 convert_case = "0.11.0"
