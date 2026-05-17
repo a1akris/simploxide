@@ -5,7 +5,7 @@ Low-level Rust FFI bindings for [SimpleX Chat](https://github.com/simplex-chat/s
 **Consider the WebSocket interface first.** `simploxide` implements WebSocket
 API you can use with SimpleX-Chat CLI application(`simplex-chat -p <port>`)
 that is far easier to work with. FFI avoids the process boundary but requires
-managing shared libraries, rpaths, and a Haskell runtime — only switch to FFI
+managing shared libraries, rpaths, and a Haskell runtime. Only switch to FFI
 when the overhead is genuinely unacceptable or you require FFI specific
 features.
 
@@ -144,3 +144,7 @@ script from `simplex-static`.
 
 Then use the same approach described in `SXCRT` to setup dev and distribution
 builds.
+
+### LICENSE
+
+**Licensed under [AGPL-3.0](../LICENSE-AGPL3)**
