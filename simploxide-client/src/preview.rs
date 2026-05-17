@@ -464,7 +464,7 @@ async fn read_plain_file(path: &PathBuf, size_limit: usize) -> std::io::Result<V
 
 #[cfg(feature = "native_crypto")]
 async fn read_crypto_file(file: CryptoFile, size_limit: usize) -> std::io::Result<Vec<u8>> {
-    let mut f = crate::crypto::TokioMaybeCryptoFile::from_crypto_file(file).await?;
+    let mut f = crate::crypto::fs::TokioMaybeCryptoFile::from_crypto_file(file).await?;
     let size_hint = f.size_hint().await?;
 
     if size_hint > size_limit {

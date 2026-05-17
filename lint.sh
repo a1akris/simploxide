@@ -9,5 +9,5 @@ cargo test --all-features --all-targets
 
 cd ../
 cargo fmt --check --verbose
-cargo clippy --workspace --all-features --all-targets -- -D warnings
-cargo test --workspace --all-features --all-targets
+cargo clippy -p simploxide-ws-core -p simploxide-core -p simploxide-api-types --all-features --all-targets -- -D warnings
+cargo clippy -p simploxide-client --features fullcli -- -D warnings

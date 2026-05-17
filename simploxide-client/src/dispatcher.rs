@@ -274,7 +274,7 @@ where
     ///   multiple times the last one wins.
     /// - `{ErrorType}` can be arbitrary but all handlers must share it and it must implement `From<ClientError>`.
     /// - All handlers run as tokio tasks so events are processed concurrently(and in parallel on
-    /// multithreaded runtimes).
+    ///   multithreaded runtimes).
     ///
     ///
     /// ## Usage
