@@ -2,11 +2,24 @@
 name = "simploxide-ffi-core"
 version = "0.1.0"
 edition = "2024"
+authors = ["a1akris <alkrivitskiy@pm.me>"]
+license = "AGPL-3.0"
+exclude = [
+    "sxcrt",
+    "test_db",
+]
+description = "SimpleX-Chat raw FFI client"
+readme = "README.md"
+repository = "https://github.com/a1akris/simploxide"
+documentation = "https://docs.rs/simploxide-ffi-core"
+categories = ["api-bindings", "asynchronous", "network-programming"]
+keywords = ["simplex-chat", "ffi", "client"]
 
 [dependencies]
 tokio = { workspace = true }
 serde.workspace = true
 serde_json.workspace = true
+
 slab = "0.4"
 simploxide-sxcrt-sys = { path = "../simploxide-sxcrt-sys", version = "0.1.0" }
 simploxide-core = { path = "../simploxide-core", version = "0.4.0" }
