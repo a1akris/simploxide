@@ -9,7 +9,7 @@ exclude = ["docs"]
 description = "SimpleX-Chat raw websocket client"
 readme = "README.md"
 repository = "https://github.com/a1akris/simploxide"
-documentation = "https://docs.rs/simploxide-core"
+documentation = "https://docs.rs/simploxide-ws-core"
 categories = ["network-programming", "asynchronous", "web-programming::websocket"]
 keywords = ["simplex-chat", "websocket", "client"]
 
