@@ -1,14 +1,14 @@
 //! Starting from `0.4.0` this crate is repurposed to supply types shared between
-//! [simploxide-ws-core](https://docs.rs/simploxide-core/latest/simploxide_ws_core/) and
-//! [simploxide-ffi-core](https://docs.rs/simploxide-core/latest/simploxide_ws_core/). Check the
+//! [simploxide-ws-core](https://docs.rs/simploxide_ws_core/) and
+//! [simploxide-ffi-core](https://docs.rs/simploxide_ffi_core/). Check the
 //! documentation of the corresponding crates for actual functionality
 
 use std::str::FromStr;
 
 use serde::Deserialize;
 
-pub const MIN_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 0, 9);
-pub const MAX_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 1, 0);
+pub const MIN_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 2, 0);
+pub const MAX_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 2, 99);
 
 /// Parses SimpleX version numbers in the form `MAJOR.MINOR.PATCH.HOTFIX`.
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash)]
