@@ -1,3 +1,9 @@
+//! WebSocket backend that connects to a `simplex-chat` WebSocket server.
+//!
+//! Use [`BotBuilder`] to launch or connect to `simplex-chat` and get a ready-to-use [`Bot`].
+//! For lower-level access, [`connect`] and [`retry_connect`] return a [`Client`] and an
+//! [`EventStream`](crate::EventStream) directly.
+
 use std::sync::Arc;
 
 pub use simploxide_ws_core::{
@@ -32,8 +38,8 @@ pub type Bot = crate::bot::Bot<crate::xftp::XftpClient<Client>>;
 pub type EventStream = crate::EventStream<CoreResult<CoreEvent>>;
 pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
 
-/// A wrapper over [`simploxide_core::connect`] that turns [`simploxide_core::RawClient`] into
-/// [`Client`] and raw event queue into the [`EventStream`] which handle serialization/deserialization.
+/// Connects to a `simplex-chat` WebSocket server, returning a [`Client`] and an [`EventStream`]
+/// that handle serialization/deserialization of commands and events.
 ///
 /// ```ignore
 /// let (client, mut events) = simploxide_client::ws::connect("ws://127.0.0.1:5225").await?;

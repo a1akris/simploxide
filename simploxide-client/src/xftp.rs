@@ -1,3 +1,19 @@
+//! XFTP file download manager.
+//!
+//! [`XftpClient`] wraps any [`ClientApi`] client and observes the file rcv events emitted by the
+//! SimpleX-Chat. [`DownloadFileBuilder`] (obtained via [`XftpExt::download_file`]) initiates the transfer
+//! and awaits those events, returning the outcome directly to the caller.
+//!
+//! # When to use
+//!
+//! - **Out-of-handler downloads.** When the decision to download a file is made outside an event
+//!   handler (for example, after a user command or a timer), `download_file` provides the result
+//!   without requiring custom event routing.
+//!
+//! - **Keeping download logic in one handler.** Sometimes it may be useful to keep all logic in a
+//!   single handler to simplify state management.
+//!
+
 use std::sync::Arc;
 
 use dashmap::DashMap;
@@ -13,10 +29,24 @@ use crate::{Hook, id::FileId};
 
 type XftpDownloadResponder = tokio::sync::oneshot::Sender<XftpManagerDownloadResponse>;
 
+/// Adds [`download_file`](Self::download_file) to any [`ClientApi`].
+/// Automatically implemented for [`XftpClient`].
 pub trait XftpExt: ClientApi {
+    /// Begin downloading `file_id` and return a builder to configure and await the result.
+    ///
+    /// # Deadlock warning
+    ///
+    /// `download_file` awaits a completion event that only arrives when the event loop processes
+    /// **Awaiting a download inside a sequential handler blocks the event loop**: that event
+    /// never arrives, causing a deadlock. Only use `download_file` from a **concurrent** handler
+    /// (registered with [`Dispatcher::on`](crate::dispatcher::Dispatcher::on)) or outside the
+    /// dispatcher entirely.
     fn download_file<FID: Into<FileId>>(&self, file_id: FID) -> DownloadFileBuilder<'_, Self>;
 }
 
+/// A [`ClientApi`] wrapper that intercepts file-result events and routes them to the
+/// corresponding [`DownloadFileBuilder`] futures. Should be constructed by
+/// [`EventStream::hook_xftp`](crate::EventStream::hook_xftp) to work correctly.
 #[derive(Clone)]
 pub struct XftpClient<C> {
     client: C,
@@ -122,21 +152,25 @@ pub struct DownloadFileBuilder<'a, C: 'a + ?Sized> {
 }
 
 impl<'a, C: 'a + ?Sized> DownloadFileBuilder<'a, C> {
+    /// Route the download through user-approved relays rather than the default ones.
     pub fn via_user_approved_relays(mut self) -> Self {
         self.cmd.user_approved_relays = true;
         self
     }
 
+    /// Store the downloaded file in encrypted form.
     pub fn store_encrypted(mut self) -> Self {
         self.cmd.store_encrypted = Some(true);
         self
     }
 
+    /// Request inline delivery (small files only).
     pub fn inline(mut self) -> Self {
         self.cmd.file_inline = Some(true);
         self
     }
 
+    /// Override the path where the downloaded file will be saved.
     pub fn file_path<P: AsRef<std::path::Path>>(mut self, path: P) -> Self {
         self.cmd.file_path = Some(path.as_ref().display().to_string());
         self
@@ -180,10 +214,15 @@ where
     }
 }
 
+/// Error returned when a [`DownloadFileBuilder`] future resolves unsuccessfully.
 pub enum DownloadError<E> {
+    /// The sender cancelled the transfer after the download was accepted.
     SendCancelled(Arc<RcvFileSndCancelled>),
+    /// The file was no longer available when the download request arrived.
     AcceptCancelled(Arc<RcvFileAcceptedSndCancelledResponse>),
+    /// The SimpleX agent reported an error while receiving the file.
     Receive(Arc<RcvFileError>),
+    /// The API call to initiate the download failed.
     Api(E),
 }
 

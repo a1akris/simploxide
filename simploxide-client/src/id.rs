@@ -1,3 +1,8 @@
+//! Type-safe wrappers for SimpleX Chat integer IDs and conversions from API structs.
+//!
+//!  ID types implement `From` for their corresponding API structs(and references to them), so you can pass a
+//! `&Contact`, `GroupInfo`, `ChatItem`, etc. directly wherever a typed ID is expected.
+
 use simploxide_api_types::{
     AChatItem, CIFile, CIMeta, ChatInfo, ChatItem, ChatRef, ChatType, Contact, FileTransferMeta,
     GroupChatScope, GroupInfo, GroupMember, GroupRelay, RcvFileTransfer, SndFileTransfer, User,
@@ -39,6 +44,8 @@ typesafe_ids!(
     RelayId
 );
 
+/// Identifies a chat: direct contact, group (optionally scoped to a member support thread),
+/// or local note-to-self.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ChatId {
     Direct(ContactId),
@@ -50,6 +57,7 @@ pub enum ChatId {
 }
 
 impl ChatId {
+    /// Creates a [`ChatId::Group`] scoped to a member support thread.
     pub fn with_group_scope(id: GroupId, group_member_support_id: MemberId) -> Self {
         Self::Group {
             id,
@@ -57,6 +65,7 @@ impl ChatId {
         }
     }
 
+    /// Converts a [`ChatRef`] from a SimpleX API response. Returns `None` for unrecognised chat types.
     pub fn from_chat_ref(chat_ref: &ChatRef) -> Option<Self> {
         match chat_ref.chat_type {
             ChatType::Direct => Some(Self::Direct(ContactId(chat_ref.chat_id))),
@@ -73,6 +82,7 @@ impl ChatId {
         }
     }
 
+    /// Converts a [`ChatInfo`] from a SimpleX API response. Returns `None` for unrecognised chat types.
     pub fn from_chat_info(chat_info: &ChatInfo) -> Option<Self> {
         match chat_info {
             ChatInfo::Direct { contact, .. } => Some(Self::Direct(ContactId(contact.contact_id))),
@@ -93,6 +103,7 @@ impl ChatId {
         }
     }
 
+    /// Converts back into a [`ChatRef`] for use in raw API calls.
     pub fn into_chat_ref(self) -> ChatRef {
         let (chat_type, chat_id, chat_scope) = match self {
             Self::Direct(contact_id) => (ChatType::Direct, contact_id.0, None),

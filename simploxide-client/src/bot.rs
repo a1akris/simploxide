@@ -1,22 +1,23 @@
 use simploxide_api_types::{
-    AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, Contact, CreatedConnLink,
-    GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject, LocalProfile, MsgContent,
-    NewUser, PaginationByTime, PendingContactConnection, Preferences, Profile, User,
+    AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, Contact,
+    CreatedConnLink, GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject,
+    LocalProfile, MsgContent, NewUser, PaginationByTime, PendingContactConnection, Preferences,
+    Profile, User,
     client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
     commands::{
-        ApiAddContact, ApiConnectPlan, ApiGetChats, ApiNewGroup, ApiNewPublicGroup, ApiSetActiveUser,
-        ApiSetProfileAddress, ApiSetUserAutoAcceptMemberContacts,
+        ApiAddContact, ApiConnectPlan, ApiGetChats, ApiNewGroup, ApiNewPublicGroup,
+        ApiSetActiveUser, ApiSetProfileAddress, ApiSetUserAutoAcceptMemberContacts,
     },
     responses::{
         AcceptingContactRequestResponse, ApiChatsResponse, ApiDeleteChatResponse,
-        ApiNewPublicGroupResponse,
-        ApiUpdateChatItemResponse, ApiUpdateProfileResponse, CancelFileResponse,
-        ChatItemReactionResponse, ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse,
-        ConnectionPlanResponse, ContactPrefsUpdatedResponse, ContactRequestRejectedResponse,
-        GroupCreatedResponse, GroupLinkCreatedResponse, GroupLinkDeletedResponse,
-        GroupUpdatedResponse, LeftMemberUserResponse, MemberAcceptedResponse,
-        MembersBlockedForAllUserResponse, MembersRoleUserResponse, SentGroupInvitationResponse,
-        UserAcceptedGroupSentResponse, UserDeletedMembersResponse, UserProfileUpdatedResponse,
+        ApiNewPublicGroupResponse, ApiUpdateChatItemResponse, ApiUpdateProfileResponse,
+        CancelFileResponse, ChatItemReactionResponse, ChatItemsDeletedResponse, CmdOkResponse,
+        ConnectResponse, ConnectionPlanResponse, ContactPrefsUpdatedResponse,
+        ContactRequestRejectedResponse, GroupCreatedResponse, GroupLinkCreatedResponse,
+        GroupLinkDeletedResponse, GroupUpdatedResponse, LeftMemberUserResponse,
+        MemberAcceptedResponse, MembersBlockedForAllUserResponse, MembersRoleUserResponse,
+        SentGroupInvitationResponse, UserAcceptedGroupSentResponse, UserDeletedMembersResponse,
+        UserProfileUpdatedResponse,
     },
 };
 
@@ -182,6 +183,7 @@ impl<C: ClientApi> Bot<C> {
         }
     }
 
+    /// Returns a minimal bot profile with conservative defaults: no files, calls, reactions, or voice.
     pub fn default_profile(name: impl Into<String>) -> Profile {
         Profile {
             display_name: name.into(),
@@ -325,6 +327,7 @@ impl<C: ClientApi> Bot<C> {
         Ok(())
     }
 
+    /// Fetches the current profile and applies `updater` to it before saving.
     pub async fn update_profile<F>(&self, updater: F) -> Result<ApiUpdateProfileResponse, C::Error>
     where
         F: 'static + Send + FnOnce(&mut Profile),
@@ -375,6 +378,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Set account type `Bot` or `Person`
     pub async fn set_peer_type(
         &self,
         peer_type: ChatPeerType,
@@ -469,6 +473,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.reject_contact(contact_request_id).await
     }
 
+    /// Send a message. See the [`messages`](crate::messages) module for details
     pub fn send_msg<CID: Into<ChatId>, M: MessageLike>(
         &self,
         chat_id: CID,
@@ -590,6 +595,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Applies multiple reactions to a message. Returns one result per reaction.
     pub async fn batch_msg_reactions<
         CID: Into<ChatId>,
         MID: Into<MessageId>,
@@ -676,6 +682,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Sends a group invitation to a contact.
     pub async fn add_member<GID: Into<GroupId>, CID: Into<ContactId>>(
         &self,
         group_id: GID,
@@ -685,6 +692,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.add_member(group_id, contact_id, role).await
     }
 
+    /// Accepts a pending group invitation.
     pub async fn join_group<GID: Into<GroupId>>(
         &self,
         group_id: GID,
@@ -692,6 +700,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.join_group(group_id).await
     }
 
+    /// Confirms a pending group membership request.
     pub async fn accept_member<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
@@ -721,6 +730,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.set_member_role(group_id, member_id, role).await
     }
 
+    /// Blocks members so their messages are hidden for everyone in the group.
     pub async fn block_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
         &self,
         group_id: GID,
@@ -731,6 +741,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Reverses a previous [`block_members_for_all`](Self::block_members_for_all).
     pub async fn unblock_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
         &self,
         group_id: GID,
@@ -741,6 +752,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Blocks a member so their messages are hidden for everyone in the group.
     pub async fn block_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
@@ -749,6 +761,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.block_member_for_all(group_id, member_id).await
     }
 
+    /// Reverses a previous [`block_member_for_all`](Self::block_member_for_all).
     pub async fn unblock_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
@@ -759,6 +772,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Removes members from the group, preserving their past messages.
     pub async fn remove_members<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
         &self,
         group_id: GID,
@@ -767,6 +781,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.remove_members(group_id, member_ids).await
     }
 
+    /// Removes members from the group and deletes their messages.
     pub async fn remove_members_with_messages<
         GID: Into<GroupId>,
         I: IntoIterator<Item = MemberId>,
@@ -780,6 +795,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Removes a member from the group, preserving their past messages.
     pub async fn remove_member<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
@@ -788,6 +804,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.remove_member(group_id, member_id).await
     }
 
+    /// Removes a member from the group and deletes their messages.
     pub async fn remove_member_with_messages<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
@@ -812,6 +829,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.list_members(group_id).await
     }
 
+    /// Deletes messages for all group members. Requires admin or owner role.
     pub async fn moderate_messages<GID: Into<GroupId>, I: IntoIterator<Item = MessageId>>(
         &self,
         group_id: GID,
@@ -820,6 +838,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.moderate_messages(group_id, message_ids).await
     }
 
+    /// Deletes a message for all group members. Requires admin or owner role.
     pub async fn moderate_message<GID: Into<GroupId>, MID: Into<MessageId>>(
         &self,
         group_id: GID,
@@ -836,6 +855,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.update_group_profile(group_id, profile).await
     }
 
+    /// Stores arbitrary app-defined JSON on the group. Pass `None` to clear it.
     pub async fn set_group_custom_data<GID: Into<GroupId>>(
         &self,
         group_id: GID,
@@ -844,6 +864,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.set_group_custom_data(group_id, data).await
     }
 
+    /// Stores arbitrary app-defined JSON on the contact. Pass `None` to clear it.
     pub async fn set_contact_custom_data<CID: Into<ContactId>>(
         &self,
         contact_id: CID,
@@ -860,6 +881,7 @@ impl<C: ClientApi> Bot<C> {
         self.client.create_group_link(group_id, role).await
     }
 
+    /// Changes the default role assigned to members who join via the group link.
     pub async fn set_group_link_role<GID: Into<GroupId>>(
         &self,
         group_id: GID,
@@ -939,6 +961,7 @@ impl crate::ffi::Bot {
     }
 }
 
+/// Passed to [`Bot::init`] to configure bot identity and startup behaviour.
 #[derive(Debug, Clone)]
 pub struct BotSettings {
     pub display_name: String,
@@ -984,7 +1007,9 @@ impl BotSettings {
 
 #[derive(Debug, Clone)]
 pub enum BotProfileSettings {
+    /// Apply only the given preferences; leave all other profile fields unchanged.
     Preferences(Preferences),
+    /// Replace the entire profile.
     FullProfile(Profile),
 }
 

@@ -1,3 +1,11 @@
+//! FFI backend that embeds the SimpleX-Chat library in-process via native Rust bindings.
+//!
+//! Use [`BotBuilder`] to initialise the FFI runtime and get a ready-to-use [`Bot`].
+//! For lower-level access, [`init`] and [`init_with_config`] return a [`Client`] and an
+//! [`EventStream`](crate::EventStream) directly.
+//!
+//! Requires AGPL-3.0 and additional build configuration. See `simploxide-sxcrt-sys`.
+
 pub use simploxide_ffi_core::{
     CallError, DbOpts, DefaultUser, InitError as CoreInitError, SimplexVersion, WorkerConfig,
 };

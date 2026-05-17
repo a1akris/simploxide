@@ -13,7 +13,7 @@ use super::{EncryptedFileState, FileCryptoArgs, InvalidAuthTag, Mode, SimplexSec
 ///   must never act on streamed content until `read()` has returned `Ok(0)`. If reading a file
 ///   returns Err() all previously read data cannot be trusted and must be discarded.
 ///
-/// - The caller is responsible to call [`put_auth_tag`] manually. The `AsyncWrite` implementation
+/// - The caller is responsible to call [`Self::put_auth_tag`] manually. The `AsyncWrite` implementation
 ///   does its best to write the authentication tag but it can silently fail leaving the file
 ///   unauthenticated.
 pub struct EncryptedFile<S: SimplexSecretBox> {

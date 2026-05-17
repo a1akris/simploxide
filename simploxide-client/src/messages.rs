@@ -609,7 +609,7 @@ impl MessageLike for Video {
 }
 
 /// Link preview message. Use `with_title`, `with_description`, and `with_image` to populate
-/// the Open Graph–style card shown to the recipient.
+/// the Open Graph-style card shown to the recipient.
 #[derive(Debug, Clone)]
 pub struct Link {
     uri: String,

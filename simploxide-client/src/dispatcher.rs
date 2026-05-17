@@ -44,7 +44,7 @@ where
         }
     }
 
-    /// Accepts all events([events::Event]) unhandled by regular handlers.
+    /// Accepts all events ([`crate::Event`]) unhandled by regular handlers.
     /// It is mostly useful for debug logging. Prefer to remove this call in production because it
     /// forces full parsing of all event types when by default only the events with set up handlers
     /// get parsed.
@@ -129,7 +129,7 @@ where
     /// - The handler signature is `AsyncFnMut(ev: Arc<{EventType}>, ctx: &mut Ctx) -> Result<StreamEvents, {ErrorType}>`
     /// - `Ctx` is whatever type you pass when creating the dispatcher with
     ///   `events.into_local_dispatcher(ctx)`. It will be passed by a mutable reference into all handlers
-    /// - `{Eventype}` is one of the data structs defined in [events]. Events are dispatched
+    /// - `{Eventype}` is one of the data structs defined in [`crate::events`]. Events are dispatched
     ///   statically so this type links the handler to event. When handlers with the same `{EvenType}` are set
     ///   multiple times the last one wins.
     /// - `{ErrorType}` can be arbitrary but all handlers must share it and it must implement `From<ClientError>`.
@@ -269,7 +269,7 @@ where
     ///
     /// - The handler signature is `AsyncFn(ev: Arc<{EventType}>, ctx: Ctx) -> Result<StreamEvents, {ErrorType}>;`
     /// - `Ctx` is whatever is passed into the `into_dispatcher` call. It is cloned into every handler invocation
-    /// - `{Eventype}` is one of the data structs defined in [events]. Events are dispatched
+    /// - `{Eventype}` is one of the data structs defined in [`crate::events`]. Events are dispatched
     ///   statically so this type links the handler to event. When handlers with the same `{EvenType}` are set
     ///   multiple times the last one wins.
     /// - `{ErrorType}` can be arbitrary but all handlers must share it and it must implement `From<ClientError>`.

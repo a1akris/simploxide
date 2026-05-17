@@ -1,35 +1,33 @@
-//! For first-time users it's recommended to get hands-on experience by running some example bots
+//! For first-time users, it's recommended to get hands-on experience by running some example bots
 //! on [GitHub](https://github.com/a1akris/simploxide/tree/main/simploxide-client) before writing
 //! their own.
 //!
-//! This SDK is supposed to be used with `tokio` runtime. Here are the steps to implement any bot:
+//! This SDK is intended to be used with the `tokio` runtime. Here are the steps to implement any bot:
 //!
 //! ### 1. Choose a backend
 //!
-//! `simploxide` provides support for both **websocket** and **FFI** SimpleX-Chat backends.
-//! `simploxide` also reimplements all **FFI** exclusive methods in native Rust so in practice the
-//! backends differ only by their runtime characteristics: a single-process app via **FFI** _vs_ an
-//! app depending on SimpleX-Chat **websocket** server.
+//! `simploxide` supports both **WebSocket** and **FFI** SimpleX-Chat backends.
+//! All FFI-exclusive methods are reimplemented in native Rust, so in practice the backends differ
+//! only in their runtime characteristics: a single-process app via **FFI** vs. an app that
+//! connects to a running SimpleX-Chat **WebSocket** server.
 //!
-//! Since backends are equally powerful always start developing with the **websocket**
-//! backend(enabled by default). Switching code to **FFI** later is as simple as replacing `ws`
-//! imports with `ffi` imports but **FFI** requires configuring the crate build and obliges you to
-//! use AGPL-3.0 license. You can read more about switching to **FFI**
-//! [here](simploxide-sxcrt-sys).
+//! Since both backends are equally capable, always start development with the **WebSocket** backend
+//! (enabled by default). Switching to **FFI** later is as simple as replacing `ws` imports with
+//! `ffi` imports, but **FFI** requires configuring the crate build and obliges you to use the
+//! AGPL-3.0 license. You can read more about switching to **FFI** [here](simploxide-sxcrt-sys).
 //!
 //! ### 2. Initialise the bot
 //!
-//! `simploxide` provides convenient bot builders to launch and configure your bot
+//! `simploxide` provides convenient bot builders to launch and configure your bot.
 //!
 //! ```ignore
-//!
 //! let (bot, events, mut cli) = ws::BotBuilder::new("YesMan", 5225)
 //!     .db_prefix("db/bot")
-//!     // create a public bot address auto-accepting new users with a welcome message
+//!     // Create a public bot address that auto-accepts new users with a welcome message.
 //!     .auto_accept_with(
-//!         "Hello, I'm a bot always agreeing with my users",
+//!         "Hello, I'm a bot that always agrees with my users",
 //!     )
-//!     // Launch CLI, connect the client, and initialise the bot
+//!     // Launch the CLI, connect the client, and initialise the bot.
 //!     .launch()
 //!     .await?;
 //!
@@ -39,25 +37,25 @@
 //!
 //! See all available options in [ws::BotBuilder] and [ffi::BotBuilder].
 //!
-//! ### 3. Set up event dispatcher
+//! ### 3. Set up an event dispatcher
 //!
-//! Dispatchers are zero-cost and provide a convenient API to handle events
+//! Dispatchers are zero-cost and provide a convenient API for handling events.
 //!
 //! ```ignore
 //! // into_dispatcher accepts any type and creates a dispatcher from the event stream.
-//! // The value provided here is then passed into all event handlers as a second argument
+//! // The value provided here is passed into all event handlers as a second argument.
 //! events.into_dispatcher(bot)
 //!     .on(new_messages)
 //!     .dispatch()
 //!     .await?;
 //! ```
 //!
-//! Learn more about dispatchers in [dispatcher] and [EventStream] docs.
+//! Learn more about dispatchers in the [dispatcher] and [EventStream] docs.
 //!
 //! ### 4. Implement event handlers
 //!
 //! The first handler argument determines which event the handler processes. The [StreamEvents]
-//! type allows to interrupt event dispatching with [`StreamEvents::Break`].
+//! type allows interrupting event dispatching via [`StreamEvents::Break`].
 //!
 //! ```ignore
 //! async fn new_msgs(ev: Arc<NewChatItems>, bot: Bot) -> ws::ClientResult<StreamEvents> {
@@ -65,7 +63,7 @@
 //!         bot.update_msg_reaction(chat, msg, Reaction::Set("👍")).await?;
 //!
 //!         bot.send_msg(chat, "I absolutely agree with this!".bold())
-//!            .reply_to(msg);
+//!            .reply_to(msg)
 //!            .await?;
 //!     }
 //!
@@ -73,9 +71,8 @@
 //! }
 //! ```
 //!
-//! Bot message builders are very powerful and flexible, learn more about them in [messages]. In
-//! most places where some kind of ID is expected you can pass a struct directly, see what
-//! type-safe conversions are available in [id]
+//! Message builders are quite powerful, see [`messages`] for details. In most places where an
+//! ID is expected you can pass a struct directly; see the type-safe conversions available in [id].
 //!
 //! ### 5. Execute cleanup before exiting
 //!
@@ -86,13 +83,35 @@
 //!
 //! ## Features
 //!
-//! -
-//! -
+//! - **`cli`** *(default)*: WebSocket backend ([`ws`]) with a built-in runner that spawns and
+//!   manages a local `simplex-chat` process. Use [`ws::BotBuilder::launch`] to start everything
+//!   in one call.
+//! - **`websocket`**: WebSocket backend ([`ws`]) without the CLI runner. Use
+//!   [`ws::BotBuilder::connect`] to attach to an already-running `simplex-chat` server.
+//! - **`ffi`**: FFI backend ([`ffi`]) that embeds the SimpleX-Chat library in-process.
+//!   Requires AGPL-3.0 and additional build configuration; see `simploxide-sxcrt-sys`.
+//! - **`native_crypto`**: Native Rust implementation of client-side encryption(XSalsa20 + Poly1305). Enables
+//!   [`ImagePreview::from_crypto_file`](preview::ImagePreview::from_crypto_file) and [crypto::fs]
+//!   module allowing to encrypt decrypt files directly in the Rust code
+//! - **`multimedia`**: Image transcoding via the `image` crate. Enables
+//!   [`preview::transcoder::Transcoder`] and automatic thumbnail generation for [`messages::Image`].
+//!   [`preview::ImagePreview`] automatically tries to transcode its sources to JPEGs with this
+//!   feature on
+//! - **`xftp`**: XFTP file transfer support. Enables [`xftp::XftpClient`], which intercepts
+//!   streamlines file downlaods with a `download_file` method.
+//! - **`cancellation`**: Re-exports [`tokio_util::sync::CancellationToken`] and enables helper
+//!   methods for cooperative shutdown.
+//! - **`crypto`**: Low-level cryptographic primitives (zeroize, rand). Pulled in automatically by
+//!   `native_crypto`. Useful on its own if you wish to use your own crypto implementation.
+//! - **`fullcli`**: Convenience bundle: `cli` + `native_crypto` + `multimedia` + `xftp` +
+//!   `cancellation`.
+//! - **`fullffi`**: Convenience bundle: `ffi` + `native_crypto` + `multimedia` + `xftp` +
+//!   `cancellation`.
 //!
 //! ### How to work with this documentation?
 //!
-//! The [bot] page should become your primary page and [events] page should become your secondary
-//! page. From these 2 pages you should be able to find everything in a structured manner.
+//! The [bot] page should be your primary reference and the [events] page your secondary one.
+//! From these two pages you should be able to find everything in a structured manner.
 
 #[cfg(feature = "crypto")]
 pub mod crypto;
@@ -223,8 +242,8 @@ impl<P> EventStream<P> {
 
 impl<P: EventParser> EventStream<P> {
     /// Turns stream into a [`DispatchChain`] builder with the provided `ctx`. The `ctx` is an
-    /// arbitrary type that can be used within event handlers. Use [`Dispatcher::seq`] to add
-    /// sequential handlers: `AsyncFnMut(Arc<Ev>, &mut Ctx)`; or [`Dispatcher::on`] for concurrent
+    /// arbitrary type that can be used within event handlers. Use [`dispatcher::Dispatcher::seq`] to add
+    /// sequential handlers: `AsyncFnMut(Arc<Ev>, &mut Ctx)`; or [`dispatcher::Dispatcher::on`] for concurrent
     /// ones: `AsyncFn(Arc<Ev>, Ctx) where Ctx: 'static + Clone + Send`.
     pub fn into_dispatcher<C>(self, ctx: C) -> DispatchChain<P, C> {
         DispatchChain::with_ctx(self, ctx)
@@ -388,17 +407,15 @@ impl EventParser for Event {
 pub trait Hook {
     fn should_intercept(&self, kind: EventKind) -> bool;
 
-    /// Hooks shouldn't block the event stream so this method is supposed to be a cheap
-    /// sync call. You can delegate work to another thread or spawn async tasks internally.
+    /// Hooks must not block the event stream; this method should be a cheap synchronous call.
+    /// Delegate heavy work to another thread or spawn async tasks internally.
     fn intercept_event(&mut self, event: Event);
 }
 
-/// Syntactic sugar for preferences
+/// Syntactic sugar for constructing [`Preferences`](simploxide_api_types::Preferences) values.
 ///
-/// use like:
-/// ```
-/// // ...
-/// preferences: Some(Preferences {
+/// ```ignore
+/// Preferences {
 ///     timed_messages: preferences::timed_messages::yes(Duration::from_hours(4)),
 ///     full_delete: preferences::YES,
 ///     reactions: preferences::ALWAYS,
@@ -408,10 +425,8 @@ pub trait Hook {
 ///     sessions: preferences::NO,
 ///     commands: None,
 ///     undocumented: Default::default(),
-/// }),
-/// // ...
+/// }
 /// ```
-///
 pub mod preferences {
     use simploxide_api_types::{FeatureAllowed, SimplePreference};
 
