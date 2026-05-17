@@ -1,6 +1,5 @@
-//! The SDK does not currently exist. The crate is empty and reserved for future use. Please, use
-//! the `simploxide-client` directly instead; it allows implementing anything, with the only
-//! downside that it provides no convenience methods
+//! The crate is empty and reserved for future use. Please, use the `simploxide-client` directly
+//! instead;
 
 #[cfg(test)]
 mod tests {

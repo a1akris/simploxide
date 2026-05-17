@@ -1,11 +1,9 @@
 #simploxide
 
-A bot SDK made on top of the [simploxide-client](../simploxide-client)
+The highest-level API made on top of the [simploxide-client](../simploxide-client)
 
-The SDK does not currently exist. The crate is empty and reserved for future
-use. Please, use the [simploxide-client](../simploxide-client) directly
-instead; it allows implementing anything, with the only downside that it
-provides no convenience methods.
+The crate is empty and reserved for future use. Please, use the
+[simploxide-client](../simploxide-client) directly instead.
 
 ### LICENSE
 
@@ -19,14 +17,12 @@ AS STATED BELOW. APACHE-2.0/MIT TERMS AND CONDITIONS ARE APPLICABLE TO YOUR
 PROJECTS AS LONG AS THEY DON'T:
 
 - SHIP SIMPLEX-CLI OR ANY OTHER SIMPLEX COMPONENTS AS PART OF AN APPLICATION
-- USE FFI BINDINGS TO THE SIMPLEX-CORE OR OTHER SIMPLEX LIBRARIES
+- USE FFI BINDINGS
 - DEPEND ON OR INCLUDE ANYTHING ELSE LICENSED UNDER AGPL
 
 OTHERWISE, YOUR PROJECTS MUST ADHERE TO [SIMPLEX
 AGPL-3.0](https://github.com/simplex-chat/simplex-chat/blob/stable/LICENSE).
 
-
-THIS IS NOT A LEGAL ADVICE BUT RATHER A FRIENDLY REMAINDER.
 
 SIMPLOXIDE LIBRARIES AUTHORS DISCLAIM ALL RESPONSIBILITY AND LIABILITY FOR ANY
 FAILURE BY SIMPLOXIDE USERS TO COMPLY WITH THE AGPL-3.0.
@@ -39,4 +35,3 @@ license](../LICENSE-MIT) at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
 be dual licensed as above, without any additional terms or conditions.
-

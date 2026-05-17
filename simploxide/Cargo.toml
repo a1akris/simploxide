@@ -1,6 +1,6 @@
 [package]
 name = "simploxide"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
@@ -9,7 +9,7 @@ description = "SimpleX-Chat bot SDK"
 readme = "README.md"
 repository = "https://github.com/a1akris/simploxide"
 documentation = "https://docs.rs/simploxide"
-categories = ["network-programming", "asynchronous", "web-programming::websocket"]
-keywords = ["simplex", "chat", "bot", "sdk", "framework"]
+categories = ["network-programming", "asynchronous"]
+keywords = ["simplex-chat", "bot", "sdk", "framework"]
 
 [dependencies]
