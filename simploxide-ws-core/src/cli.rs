@@ -75,12 +75,12 @@ impl Drop for SimplexCli {
 
 /// Builder for [`SimplexCli`].
 ///
-/// Obtained via [`SimplexCli::new`].
+/// Obtained via [`SimplexCli::builder`].
 ///
 /// # Example
 /// ```ignore
-/// let cli = SimplexCli::new("Bot", 5225)
-///     .db_path("/var/db/simplex")
+/// let cli = SimplexCli::builder("Bot", 5225)
+///     .db_prefix("/var/db/simplex")
 ///     .db_key(secret)
 ///     .arg("--smp-servers=smp://example.com")
 ///     .spawn()

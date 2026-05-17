@@ -13,19 +13,21 @@ use simploxide_api_types::{
     responses::{
         AcceptingContactRequestResponse, ActiveUserResponse, ApiAddGroupRelaysResponse,
         ApiDeleteChatResponse, ApiUpdateChatItemResponse, CancelFileResponse,
-        ChatItemReactionResponse,
-        ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse, ContactRequestRejectedResponse,
-        GroupLinkCreatedResponse, GroupLinkDeletedResponse, GroupLinkResponse, GroupRelaysResponse,
-        GroupUpdatedResponse, LeftMemberUserResponse, MemberAcceptedResponse,
-        MembersBlockedForAllUserResponse, MembersRoleUserResponse, ReceiveFileResponse,
-        SentGroupInvitationResponse, UserAcceptedGroupSentResponse, UserDeletedMembersResponse,
+        ChatItemReactionResponse, ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse,
+        ContactRequestRejectedResponse, GroupLinkCreatedResponse, GroupLinkDeletedResponse,
+        GroupLinkResponse, GroupRelaysResponse, GroupUpdatedResponse, LeftMemberUserResponse,
+        MemberAcceptedResponse, MembersBlockedForAllUserResponse, MembersRoleUserResponse,
+        ReceiveFileResponse, SentGroupInvitationResponse, UserAcceptedGroupSentResponse,
+        UserDeletedMembersResponse,
     },
 };
 
 use std::{pin::Pin, sync::Arc};
 
 use crate::{
-    id::{ChatId, ContactId, ContactRequestId, FileId, GroupId, MemberId, MessageId, RelayId, UserId},
+    id::{
+        ChatId, ContactId, ContactRequestId, FileId, GroupId, MemberId, MessageId, RelayId, UserId,
+    },
     messages::{MessageBuilder, MessageLike, MulticastBuilder},
 };
 

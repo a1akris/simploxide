@@ -53,7 +53,7 @@ impl SimpleXChat {
         c_res_to_string(&mut c_res)
     }
 
-    /// [recv_msg_wait] but with minimum possible wait duration
+    /// [`recv_msg_wait`](Self::recv_msg_wait) but with minimum possible wait duration
     pub fn try_recv_msg(&mut self) -> Result<String, CallError> {
         self.recv_msg_wait(std::time::Duration::from_micros(1))
     }
