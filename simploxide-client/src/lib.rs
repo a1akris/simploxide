@@ -1,3 +1,99 @@
+//! For first-time users it's recommended to get hands-on experience by running some example bots
+//! on [GitHub](https://github.com/a1akris/simploxide/tree/main/simploxide-client) before writing
+//! their own.
+//!
+//! This SDK is supposed to be used with `tokio` runtime. Here are the steps to implement any bot:
+//!
+//! ### 1. Choose a backend
+//!
+//! `simploxide` provides support for both **websocket** and **FFI** SimpleX-Chat backends.
+//! `simploxide` also reimplements all **FFI** exclusive methods in native Rust so in practice the
+//! backends differ only by their runtime characteristics: a single-process app via **FFI** _vs_ an
+//! app depending on SimpleX-Chat **websocket** server.
+//!
+//! Since backends are equally powerful always start developing with the **websocket**
+//! backend(enabled by default). Switching code to **FFI** later is as simple as replacing `ws`
+//! imports with `ffi` imports but **FFI** requires configuring the crate build and obliges you to
+//! use AGPL-3.0 license. You can read more about switching to **FFI**
+//! [here](simploxide-sxcrt-sys).
+//!
+//! ### 2. Initialise the bot
+//!
+//! `simploxide` provides convenient bot builders to launch and configure your bot
+//!
+//! ```ignore
+//!
+//! let (bot, events, mut cli) = ws::BotBuilder::new("YesMan", 5225)
+//!     .db_prefix("db/bot")
+//!     // create a public bot address auto-accepting new users with a welcome message
+//!     .auto_accept_with(
+//!         "Hello, I'm a bot always agreeing with my users",
+//!     )
+//!     // Launch CLI, connect the client, and initialise the bot
+//!     .launch()
+//!     .await?;
+//!
+//! let address = bot.address().await?;
+//! println!("My address: {address}");
+//! ```
+//!
+//! See all available options in [ws::BotBuilder] and [ffi::BotBuilder].
+//!
+//! ### 3. Set up event dispatcher
+//!
+//! Dispatchers are zero-cost and provide a convenient API to handle events
+//!
+//! ```ignore
+//! // into_dispatcher accepts any type and creates a dispatcher from the event stream.
+//! // The value provided here is then passed into all event handlers as a second argument
+//! events.into_dispatcher(bot)
+//!     .on(new_messages)
+//!     .dispatch()
+//!     .await?;
+//! ```
+//!
+//! Learn more about dispatchers in [dispatcher] and [EventStream] docs.
+//!
+//! ### 4. Implement event handlers
+//!
+//! The first handler argument determines which event the handler processes. The [StreamEvents]
+//! type allows to interrupt event dispatching with [`StreamEvents::Break`].
+//!
+//! ```ignore
+//! async fn new_msgs(ev: Arc<NewChatItems>, bot: Bot) -> ws::ClientResult<StreamEvents> {
+//!     for (chat, msg, content) in ev.filter_messages() {
+//!         bot.update_msg_reaction(chat, msg, Reaction::Set("👍")).await?;
+//!
+//!         bot.send_msg(chat, "I absolutely agree with this!".bold())
+//!            .reply_to(msg);
+//!            .await?;
+//!     }
+//!
+//!     Ok(StreamEvents::Continue)
+//! }
+//! ```
+//!
+//! Bot message builders are very powerful and flexible, learn more about them in [messages]. In
+//! most places where some kind of ID is expected you can pass a struct directly, see what
+//! type-safe conversions are available in [id]
+//!
+//! ### 5. Execute cleanup before exiting
+//!
+//! ```ignore
+//! bot.shutdown().await;
+//! cli.kill().await?;
+//! ```
+//!
+//! ## Features
+//!
+//! -
+//! -
+//!
+//! ### How to work with this documentation?
+//!
+//! The [bot] page should become your primary page and [events] page should become your secondary
+//! page. From these 2 pages you should be able to find everything in a structured manner.
+
 #[cfg(feature = "crypto")]
 pub mod crypto;
 #[cfg(feature = "ffi")]

@@ -7,25 +7,48 @@
 //! ### Simple text
 //!
 //! ```ignore
+//! // Regular text message
 //! bot.send_msg(chat, "Hello").await?;
 //!
+//! // Regular text reply with TTL
 //! bot.send_msg(chat, "Hello")
 //!     .reply_to(msg)
 //!     .with_ttl(Duration::from_secs(3600))
 //!     .await?;
+//!
+//! // Formatted text
+//! bot.send_msg(chat, Text::yellow("Warning: operation is cancelledd")).await?;
+//!
+//! // Heavily-formatted text
+//! bot.send_msg(
+//!     chat,
+//!     format!("{}\n\nThe operation {} {}",
+//!         "Attention".bold(),
+//!         op.italic(),
+//!         "is not permitted".red()
+//!     )
+//! ).await?;
 //! ```
 //!
 //! ### Simple files
 //!
 //! ```ignore
 //! // Plain file with caption
-//! bot.send_msg(chat, File::new("document.pdf").with_caption("Here's the doc")).await?;
+//! bot.send_msg(
+//!     chat,
+//!     File::new("document.pdf")
+//!         .with_caption("Here's the doc")
+//! ).await?;
 //!
 //! // Same as above but with a message builder method
-//! bot.send_msg(chat, File::new("document.pdf")).set_text("Here's the doc").await?;
+//! bot.send_msg(chat, File::new("document.pdf"))
+//!    .set_text("Here's the doc")
+//!    .await?;
 //!
 //! // Attach a CryptoFile to a text message
-//! bot.send_msg(chat, "See attached").attach(crypto_file).await?;
+//! bot.send_msg(chat, "See attached")
+//!    .attach(crypto_file)
+//!    .await?;
 //! ```
 //!
 //! ### Images
@@ -33,32 +56,38 @@
 //! ```ignore
 //! // With multimedia: source file is automatically transcoded into a thumbnail
 //! // Without multimedia: sends with the default placeholder as a preview
-//! bot.send_msg(cid, Image::new("img.jpg")).await?;
+//! bot.send_msg(chat, Image::new("img.jpg")).await?;
 //!
 //! // Override transcoder settings(requires `multimedia` feature)
-//! bot.send_msg(cid, Image::new("img.jpg"))
-//!     .with_transcoder(Transcoder::default().with_size(200, 200).with_quality(80).with_blur(1.5))
-//!     .await?;
+//! bot.send_msg(chat, Image::new("img.jpg"))
+//!     .with_transcoder(
+//!         Transcoder::default()
+//!             .with_size(200, 200)
+//!             .with_quality(80)
+//!             .with_blur(1.5)
+//!     ).await?;
 //!
 //! // Get thumbnail from in memory bytes. With `multimedia` feature the bytes will be transcoded
 //! // to JPG so with_transcoder(Transcoder::disabled()) is used to opt out, without multimedia the bytes
 //! // are used as is
-//! bot.send_msg(cid, Image::new("img.jpg"))
-//!     .with_preview(ImagePreview::from_bytes(thumb_bytes).with_transcoder(Transcoder::disabled()))
-//!     .await?;
+//! bot.send_msg(chat, Image::new("img.jpg"))
+//!     .with_preview(
+//!         ImagePreview::from_bytes(thumb_bytes)
+//!             .with_transcoder(Transcoder::disabled())
+//!     ).await?;
 //!
 //! // Thumbnail from a separate file(read asyncronously at send time)
-//! bot.send_msg(cid, Image::new("img.jpg"))
+//! bot.send_msg(chat, Image::new("img.jpg"))
 //!     .with_preview(ImagePreview::from_file("thumb.jpg"))
 //!     .await?;
 //!
 //! // Encrypted source and thumbnail(requires feature `native_crypto`)
-//! bot.send_msg(cid, Image::from(image_crypto_file))
+//! bot.send_msg(chat, Image::from(image_crypto_file))
 //!     .with_preview(ImagePreview::from_crypto_file(thumb_crypto_file))
 //!     .await?;
 //!
 //! // Text transitioning to image so "Here is the photo" becomes the caption
-//! bot.send_msg(cid, "Here is the photo")
+//! bot.send_msg(chat, "Here is the photo")
 //!     .with_image(Image::new("img.jpg"))
 //!     .await?;
 //! ```
@@ -70,15 +99,15 @@
 //!
 //! ```ignore
 //! // Default placeholder preview
-//! bot.send_msg(cid, Video::new("vid.mp4", Duration::from_secs(30))).await?;
+//! bot.send_msg(chat, Video::new("vid.mp4", Duration::from_secs(30))).await?;
 //!
 //! // Custom thumbnail
-//! bot.send_msg(cid, Video::new("vid.mp4", Duration::from_secs(30)))
+//! bot.send_msg(chat, Video::new("vid.mp4", Duration::from_secs(30)))
 //!     .with_preview(ImagePreview::from_bytes(thumb_bytes))
 //!     .await?;
 //!
 //! // Custom thumbnail from a file, resized at send time(requires `multimedia`)
-//! bot.send_msg(cid, Video::new("vid.mp4", Duration::from_secs(30)))
+//! bot.send_msg(chat, Video::new("vid.mp4", Duration::from_secs(30)))
 //!     .with_preview(
 //!         ImagePreview::from_file("thumb.jpg")
 //!             .with_transcoder(Transcoder::default().with_size(255, 255))
@@ -90,11 +119,11 @@
 //!
 //! ```ignore
 //! // Minimal: no preview image, no metadata
-//! bot.send_msg(cid, Link::new("https://example.com")).await?;
+//! bot.send_msg(chat, Link::new("https://example.com")).await?;
 //!
 //! // Full Open Graph preview
 //! let og_bytes: Vec<u8> = fetch_og_image("https://example.com").await?;
-//! bot.send_msg(cid,
+//! bot.send_msg(chat,
 //!     Link::new("https://example.com")
 //!         .with_title("Example Domain")
 //!         .with_description("Domain description")
@@ -104,7 +133,7 @@
 //! .await?;
 //!
 //! // Text transitioning to link
-//! bot.send_msg(cid, "Check this out")
+//! bot.send_msg(chat, "Check this out")
 //!     .with_link(Link::new("https://example.com").with_title("Example"))
 //!     .await?;
 //! ```
@@ -113,33 +142,33 @@
 //!
 //! ```ignore
 //! // Report
-//! bot.send_msg(cid, Report::spam("Unsolicited advertisement")).await?;
+//! bot.send_msg(chat, Report::spam("Unsolicited advertisement")).await?;
 //!
 //! // Report via text transition so the text becomes the report body
-//! bot.send_msg(cid, "Unsolicited advertisement").report(ReportReason::Spam).await?;
+//! bot.send_msg(chat, "Unsolicited advertisement").report(ReportReason::Spam).await?;
 //!
 //! // Chat invitation
-//! bot.send_msg(cid, Chat::new(chat_link).with_text("Join our group")).await?;
+//! bot.send_msg(chat, Chat::new(chat_link).with_text("Join our group")).await?;
 //! ```
 //!
 //! ### Custom and Raw messages
 //!
 //! Custom messages are useful for implementing interbot protocols
+//!
 //! ```ignore
-//! bot.send_msg(cid, Custom::new("app.ping", &PingPayload { id: 42 })).await?;
+//! bot.send_msg(chat, Custom::new("app.ping", &PingPayload { id: 42 })).await?;
 //! ```
 //!
 //! [`ComposedMessage`] is for dynamic construction scenarios where the message content, media
 //! type, or delivery options are determined by program logic rather than known at compile time.
 //! Because [`ComposedMessage`] is sent verbatim, preview resolution is the caller's
-//! responsibility, use `preview.resolve().await` when the default fallback on error is acceptable,
-//! or `preview.try_resolve().await` when errors should be handled explicitly.
+//! responsibility.
 //!
 //! ```ignore
 //! // resolve() always returns a valid preview string, falling back to the default on any error
 //! let preview = ImagePreview::from_file("thumb.jpg").resolve().await;
 //!
-//! // try_resolve() surfaces the error so the caller can decide what to do
+//! // try_resolve() surfaces the error so the caller can dechate what to do
 //! let preview = match ImagePreview::from_file("thumb.jpg").try_resolve().await {
 //!     Ok(s) => s,
 //!     Err(e) => {
@@ -165,29 +194,36 @@
 //!     msg.quoted_item_id = Some(id);
 //! }
 //!
-//! bot.send_msg(cid, chat).await?;
+//! bot.send_msg(chat, msg).await?;
 //! ```
 //!
 //! ### Broadcasts & Multicasts
 //!
-//! `prepare_broadcast` fetches the recipient list asynchronously, then returns a `MulticastBuilder`.
-//! Preview is resolved **once** and the result is cloned per recipient — not once per recipient.
+//! `prepare_broadcast` fetches the recipient list asynchronously, then returns a
+//! `MulticastBuilder`. Preview is resolved **only once** and the result is cloned for every
+//! recipient.
 //!
 //! ```ignore
 //! // All known chats
-//! bot.prepare_broadcast("Hello everyone").await?.send().await;
-//!
-//! // Filtered to direct chats only
-//! bot.prepare_broadcast_with("Hello", |id| id.is_direct()).await?.send().await;
-//!
-//! // Image — transcoded once, result broadcast to all groups (requires `multimedia`)
-//! bot.prepare_broadcast_with(Image::new("/tmp/photo.jpg"), |id| id.is_group())
+//! bot.prepare_broadcast("Hello everyone")
 //!     .await?
 //!     .send()
 //!     .await;
 //!
-//! // Image with in-memory thumbnail, always available
-//! bot.prepare_broadcast(Image::new("/tmp/photo.jpg"))
+//! // Filtered to direct chats only
+//! bot.prepare_broadcast_with("Hello", |id| id.is_direct())
+//!     .await?
+//!     .send()
+//!     .await;
+//!
+//! // Image preview is transcoded/resolved once, result broadcast to all groups
+//! bot.prepare_broadcast_with(Image::new("img.jpg"), |id| id.is_group())
+//!     .await?
+//!     .send()
+//!     .await;
+//!
+//! // Image with in-memory thumbnail
+//! bot.prepare_broadcast(Image::new("img.jpg"))
 //!     .await?
 //!     .with_preview(ImagePreview::from_bytes(thumb_bytes))
 //!     .send()
