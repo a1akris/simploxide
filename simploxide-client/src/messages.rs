@@ -1,3 +1,213 @@
+//! Message builders.
+//!
+//! Any [`MessageLike`] value can be passed to send message methods and then modified by a
+//! plenty of builder options as shown in the usage examples below
+//!
+//!
+//! ### Simple text
+//!
+//! ```ignore
+//! bot.send_msg(chat, "Hello").await?;
+//!
+//! bot.send_msg(chat, "Hello")
+//!     .reply_to(msg)
+//!     .with_ttl(Duration::from_secs(3600))
+//!     .await?;
+//! ```
+//!
+//! ### Simple files
+//!
+//! ```ignore
+//! // Plain file with caption
+//! bot.send_msg(chat, File::new("document.pdf").with_caption("Here's the doc")).await?;
+//!
+//! // Same as above but with a message builder method
+//! bot.send_msg(chat, File::new("document.pdf")).set_text("Here's the doc").await?;
+//!
+//! // Attach a CryptoFile to a text message
+//! bot.send_msg(chat, "See attached").attach(crypto_file).await?;
+//! ```
+//!
+//! ### Images
+//!
+//! ```ignore
+//! // With multimedia: source file is automatically transcoded into a thumbnail
+//! // Without multimedia: sends with the default placeholder as a preview
+//! bot.send_msg(cid, Image::new("img.jpg")).await?;
+//!
+//! // Override transcoder settings(requires `multimedia` feature)
+//! bot.send_msg(cid, Image::new("img.jpg"))
+//!     .with_transcoder(Transcoder::default().with_size(200, 200).with_quality(80).with_blur(1.5))
+//!     .await?;
+//!
+//! // Get thumbnail from in memory bytes. With `multimedia` feature the bytes will be transcoded
+//! // to JPG so with_transcoder(Transcoder::disabled()) is used to opt out, without multimedia the bytes
+//! // are used as is
+//! bot.send_msg(cid, Image::new("img.jpg"))
+//!     .with_preview(ImagePreview::from_bytes(thumb_bytes).with_transcoder(Transcoder::disabled()))
+//!     .await?;
+//!
+//! // Thumbnail from a separate file(read asyncronously at send time)
+//! bot.send_msg(cid, Image::new("img.jpg"))
+//!     .with_preview(ImagePreview::from_file("thumb.jpg"))
+//!     .await?;
+//!
+//! // Encrypted source and thumbnail(requires feature `native_crypto`)
+//! bot.send_msg(cid, Image::from(image_crypto_file))
+//!     .with_preview(ImagePreview::from_crypto_file(thumb_crypto_file))
+//!     .await?;
+//!
+//! // Text transitioning to image so "Here is the photo" becomes the caption
+//! bot.send_msg(cid, "Here is the photo")
+//!     .with_image(Image::new("img.jpg"))
+//!     .await?;
+//! ```
+//!
+//! ### Video
+//!
+//! Automatic preview generation from video files is currently unsupported. A custom preview can be
+//! provided, or the message sends with the default placeholder preview.
+//!
+//! ```ignore
+//! // Default placeholder preview
+//! bot.send_msg(cid, Video::new("vid.mp4", Duration::from_secs(30))).await?;
+//!
+//! // Custom thumbnail
+//! bot.send_msg(cid, Video::new("vid.mp4", Duration::from_secs(30)))
+//!     .with_preview(ImagePreview::from_bytes(thumb_bytes))
+//!     .await?;
+//!
+//! // Custom thumbnail from a file, resized at send time(requires `multimedia`)
+//! bot.send_msg(cid, Video::new("vid.mp4", Duration::from_secs(30)))
+//!     .with_preview(
+//!         ImagePreview::from_file("thumb.jpg")
+//!             .with_transcoder(Transcoder::default().with_size(255, 255))
+//!     )
+//!     .await?;
+//! ```
+//!
+//! ### Link
+//!
+//! ```ignore
+//! // Minimal: no preview image, no metadata
+//! bot.send_msg(cid, Link::new("https://example.com")).await?;
+//!
+//! // Full Open Graph preview
+//! let og_bytes: Vec<u8> = fetch_og_image("https://example.com").await?;
+//! bot.send_msg(cid,
+//!     Link::new("https://example.com")
+//!         .with_title("Example Domain")
+//!         .with_description("Domain description")
+//!         .with_content(LinkContent::make_page())
+//! )
+//! .with_preview(ImagePreview::from_bytes(og_bytes))
+//! .await?;
+//!
+//! // Text transitioning to link
+//! bot.send_msg(cid, "Check this out")
+//!     .with_link(Link::new("https://example.com").with_title("Example"))
+//!     .await?;
+//! ```
+//!
+//! ### Special messages like reports and chat links
+//!
+//! ```ignore
+//! // Report
+//! bot.send_msg(cid, Report::spam("Unsolicited advertisement")).await?;
+//!
+//! // Report via text transition so the text becomes the report body
+//! bot.send_msg(cid, "Unsolicited advertisement").report(ReportReason::Spam).await?;
+//!
+//! // Chat invitation
+//! bot.send_msg(cid, Chat::new(chat_link).with_text("Join our group")).await?;
+//! ```
+//!
+//! ### Custom and Raw messages
+//!
+//! Custom messages are useful for implementing interbot protocols
+//! ```ignore
+//! bot.send_msg(cid, Custom::new("app.ping", &PingPayload { id: 42 })).await?;
+//! ```
+//!
+//! [`ComposedMessage`] is for dynamic construction scenarios where the message content, media
+//! type, or delivery options are determined by program logic rather than known at compile time.
+//! Because [`ComposedMessage`] is sent verbatim, preview resolution is the caller's
+//! responsibility, use `preview.resolve().await` when the default fallback on error is acceptable,
+//! or `preview.try_resolve().await` when errors should be handled explicitly.
+//!
+//! ```ignore
+//! // resolve() always returns a valid preview string, falling back to the default on any error
+//! let preview = ImagePreview::from_file("thumb.jpg").resolve().await;
+//!
+//! // try_resolve() surfaces the error so the caller can decide what to do
+//! let preview = match ImagePreview::from_file("thumb.jpg").try_resolve().await {
+//!     Ok(s) => s,
+//!     Err(e) => {
+//!         log::error!("Preview failed: {e}");
+//!         return Err(e.into());
+//!     }
+//! };
+//!
+//! let mut msg = ComposedMessage {
+//!     file_source: None,
+//!     msg_content: MsgContent::make_text(String::new()),
+//!     quoted_item_id: None,
+//!     mentions: Default::default(),
+//!     undocumented: Default::default(),
+//! };
+//!
+//! if let Some(image_file) = attachment {
+//!     msg.file_source = Some(image_file);
+//!     msg.msg_content = MsgContent::make_image(caption, preview);
+//! }
+//!
+//! if let Some(id) = reply_to_id {
+//!     msg.quoted_item_id = Some(id);
+//! }
+//!
+//! bot.send_msg(cid, chat).await?;
+//! ```
+//!
+//! ### Broadcasts & Multicasts
+//!
+//! `prepare_broadcast` fetches the recipient list asynchronously, then returns a `MulticastBuilder`.
+//! Preview is resolved **once** and the result is cloned per recipient — not once per recipient.
+//!
+//! ```ignore
+//! // All known chats
+//! bot.prepare_broadcast("Hello everyone").await?.send().await;
+//!
+//! // Filtered to direct chats only
+//! bot.prepare_broadcast_with("Hello", |id| id.is_direct()).await?.send().await;
+//!
+//! // Image — transcoded once, result broadcast to all groups (requires `multimedia`)
+//! bot.prepare_broadcast_with(Image::new("/tmp/photo.jpg"), |id| id.is_group())
+//!     .await?
+//!     .send()
+//!     .await;
+//!
+//! // Image with in-memory thumbnail, always available
+//! bot.prepare_broadcast(Image::new("/tmp/photo.jpg"))
+//!     .await?
+//!     .with_preview(ImagePreview::from_bytes(thumb_bytes))
+//!     .send()
+//!     .await;
+//!
+//! // Text transitioning to link inside the broadcast builder
+//! bot.prepare_broadcast("Check this out")
+//!     .await?
+//!     .with_link(Link::new("https://example.com").with_title("Example"))
+//!     .with_preview(ImagePreview::from_bytes(og_bytes))
+//!     .with_ttl(Duration::from_secs(86400))
+//!     .send()
+//!     .await;
+//!
+//! // Explicit set of chat IDs
+//! bot.multicast_message(chat_ids, Image::new("/tmp/photo.jpg"))
+//!     .with_preview(ImagePreview::from_bytes(thumb_bytes))
+//!     .await;
+//! ```
+
 use serde::Serialize;
 use simploxide_api_types::{
     ComposedMessage, CryptoFile, CryptoFileArgs, JsonObject, LinkContent, LinkOwnerSig,
@@ -15,14 +225,20 @@ use crate::{
 
 use std::{path::Path, pin::Pin, sync::Arc, time::Duration};
 
-/// Simple text messages
+/// A kind for simple text messsages
 pub struct TextKind;
-/// Text with attachments or special message types(e.g. Report)
+
+/// A kind for complex messages(simple attachments, reports, etc) that don't require any
+/// pre-processing to be sent
 pub struct RichKind;
-/// Raw ComposedMessage
+
+/// Builder kind for [`ComposedMessage`]. Content is sent verbatim so no builder methods are
+/// available for this kind.
 pub struct RawKind;
 
-/// Messages requiring generating preview images
+/// Builder kind for messages requiring preview processing. Exposes `with_preview` to override the
+/// thumbnail. With the `multimedia` feature, also exposes `with_transcoder` to control JPEG
+/// re-encoding at send time.
 pub struct PreviewableKind(ImagePreview);
 
 pub trait MessageLike {
@@ -58,6 +274,7 @@ impl MessageLike for &str {
     }
 }
 
+/// Represents a styled text(applies SimpleX-Chat markdown syntax to the given substr)
 #[derive(Debug, Clone)]
 pub enum Text<'a> {
     Bold(&'a str),
@@ -101,6 +318,11 @@ impl std::fmt::Display for Text<'_> {
     }
 }
 
+/// An extension trait supposed to construct [`Text`] types from string like types, e.g.
+///
+/// ```ignore
+/// format!("Hello, {}", user_name.bold())
+/// ```
 pub trait TextExt {
     fn bold(&self) -> Text<'_>;
     fn italic(&self) -> Text<'_>;
@@ -188,6 +410,9 @@ impl MessageLike for CryptoFile {
     }
 }
 
+/// Image message type. With the `multimedia` feature, auto-transcodes the source file into a
+/// thumbnail on resolve when no explicit preview is set. Without it, the gray placeholder is used.
+/// With `native_crypto` feature can auto-transcode thumbnails even from the encrypted source files
 #[derive(Debug, Clone)]
 pub struct Image {
     source: CryptoFile,
@@ -275,6 +500,9 @@ fn make_image_preview(_: &CryptoFile) -> ImagePreview {
     ImagePreview::default()
 }
 
+/// Video message type. Automatic preview generation from video files is unsupported; set a preview
+/// explicitly or the default placeholder is used. Your app can generate video previews by calling
+/// the external `ffmpeg` process or similar.
 #[derive(Debug, Clone)]
 pub struct Video {
     source: CryptoFile,
@@ -344,6 +572,8 @@ impl MessageLike for Video {
     }
 }
 
+/// Link preview message. Use `with_title`, `with_description`, and `with_image` to populate
+/// the Open Graph–style card shown to the recipient.
 #[derive(Debug, Clone)]
 pub struct Link {
     uri: String,
@@ -418,6 +648,7 @@ impl MessageLike for Link {
     }
 }
 
+/// Simple file attachment
 #[derive(Debug, Clone)]
 pub struct File {
     pub text: String,
@@ -463,6 +694,7 @@ impl MessageLike for File {
     }
 }
 
+/// A message sent to groups to report other users
 #[derive(Debug, Clone)]
 pub struct Report {
     pub text: String,
@@ -527,6 +759,7 @@ impl MessageLike for ReportReason {
     }
 }
 
+/// Chat invitation message containing a link to a group or direct contact.
 #[derive(Debug, Clone)]
 pub struct Chat {
     pub text: String,
@@ -564,6 +797,7 @@ impl MessageLike for Chat {
     }
 }
 
+/// Application defined message with a string tag and arbitrary JSON payload.
 #[derive(Debug, Clone)]
 pub struct Custom {
     pub tag: String,
@@ -573,6 +807,7 @@ pub struct Custom {
 
 impl Custom {
     pub fn new(tag: impl Into<String>, object: impl Serialize) -> Self {
+        // TODO: handle serialize error
         Self::from_raw(tag.into(), serde_json::to_value(object).unwrap())
     }
 
@@ -600,6 +835,7 @@ impl MessageLike for Custom {
     }
 }
 
+/// An awaitable message builder(await sends the message)
 pub struct MessageBuilder<'a, C: 'a + ?Sized, M = TextKind> {
     pub(crate) client: &'a C,
     pub(crate) chat_id: ChatId,
@@ -630,6 +866,8 @@ impl<'a, C, M> MessageBuilder<'a, C, M> {
         self
     }
 
+    /// A syntactic sugar to avoid double awaits(`.await.await` -> `.await.send().await`) in
+    /// certain use-cases
     pub fn send(self) -> <Self as IntoFuture>::IntoFuture
     where
         Self: IntoFuture,
@@ -733,6 +971,7 @@ impl<'a, C> MessageBuilder<'a, C, PreviewableKind> {
     }
 
     #[cfg(feature = "multimedia")]
+    /// Alter the default preview transcoder
     pub fn with_transcoder(mut self, transcoder: preview::Transcoder) -> Self {
         self.kind.0.set_transcoder(transcoder);
         self
@@ -810,6 +1049,8 @@ impl<'a, I, C, M> MulticastBuilder<'a, I, C, M> {
         self
     }
 
+    /// A syntactic sugar to avoid double awaits(`.await.await` -> `.await.send().await`) in
+    /// certain use-cases
     pub fn send(self) -> <Self as IntoFuture>::IntoFuture
     where
         Self: IntoFuture,

@@ -1,3 +1,5 @@
+//! Image previews generation
+
 use base64::prelude::*;
 #[cfg(feature = "native_crypto")]
 use simploxide_api_types::CryptoFile;
@@ -21,6 +23,11 @@ const MAX_PREVIEW_BYTES: usize = 10_000;
 #[cfg(feature = "multimedia")]
 const MAX_FILE_SIZE: usize = 64 * 1024 * 1024;
 
+/// Thumbnail for [`Image`](crate::messages::Image), [`Video`](crate::messages::Video), and
+/// [`Link`](crate::messages::Link) messages. Also used as bot profile pictures. The source is stored
+/// lazily and resolved when [`resolve`](Self::resolve) or [`try_resolve`](Self::try_resolve) is
+/// called(either manually or automatically by message builders). Any error falls back to a default
+/// ~600 bytes in size JPEG placeholder.
 #[derive(Clone)]
 pub struct ImagePreview {
     source: PreviewSource,
@@ -56,6 +63,7 @@ impl std::fmt::Debug for ImagePreview {
 }
 
 impl ImagePreview {
+    /// Thumbnail from raw JPEG bytes. Fails on resolve if the encoded data URI exceeds 13333 bytes.
     pub fn from_bytes(bytes: impl Into<Vec<u8>>) -> Self {
         Self {
             source: PreviewSource::Bytes(bytes.into()),
@@ -64,7 +72,7 @@ impl ImagePreview {
         }
     }
 
-    /// Supply raw image preview in form `data:image/jpg;base64,{base64_encoded_jpg_bytes}`
+    /// Thumbnail from a pre-assembled `data:image/jpg;base64,{base64_contents} URI string.
     pub fn raw(uri: impl Into<String>) -> Self {
         Self {
             source: PreviewSource::DataUri(uri.into()),
@@ -73,6 +81,7 @@ impl ImagePreview {
         }
     }
 
+    /// Thumbnail loaded from a file; the file is read lazily when resolved.
     pub fn from_file(path: impl AsRef<Path>) -> Self {
         Self {
             source: PreviewSource::File(path.as_ref().to_path_buf()),
@@ -93,6 +102,7 @@ impl ImagePreview {
     }
 
     #[cfg(feature = "native_crypto")]
+    /// Thumbnail loaded from an encrypted file; decrypted lazily when resolved.
     pub fn from_crypto_file(file: CryptoFile) -> Self {
         Self {
             source: PreviewSource::CryptoFile(file),
@@ -102,6 +112,10 @@ impl ImagePreview {
     }
 
     #[cfg(feature = "multimedia")]
+    /// Attach a custom [`Transcoder`] to transcode the source as a JPEG thumbnail on resolve.
+    /// Transcoder transcodes images of any widespread format to JPEGs.
+    ///
+    /// Has no effect on `default` and `raw` sources, they always passed as is.
     pub fn with_transcoder(mut self, transcoder: Transcoder) -> Self {
         self.set_transcoder(transcoder);
         self
@@ -112,7 +126,7 @@ impl ImagePreview {
         self.transcoder = transcoder;
     }
 
-    /// Like [Self::try_resolve] but returns the default preview on [PreviewError]
+    /// Like [`Self::try_resolve`] but falls back to the default placeholder preview on error.
     pub async fn resolve(self) -> String {
         match self.try_resolve().await {
             Ok(s) => s,
@@ -124,17 +138,10 @@ impl ImagePreview {
     }
 
     #[cfg(not(feature = "multimedia"))]
-    /// With "multimedia" feature enabled this method tries to parse and transcode the preview
-    /// source into the valid JPEG thumbnail using the current [Transcoder](default and raw image
-    /// previews are resovled immediately without any transcoding). With "multimedia" feature disabled
-    /// this method assumes that the source is the valid JPEG thumbnail(jpeg encoding is not
-    /// validated) and resolves by reading the source and checking the resulting preview size.
-    ///
-    /// # Return type
-    ///
-    /// Returns a size-checked data uri string the SimpleX-Chat APIs expect:
-    /// `data:image/jpg;base64,{base64_jpg_bytes}`. Returns the [PreviewError] if the preview source
-    /// cannot be read/processed/validated or if it is too large.
+    /// Returns the preview as a `data:image/jpg;base64,{base64_contents}` URI. The source is
+    /// assumed to be a valid JPEG(encoding is not validated) when multimedia feature is off or is
+    /// lazily transcoded to JPEG when multimedia feature is on. Fails if the source cannot be read
+    /// or the encoded URI exceeds 13333 bytes.
     pub async fn try_resolve(self) -> Result<String, PreviewError> {
         match self.source {
             PreviewSource::Default => Ok(default()),
@@ -153,17 +160,10 @@ impl ImagePreview {
     }
 
     #[cfg(feature = "multimedia")]
-    /// With "multimedia" feature enabled this method tries to parse and transcode the preview
-    /// source into the valid JPEG thumbnail using the current [Transcoder](default and raw image
-    /// previews are resovled immediately without any transcoding). With "multimedia" feature disabled
-    /// this method assumes that the source is the valid JPEG thumbnail(jpeg encoding is not
-    /// validated) and resolves by reading the source and checking the resulting preview size.
-    ///
-    /// # Return type
-    ///
-    /// Returns a size-checked data uri string the SimpleX-Chat APIs expect:
-    /// `data:image/jpg;base64,{base64_jpg_bytes}`. Returns the [PreviewError] if the preview source
-    /// cannot be read/processed/validated or if it is too large.
+    /// Returns the preview as a `data:image/jpg;base64,{base64_contents}` URI. The source is
+    /// assumed to be a valid JPEG(encoding is not validated) when multimedia feature is off or is
+    /// lazily transcoded to JPEG when multimedia feature is on. Fails if the source cannot be read
+    /// or the encoded URI exceeds 13333 bytes.
     pub async fn try_resolve(self) -> Result<String, PreviewError> {
         let bytes = match self.source {
             PreviewSource::Default => return Ok(default()),
@@ -206,6 +206,8 @@ pub mod transcoder {
 
     use super::PreviewError;
 
+    /// Transcodes images of any wide-spread types to JPEG thumbnails. Default settings generate
+    /// previews similar to SimpleX-Chat previews
     #[derive(Debug, Clone, Copy)]
     pub struct Transcoder {
         enabled: bool,
@@ -226,6 +228,7 @@ pub mod transcoder {
     }
 
     impl Transcoder {
+        /// Disable transcoding. Useful for pre-made thumbnails.
         pub fn disabled() -> Self {
             Self {
                 enabled: false,
@@ -311,7 +314,7 @@ pub fn default() -> String {
     DEFAULT_PREVIEW.to_owned()
 }
 
-/// Returns the default preview on [PreviewError]
+/// Returns the default preview on [`PreviewError`]
 pub fn encode_jpg_to_uri(bytes: &[u8]) -> String {
     match try_encode_jpg_to_uri(bytes) {
         Ok(s) => s,
