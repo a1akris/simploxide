@@ -1,6 +1,11 @@
 type BuildResult<T = ()> = ::std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> BuildResult {
+    // docs.rs cannot install the SimpleX runtime libraries; skip linking there.
+    if std::env::var("DOCS_RS").is_ok() {
+        return Ok(());
+    }
+
     println!("cargo:rerun-if-env-changed=SXCRT");
     println!("cargo:rerun-if-env-changed=SIMPLEX_STATIC_DIR");
     println!("cargo:rerun-if-env-changed=GHC_LIBS");

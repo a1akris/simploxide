@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-client"
-version = "0.10.0"
+version = "0.10.1"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0 OR AGPL-3.0"
@@ -12,6 +12,10 @@ repository = "https://github.com/a1akris/simploxide"
 documentation = "https://docs.rs/simploxide-client"
 categories = ["network-programming", "asynchronous"]
 keywords = ["simplex-chat", "websocket", "ffi", "client"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = ["cli"]
@@ -35,8 +39,8 @@ serde.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 
 simploxide-core = { version = "0.4.0", path = "../simploxide-core" }
-simploxide-ws-core = { version = "0.1.0", path = "../simploxide-ws-core", optional = true }
-simploxide-ffi-core = { version = "0.1.0", path = "../simploxide-ffi-core", optional = true }
+simploxide-ws-core = { version = "0.1.1", path = "../simploxide-ws-core", optional = true }
+simploxide-ffi-core = { version = "0.1.1", path = "../simploxide-ffi-core", optional = true }
 simploxide-api-types = { version = "0.8.0", path = "../simploxide-api-types" }
 
 base64 = "0.22"

@@ -12,12 +12,9 @@
 
 use futures::TryStreamExt as _;
 use simploxide_client::{
-    StreamEvents,
-    crypto::TokioEncryptedFile,
-    preferences,
+    crypto::fs::TokioEncryptedFile,
     prelude::*,
-    preview::{ImagePreview, Transcoder},
-    types::CIFile,
+    preview::Transcoder,
     ws::{self, Bot},
 };
 use std::{error::Error, io::Cursor, sync::Arc, time::Duration};
@@ -113,7 +110,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // reaped by the system. The Drop impl does it best to kill the process but it doesn't
     // guarantee success
     cli.kill().await?;
-
     Ok(())
 }
 
@@ -241,17 +237,14 @@ async fn process_image(
     bot: &Bot,
     file: &CIFile,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // The download file is available behind the "xftp" feature and streamlines downloads by
+    // observing XFTP events under the hood. Without this method the backpressure logic(semaphore)
+    // and download file logic would be split between different handlers significantly complicating
+    // the state management.
     let received = bot.download_file(file).store_encrypted().await?;
-    let file_source = received
-        .chat_item
-        .chat_item
-        .file
-        .as_ref()
-        .and_then(|x| x.file_source.clone())
-        .unwrap();
+    let file_source = received.file_source().unwrap();
 
     // Processing the encrypted image in memory
-
     let path = file_source.file_path;
     let mut file =
         TokioEncryptedFile::open(&path, file_source.crypto_args.unwrap().try_into()?).await?;

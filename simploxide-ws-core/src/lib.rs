@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! A fully asynchronous raw SimpleX websocket client that provides:
 //!
 //! 1. Requests batching under a heavy load.

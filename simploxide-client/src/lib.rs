@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! For first-time users, it's recommended to get hands-on experience by running some example bots
 //! on [GitHub](https://github.com/a1akris/simploxide/tree/main/simploxide-client) before writing
 //! their own.
@@ -14,7 +15,7 @@
 //! Since both backends are equally capable, always start development with the **WebSocket** backend
 //! (enabled by default). Switching to **FFI** later is as simple as replacing `ws` imports with
 //! `ffi` imports, but **FFI** requires configuring the crate build and obliges you to use the
-//! AGPL-3.0 license. You can read more about switching to **FFI** [here](simploxide-sxcrt-sys).
+//! AGPL-3.0 license. You can read more about switching to **FFI** in the `simploxide-sxcrt-sys` crate docs.
 //!
 //! ### 2. Initialise the bot
 //!

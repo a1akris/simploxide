@@ -1,8 +1,8 @@
 use futures::FutureExt as _;
 use simploxide_api_types::{
-    AChatItem, CIDeleteMode, ChatDeleteMode, ChatItem, Contact, GroupInfo, GroupMember,
-    GroupMemberRole, GroupProfile, JsonObject, MsgContent, MsgReaction, NewUser, UpdatedMessage,
-    UserInfo,
+    AChatItem, CIDeleteMode, CIFile, ChatDeleteMode, ChatItem, Contact, CryptoFile, GroupInfo,
+    GroupMember, GroupMemberRole, GroupProfile, JsonObject, MsgContent, MsgReaction, NewUser,
+    UpdatedMessage, UserInfo,
     client_api::{
         AllowUndocumentedResponses as _, ClientApi, ClientApiError as _, UndocumentedResponse,
     },
@@ -832,4 +832,25 @@ impl<'a, C: 'a + ?Sized + ClientApi> IntoFuture for AcceptFileBuilder<'a, C> {
 pub enum Reaction {
     Set(String),
     Unset(String),
+}
+
+/// Convenience accessor for the [`CryptoFile`] stored inside a received file item.
+///
+/// Implemented for [`CIFile`] (direct access) and for [`simploxide_api_types::events::RcvFileComplete`]
+/// (drills through `chat_item.chat_item.file`).
+pub trait FileSourceExt {
+    /// Returns the file source, or `None` if no file source is present.
+    fn file_source(&self) -> Option<CryptoFile>;
+}
+
+impl FileSourceExt for CIFile {
+    fn file_source(&self) -> Option<CryptoFile> {
+        self.file_source.clone()
+    }
+}
+
+impl FileSourceExt for simploxide_api_types::events::RcvFileComplete {
+    fn file_source(&self) -> Option<CryptoFile> {
+        self.chat_item.chat_item.file.as_ref()?.file_source.clone()
+    }
 }

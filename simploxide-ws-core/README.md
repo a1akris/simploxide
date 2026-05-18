@@ -1,4 +1,4 @@
-# simploxide-core
+# simploxide-ws-core
 
 Provides a fully asynchronous client capable of sending raw SimpleX
 requests(commands) and receiving raw responses(JSON objects).
