@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-client"
-version = "0.10.1"
+version = "0.10.2"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0 OR AGPL-3.0"
@@ -44,7 +44,7 @@ simploxide-ffi-core = { version = "0.1.1", path = "../simploxide-ffi-core", opti
 simploxide-api-types = { version = "0.8.0", path = "../simploxide-api-types" }
 
 base64 = "0.22"
-poly1305 = { version = "0.8.0", features = ["zeroize"], optional = true }
+poly1305 = { version = "0.9.0", features = ["zeroize"], optional = true }
 rand = { version = "0.10", optional = true }
 salsa20 = { version = "0.11.0", features = ["zeroize"], optional = true }
 subtle = { version = "2", optional = true }

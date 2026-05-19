@@ -36,7 +36,8 @@ impl SecretBox {
 
             if self.mac_tail_len == 16 {
                 self.mac
-                    .update(&[MacBlock::clone_from_slice(self.mac_tail.as_ref())]);
+                    .update(&[MacBlock::try_from(self.mac_tail.as_ref())
+                        .expect("mac len is checked above")]);
 
                 self.mac_tail_len = 0;
             }
@@ -46,7 +47,10 @@ impl SecretBox {
         let mut chunks = data[pos..].chunks_exact(16);
 
         for chunk in &mut chunks {
-            self.mac.update(&[MacBlock::clone_from_slice(chunk)]);
+            // chunk len is checked by chunks_exact
+            self.mac.update(&[
+                MacBlock::try_from(chunk).expect("chunk len is guaranteed by chunks_exact")
+            ]);
         }
 
         let tail = chunks.remainder();

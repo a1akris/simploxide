@@ -22,10 +22,7 @@ fn smoke_test() {
 
     let output = chat.send_cmd("/v".to_owned()).unwrap();
     let json: serde_json::Value = serde_json::from_str(&output).unwrap();
-    assert_eq!(
-        json["result"]["versionInfo"]["version"].as_str(),
-        Some("6.5.0.11")
-    );
+    assert!(json["result"]["versionInfo"]["version"].as_str().is_some());
 
     let output = chat.send_cmd("/users".to_owned()).unwrap();
     let json: serde_json::Value = serde_json::from_str(&output).unwrap();

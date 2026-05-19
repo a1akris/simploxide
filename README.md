@@ -66,6 +66,11 @@ automatically by [autoupdater.sh](./autoupdater.sh) during scheduled CI runs_
 | 0.2.0              | 6.4.4.0                  | 6.4.4.2                  |
 
 
+### Notable projects built with simploxide
+
+- [Teleghosts](https://teleghosts.app/): Telegram <-> SimpleX-Chat direct messages bridge
+
+
 ### LICENSES
 
 - `simploxide-client`: [APACHE-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT) when

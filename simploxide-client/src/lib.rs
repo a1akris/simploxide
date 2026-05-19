@@ -84,28 +84,41 @@
 //!
 //! ## Features
 //!
+//! `simploxide` strives to be a minimal library for simple bots while also coming with batteries
+//! included for all sorts of the advanced use cases. The balance is maintained through feature
+//! gates documented below:
+//!
 //! - **`cli`** *(default)*: WebSocket backend ([`ws`]) with a built-in runner that spawns and
 //!   manages a local `simplex-chat` process. Use [`ws::BotBuilder::launch`] to start everything
 //!   in one call.
+//!
 //! - **`websocket`**: WebSocket backend ([`ws`]) without the CLI runner. Use
 //!   [`ws::BotBuilder::connect`] to attach to an already-running `simplex-chat` server.
+//!
 //! - **`ffi`**: FFI backend ([`ffi`]) that embeds the SimpleX-Chat library in-process.
 //!   Requires AGPL-3.0 and additional build configuration; see `simploxide-sxcrt-sys`.
+//!
 //! - **`native_crypto`**: Native Rust implementation of client-side encryption(XSalsa20 + Poly1305). Enables
 //!   [`ImagePreview::from_crypto_file`](preview::ImagePreview::from_crypto_file) and [crypto::fs]
 //!   module allowing to encrypt decrypt files directly in the Rust code
+//!
 //! - **`multimedia`**: Image transcoding via the `image` crate. Enables
 //!   [`preview::transcoder::Transcoder`] and automatic thumbnail generation for [`messages::Image`].
 //!   [`preview::ImagePreview`] automatically tries to transcode its sources to JPEGs with this
 //!   feature on
+//!
 //! - **`xftp`**: XFTP file transfer support. Enables [`xftp::XftpClient`], which intercepts
 //!   streamlines file downlaods with a `download_file` method.
+//!
 //! - **`cancellation`**: Re-exports [`tokio_util::sync::CancellationToken`] and enables helper
 //!   methods for cooperative shutdown.
+//!
 //! - **`crypto`**: Low-level cryptographic primitives (zeroize, rand). Pulled in automatically by
 //!   `native_crypto`. Useful on its own if you wish to use your own crypto implementation.
+//!
 //! - **`fullcli`**: Convenience bundle: `cli` + `native_crypto` + `multimedia` + `xftp` +
 //!   `cancellation`.
+//!
 //! - **`fullffi`**: Convenience bundle: `ffi` + `native_crypto` + `multimedia` + `xftp` +
 //!   `cancellation`.
 //!
