@@ -1151,6 +1151,38 @@ impl CommandSyntax for ApiAddGroupRelays {
 ///
 /// ----
 ///
+/// Clear relay rejection for a channel (relay operator).
+///
+/// *Network usage*: background.
+///
+/// *Syntax:*
+///
+/// ```
+/// /_relay allow #<groupId>
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+pub struct ApiAllowRelayGroup {
+    pub group_id: i64,
+}
+
+impl CommandSyntax for ApiAllowRelayGroup {
+    const COMMAND_BUF_SIZE: usize = 64;
+
+    fn append_command_syntax(&self, buf: &mut String) {
+        buf.push_str("/_relay ");
+        buf.push_str("allow ");
+        buf.push('#');
+        write!(buf, "{}", self.group_id).unwrap();
+    }
+}
+
+/// ### Group commands
+///
+/// Commands to manage and moderate groups. These commands can be used with business chats as well - they are groups. E.g., a common scenario would be to add human agents to business chat with the customer who connected via business address.
+///
+/// ----
+///
 /// Update group profile.
 ///
 /// *Network usage*: background.

@@ -7,7 +7,8 @@
 //! Requires AGPL-3.0 and additional build configuration. See `simploxide-sxcrt-sys`.
 
 pub use simploxide_ffi_core::{
-    CallError, DbOpts, DefaultUser, InitError as CoreInitError, SimplexVersion, WorkerConfig,
+    CallError, DbOpts, DefaultUser, InitError as CoreInitError, SimplexVersion, VersionError,
+    WorkerConfig,
 };
 
 use simploxide_api_types::{
@@ -16,7 +17,7 @@ use simploxide_api_types::{
     events::{Event, EventKind},
 };
 use simploxide_core::{MAX_SUPPORTED_VERSION, MIN_SUPPORTED_VERSION};
-use simploxide_ffi_core::{Event as CoreEvent, RawClient, Result as CoreResult, VersionError};
+use simploxide_ffi_core::{Event as CoreEvent, RawClient, Result as CoreResult};
 
 use std::sync::Arc;
 

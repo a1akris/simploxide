@@ -203,7 +203,10 @@ impl<P> EventStream<P> {
     }
 
     #[cfg(feature = "xftp")]
-    pub fn hook_xftp<C: 'static + Clone + ClientApi>(&mut self, client: C) -> xftp::XftpClient<C> {
+    pub fn hook_xftp<C: 'static + Clone + Send + ClientApi>(
+        &mut self,
+        client: C,
+    ) -> xftp::XftpClient<C> {
         let xftp_client = xftp::XftpClient::from(client);
         let hook = xftp_client.clone();
         self.add_hook(Box::new(hook));
@@ -418,7 +421,7 @@ impl EventParser for Event {
     }
 }
 
-pub trait Hook {
+pub trait Hook: 'static + Send {
     fn should_intercept(&self, kind: EventKind) -> bool;
 
     /// Hooks must not block the event stream; this method should be a cheap synchronous call.

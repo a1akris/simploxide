@@ -1,7 +1,10 @@
 /test_db
 simplex-static/libsimplex.a
 simplex-static/libsqlcipher.so
+simplex-static/libsqlcipher.a
 simplex-static/libsqlite3.so
+simplex-static/libsqlite3.a
+simplex-static/direct-sqlcipher
 simplex-static/sqlite3.h
 simplex-static/cabal.project.local
 simplex-static/.simplex-symbols.txt

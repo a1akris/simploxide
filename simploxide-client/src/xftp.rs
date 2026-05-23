@@ -55,6 +55,12 @@ pub struct XftpClient<C> {
 
 #[cfg(feature = "websocket")]
 impl XftpClient<crate::ws::Client> {
+    pub fn version(
+        &self,
+    ) -> impl Future<Output = Result<crate::ws::SimplexVersion, crate::ws::VersionError>> {
+        self.client.version()
+    }
+
     pub fn disconnect(self) -> impl Future<Output = ()> {
         self.client.disconnect()
     }
@@ -62,6 +68,12 @@ impl XftpClient<crate::ws::Client> {
 
 #[cfg(feature = "ffi")]
 impl XftpClient<crate::ffi::Client> {
+    pub fn version(
+        &self,
+    ) -> impl Future<Output = Result<crate::ffi::SimplexVersion, crate::ffi::VersionError>> {
+        self.client.version()
+    }
+
     pub fn disconnect(self) -> impl Future<Output = ()> {
         self.client.disconnect()
     }
@@ -105,7 +117,7 @@ impl<C: ClientApi> XftpExt for XftpClient<C> {
     }
 }
 
-impl<C: ClientApi> Hook for XftpClient<C> {
+impl<C: 'static + ClientApi + Send> Hook for XftpClient<C> {
     fn should_intercept(&self, kind: EventKind) -> bool {
         const EVENT_KINDS: [EventKind; 3] = [
             EventKind::RcvFileSndCancelled,

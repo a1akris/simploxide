@@ -693,6 +693,32 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
+    /// Clear relay rejection for a channel (relay operator).
+    ///
+    /// *Network usage*: background.
+    ///
+    /// *Syntax:*
+    ///
+    /// ```
+    /// /_relay allow #<groupId>
+    /// ```
+    fn api_allow_relay_group(
+        &self,
+        group_id: i64,
+    ) -> impl Future<Output = Result<Arc<RelayGroupAllowedResponse>, Self::Error>> + Send {
+        async move {
+            let command = ApiAllowRelayGroup { group_id };
+            let response: ApiAllowRelayGroupResponse = self.send(command).await?;
+            Ok(response.into_inner())
+        }
+    }
+
+    /// ### Group commands
+    ///
+    /// Commands to manage and moderate groups. These commands can be used with business chats as well - they are groups. E.g., a common scenario would be to add human agents to business chat with the customer who connected via business address.
+    ///
+    /// ----
+    ///
     /// Update group profile.
     ///
     /// *Network usage*: background.

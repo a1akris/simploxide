@@ -1,6 +1,6 @@
 use simploxide_api_types::{
-    AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, Contact,
-    CreatedConnLink, GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject,
+    AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, ConnectionPlan,
+    Contact, CreatedConnLink, GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject,
     LocalProfile, MsgContent, NewUser, PaginationByTime, PendingContactConnection, Preferences,
     Profile, User,
     client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
@@ -245,6 +245,36 @@ impl<C: ClientApi> Bot<C> {
                 link_owner_sig: None,
             })
             .await
+    }
+
+    /// Initiate a connection only if [`ConnectionPlan`] satisfies the predicate. For example, this
+    /// can be used to connect strictly via one-time links:
+    ///
+    /// ```ignore
+    /// let conn = bot.initiate_connection_if(
+    ///     link,
+    ///     |plan| matches!(plan, ConnectionPlan::InvitationLink { .. })
+    /// ).await?;
+    ///
+    /// if conn.is_rejected() {
+    ///     return Err("not a one-time link");
+    /// }
+    /// ```
+    pub async fn initiate_connection_if<F: FnOnce(&ConnectionPlan) -> bool>(
+        &self,
+        link: impl Into<String>,
+        predicate: F,
+    ) -> Result<Connection, C::Error> {
+        let link = link.into();
+        let plan_resp = self.check_connection_plan(link.clone()).await?;
+
+        if !predicate(&plan_resp.connection_plan) {
+            return Ok(Connection::Rejected(plan_resp));
+        }
+
+        self.initiate_connection(link)
+            .await
+            .map(Connection::Initiated)
     }
 
     /// Create one-time-invitation link. Can be used for admin-access or for private connections
@@ -622,6 +652,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Starts background file download. Catch `RcvFile*` events to track the progress
     pub fn accept_file<FID: Into<FileId>>(&self, file_id: FID) -> AcceptFileBuilder<'_, C> {
         self.client.accept_file(file_id)
     }
@@ -633,8 +664,6 @@ impl<C: ClientApi> Bot<C> {
         self.client.reject_file(file_id).await
     }
 
-    /// [ChatId] can be created from various types. See [ChatId] docs for the full list of `From`
-    /// impls.
     pub async fn delete_chat<CID: Into<ChatId>>(
         &self,
         chat_id: CID,
@@ -1011,6 +1040,37 @@ pub enum BotProfileSettings {
     Preferences(Preferences),
     /// Replace the entire profile.
     FullProfile(Profile),
+}
+
+pub enum Connection {
+    Initiated(UndocumentedResponse<ConnectResponse>),
+    Rejected(Arc<ConnectionPlanResponse>),
+}
+
+impl Connection {
+    pub fn rejected(&self) -> Option<&ConnectionPlan> {
+        if let Self::Rejected(resp) = self {
+            Some(&resp.connection_plan)
+        } else {
+            None
+        }
+    }
+
+    pub fn initiated(&self) -> Option<&UndocumentedResponse<ConnectResponse>> {
+        if let Self::Initiated(resp) = self {
+            Some(resp)
+        } else {
+            None
+        }
+    }
+
+    pub fn is_rejected(&self) -> bool {
+        self.rejected().is_some()
+    }
+
+    pub fn is_initiated(&self) -> bool {
+        self.initiated().is_some()
+    }
 }
 
 fn extract_address(link: &CreatedConnLink) -> String {

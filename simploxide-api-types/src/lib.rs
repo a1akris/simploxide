@@ -7625,6 +7625,8 @@ pub enum RelayStatus {
     Active,
     #[serde(rename = "inactive")]
     Inactive,
+    #[serde(rename = "rejected")]
+    Rejected,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

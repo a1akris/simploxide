@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-client"
-version = "0.10.2"
+version = "0.11.0"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0 OR AGPL-3.0"
@@ -38,20 +38,20 @@ serde_json.workspace = true
 serde.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 
-simploxide-core = { version = "0.4.0", path = "../simploxide-core" }
-simploxide-ws-core = { version = "0.1.1", path = "../simploxide-ws-core", optional = true }
-simploxide-ffi-core = { version = "0.1.1", path = "../simploxide-ffi-core", optional = true }
-simploxide-api-types = { version = "0.8.0", path = "../simploxide-api-types" }
+simploxide-core = { version = "0.5.0", path = "../simploxide-core" }
+simploxide-ws-core = { version = "0.2.0", path = "../simploxide-ws-core", optional = true }
+simploxide-ffi-core = { version = "0.2.0", path = "../simploxide-ffi-core", optional = true }
+simploxide-api-types = { version = "0.9.0", path = "../simploxide-api-types" }
 
 base64 = "0.22"
-poly1305 = { version = "0.9.0", features = ["zeroize"], optional = true }
+poly1305 = { version = "0.9", features = ["zeroize"], optional = true }
 rand = { version = "0.10", optional = true }
-salsa20 = { version = "0.11.0", features = ["zeroize"], optional = true }
+salsa20 = { version = "0.11", features = ["zeroize"], optional = true }
 subtle = { version = "2", optional = true }
 zeroize = { version = "1", features = ["derive"], optional = true }
 tokio-util = { version = "0.7", optional = true }
 image = { version = "0.25", default-features = false, features = ["default-formats"], optional = true }
-dashmap = { version = "6.1.0", optional = true }
+dashmap = { version = "6.1", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "signal"] }

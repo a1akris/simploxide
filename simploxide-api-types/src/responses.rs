@@ -451,6 +451,22 @@ impl ApiAddGroupRelaysResponse {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
+pub enum ApiAllowRelayGroupResponse {
+    /// RelayGroupAllowed: Relay rejection cleared for a channel.
+    #[serde(rename = "relayGroupAllowed")]
+    RelayGroupAllowed(Arc<RelayGroupAllowedResponse>),
+}
+
+impl ApiAllowRelayGroupResponse {
+    pub fn into_inner(self) -> Arc<RelayGroupAllowedResponse> {
+        match self {
+            Self::RelayGroupAllowed(inner) => inner,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum ApiUpdateGroupProfileResponse {
     /// GroupUpdated: Group updated.
     #[serde(rename = "groupUpdated")]
@@ -1654,6 +1670,21 @@ pub struct RcvFileCancelledResponse {
 
     #[serde(rename = "rcvFileTransfer")]
     pub rcv_file_transfer: RcvFileTransfer,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct RelayGroupAllowedResponse {
+    #[serde(rename = "user")]
+    pub user: User,
+
+    #[serde(rename = "groupInfo")]
+    pub group_info: GroupInfo,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]

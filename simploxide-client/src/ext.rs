@@ -17,8 +17,8 @@ use simploxide_api_types::{
         ContactRequestRejectedResponse, GroupLinkCreatedResponse, GroupLinkDeletedResponse,
         GroupLinkResponse, GroupRelaysResponse, GroupUpdatedResponse, LeftMemberUserResponse,
         MemberAcceptedResponse, MembersBlockedForAllUserResponse, MembersRoleUserResponse,
-        ReceiveFileResponse, SentGroupInvitationResponse, UserAcceptedGroupSentResponse,
-        UserDeletedMembersResponse,
+        ReceiveFileResponse, RelayGroupAllowedResponse, SentGroupInvitationResponse,
+        UserAcceptedGroupSentResponse, UserDeletedMembersResponse,
     },
 };
 
@@ -72,6 +72,8 @@ pub type GroupLinkResult<C> = Result<Arc<GroupLinkResponse>, <C as ClientApi>::E
 pub type DeleteGroupLinkResult<C> = Result<Arc<GroupLinkDeletedResponse>, <C as ClientApi>::Error>;
 pub type GetGroupRelaysResponse<C> = Result<Arc<GroupRelaysResponse>, <C as ClientApi>::Error>;
 pub type AddGroupRelaysResponse<C> = Result<ApiAddGroupRelaysResponse, <C as ClientApi>::Error>;
+pub type AllowRelayGroupsResponse<C> =
+    Result<Arc<RelayGroupAllowedResponse>, <C as ClientApi>::Error>;
 
 pub trait ClientApiExt: ClientApi {
     fn users(&self) -> impl Future<Output = UsersResponse<Self>>;
@@ -351,6 +353,11 @@ pub trait ClientApiExt: ClientApi {
     ) -> impl Future<Output = AddGroupRelaysResponse<Self>> {
         self.add_group_relays(group_id, std::iter::once(relay_id.into()))
     }
+
+    fn allow_replay_group<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = AllowRelayGroupsResponse<Self>>;
 }
 
 impl<C> ClientApiExt for C
@@ -528,12 +535,19 @@ where
         .map(|res| res.allow_undocumented())
     }
 
-    fn delete_chat<CID: Into<ChatId>>(
+    async fn delete_chat<CID: Into<ChatId>>(
         &self,
         chat_id: CID,
         mode: DeleteMode,
-    ) -> impl Future<Output = DeleteChatResponse<Self>> {
-        self.api_delete_chat(chat_id.into().into_chat_ref(), mode.into())
+    ) -> DeleteChatResponse<Self> {
+        let chat_id = chat_id.into();
+
+        if let ChatId::Group { id, .. } = chat_id {
+            self.leave_group(id).await?;
+        }
+
+        self.api_delete_chat(chat_id.into_chat_ref(), mode.into())
+            .await
     }
 
     fn add_member<GID: Into<GroupId>, CID: Into<ContactId>>(
@@ -722,6 +736,13 @@ where
             group_id.into().0,
             relay_ids.into_iter().map(|id| id.0).collect(),
         )
+    }
+
+    fn allow_replay_group<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = AllowRelayGroupsResponse<Self>> {
+        self.api_allow_relay_group(group_id.into().0)
     }
 }
 
