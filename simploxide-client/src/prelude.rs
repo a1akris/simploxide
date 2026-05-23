@@ -2,10 +2,11 @@
 
 pub use crate::{
     ClientApi as _, StreamEvents,
+    bot::{BotProfileSettings, BotSettings, Connection},
     client_api::*,
     commands::*,
     events::*,
-    ext::{ClientApiExt as _, DeleteMode, FileSourceExt as _, FilterChatItems as _},
+    ext::{ClientApiExt as _, DeleteMode, FileSourceExt as _, FilterChatItems as _, Reaction},
     id::*,
     messages::*,
     preferences,
