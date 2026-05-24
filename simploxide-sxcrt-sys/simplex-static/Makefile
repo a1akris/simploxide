@@ -17,10 +17,18 @@ SQLCIPHER_DEFS := \
     -DSQLITE_USE_URI \
     -DSQLITE_ENABLE_JSON1
 
-.PHONY: build simplexlib sqlcipher clean veryclean verify-sqlcipher verify-simplexlib
+.PHONY: build autobuild simplexlib sqlcipher clean veryclean verify-sqlcipher verify-simplexlib
 
 
 build: simplexlib sqlcipher verify-simplexlib verify-sqlcipher
+
+
+# Fully static build — bundles GHC boot libs into libsimplex.a so no GHC installation
+# is required at runtime. Downstream binaries must be linked with -no-pie.
+# The .ghcboot_bundled marker records a completed autobuild; delete it to force a rebuild.
+autobuild:
+	cabal --store-dir=$(STORE_DIR) build lib:simplex-chat
+	bash bundle.sh --include-ghc-boot
 
 
 simplexlib: libsimplex.a
@@ -38,7 +46,7 @@ sqlcipher: libsqlcipher.a
 # Flags match direct-sqlcipher.cabal exactly (-systemlib +openssl path).
 # Also copies sqlite3.h for SQLCIPHER_INCLUDE_DIR.
 libsqlcipher.a: | direct-sqlcipher
-	gcc -O2 -fPIC \
+	$(CC) -O2 -fPIC \
 	    $(SQLCIPHER_DEFS) \
 	    $(OPENSSL_CFLAGS) \
 	    -I$(CBITS) \

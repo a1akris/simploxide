@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # collect-ghc-libs.sh <dest-dir>
 #
-# Copies the GHC boot .so files required at runtime by libsimplex.a into <dest-dir>.
+# Copies the GHC boot shared libraries required at runtime by libsimplex.a into <dest-dir>.
 # The selected set mirrors the needed_ghc_lib() filter in build.rs exactly.
 #
 # Also copies libsqlcipher.so (built by build-sqlcipher.sh / make sqlcipher) if it
-# exists next to this script.  Shipping our own libsqlcipher.so in sxcrt/ ensures
+# exists next to this script.  Shipping our own libsqlcipher in sxcrt/ ensures
 # that consumers load the exact SQLCipher version that simplex-chat was compiled
 # against, regardless of what the system has installed.
 #
@@ -22,6 +22,12 @@ fi
 DEST="$1"
 mkdir -p "$DEST"
 
+# Shared library extension for the current platform
+case "$(uname -s)" in
+    Darwin) DYLIB_EXT="dylib" ;;
+    *)      DYLIB_EXT="so" ;;
+esac
+
 # --- locate GHC boot libs dir (mirrors ghc_libs_dir() in build.rs) ---
 
 if [[ -n "${GHC_LIBS:-}" ]]; then
@@ -36,9 +42,9 @@ else
         exit 1
     fi
     LIBDIR="$(ghc --print-libdir)"
-    GHC_LIB_DIR="$(find "$LIBDIR" -maxdepth 1 -type d -name 'x86_64-linux-ghc-*' | head -1)"
+    GHC_LIB_DIR="$(find "$LIBDIR" -maxdepth 1 -type d -name '*-ghc-*' | head -1)"
     if [[ -z "$GHC_LIB_DIR" ]]; then
-        echo "error: GHC platform dir (x86_64-linux-ghc-*) not found under $LIBDIR" >&2
+        echo "error: GHC platform dir (<arch>-<os>-ghc-*) not found under $LIBDIR" >&2
         exit 1
     fi
 fi
@@ -49,10 +55,10 @@ echo "Collecting from: $GHC_LIB_DIR"
 
 needed_ghc_lib() {
     local filename="$1"
-    # strip lib prefix and .so suffix
-    [[ "$filename" == lib*.so ]] || return 1
+    # strip lib prefix and dylib suffix
+    [[ "$filename" == lib*."$DYLIB_EXT" ]] || return 1
     local stem="${filename#lib}"
-    stem="${stem%.so}"
+    stem="${stem%.$DYLIB_EXT}"
 
     # RTS: only the threaded non-debug variant
     if [[ "$stem" == HSrts-* ]]; then
@@ -100,7 +106,7 @@ needed_ghc_lib() {
 # --- copy matching files ---
 
 count=0
-for filepath in "$GHC_LIB_DIR"/lib*.so; do
+for filepath in "$GHC_LIB_DIR"/lib*."$DYLIB_EXT"; do
     [[ -e "$filepath" ]] || continue
     filename="$(basename "$filepath")"
     if needed_ghc_lib "$filename"; then
@@ -109,4 +115,4 @@ for filepath in "$GHC_LIB_DIR"/lib*.so; do
     fi
 done
 
-echo "Collected $count GHC boot .so files into $DEST"
+echo "Collected $count GHC boot shared libraries into $DEST"

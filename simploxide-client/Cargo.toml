@@ -32,11 +32,11 @@ fullffi = ["ffi", "native_crypto", "cancellation", "multimedia", "xftp"]
 xftp = ["dep:dashmap"]
 
 [dependencies]
-futures.workspace = true
+futures = { workspace = true, features = ["alloc"] }
 log.workspace = true
 serde_json.workspace = true
 serde.workspace = true
-tokio = { workspace = true, features = ["fs"] }
+tokio = { workspace = true, features = ["fs", "io-util"] }
 
 simploxide-core = { version = "0.5.0", path = "../simploxide-core" }
 simploxide-ws-core = { version = "0.2.0", path = "../simploxide-ws-core", optional = true }
