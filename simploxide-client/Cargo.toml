@@ -14,7 +14,7 @@ categories = ["network-programming", "asynchronous"]
 keywords = ["simplex-chat", "websocket", "ffi", "client"]
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["cli", "ffi", "native_crypto", "cancellation", "multimedia", "xftp"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]

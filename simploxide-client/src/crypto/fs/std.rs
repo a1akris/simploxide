@@ -1,3 +1,5 @@
+//! Sync version of SimpleX encrypted files
+
 use simploxide_api_types::CryptoFile as SxcCryptoFile;
 
 use std::{

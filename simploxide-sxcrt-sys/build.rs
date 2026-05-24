@@ -232,7 +232,7 @@ fn ghc_libs_dir() -> BuildResult<std::path::PathBuf> {
     let libdir = str::from_utf8(&output.stdout)?.trim();
 
     // Find the platform subdir: <arch>-<os>-ghc-<version>/
-    std::fs::read_dir(&libdir)?
+    std::fs::read_dir(libdir)?
         .filter_map(|e| e.ok())
         .map(|e| e.path())
         .find(|p| {

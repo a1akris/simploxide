@@ -1,3 +1,15 @@
+# v0.11.0 - Fully static builds for FFI
+
+- `simploxide-sxcrt-sys` now comes with an option to enable automatic fully
+  static builds for downstream apps. The documentation was improved to describe
+  the tradeoffs of each build mode in details
+
+- Fix invalid constraints and holes in high-level APIs
+
+- Update types to support `v6.5.3` and add typesafe wrappers for new methods
+
+[Full diff](https://github.com/a1akris/simploxide/compare/v0.10.0...v0.11.0)
+
 # v0.10.0 - High level API, FFI support and more
 
 - High-level `Bot` type providing the typesafe idiomatic Rust API to work with SimpleX-Chat.

@@ -1,3 +1,5 @@
+//! Provides [`ClientApiExt`] with type-safe wrappers over raw [`ClientApi`]
+
 use futures::FutureExt as _;
 use simploxide_api_types::{
     AChatItem, CIDeleteMode, CIFile, ChatDeleteMode, ChatItem, Contact, CryptoFile, GroupInfo,

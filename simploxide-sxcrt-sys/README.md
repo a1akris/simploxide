@@ -158,7 +158,7 @@ loads SQLCipher dynamically, the conflict can still occur.
 
 #### Prerequisites
 
-__Same deps as for the SIMPLEX_STATIC_AUTOBUILD___
+_Same deps as for the SIMPLEX_STATIC_AUTOBUILD_
 
 - `simplex-static` directory must be copied from this repo and stored somewhere
   on the system. The recommended approach is to git clone `simploxide` and

@@ -1,3 +1,5 @@
+//! Native Rust implementation of SimpleX crypto
+
 use poly1305::{
     Block as MacBlock, Poly1305,
     universal_hash::{KeyInit, UniversalHash},

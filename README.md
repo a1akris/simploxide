@@ -61,6 +61,7 @@ automatically by [autoupdater.sh](./autoupdater.sh) during scheduled CI runs_
 
 | SimplOxide Version | Simplex Chat Min Version | Simplex Chat Max Version |
 | ------------------ | ------------------------ | ------------------------ |
+| 0.11.0             | 6.5.3.0                  | 6.5.3.0                  |
 | 0.10.0             | 6.5.2.0                  | 6.5.2.0                  |
 | 0.9.0              | 6.4.5.1                  | 6.4.10.0                 |
 | 0.2.0              | 6.4.4.0                  | 6.4.4.2                  |

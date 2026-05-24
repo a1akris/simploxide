@@ -1,3 +1,5 @@
+//! Types that handle SimpleX client-side file encryption
+
 use base64::{Engine as _, engine::general_purpose::URL_SAFE};
 use rand::Rng as _;
 use simploxide_api_types::CryptoFileArgs as SxcCryptoFileArgs;

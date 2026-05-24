@@ -1,3 +1,5 @@
+//! Async version of SimpleX encrypted files
+
 use simploxide_api_types::CryptoFile as SxcCryptoFile;
 use tokio::io::{AsyncRead, AsyncSeekExt as _, AsyncWrite, AsyncWriteExt as _};
 

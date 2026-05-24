@@ -1,3 +1,6 @@
+//! Crypto primitives and traits to implement SimpleX-Chat cryptography in a way compatible with
+//! simploxide.
+
 pub mod fs;
 
 #[cfg(feature = "native_crypto")]
