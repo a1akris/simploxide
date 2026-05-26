@@ -83,17 +83,14 @@ async fn recv_file_cancelled(
     ev: Arc<RcvFileSndCancelled>,
     bot: ws::Bot,
 ) -> ws::ClientResult<StreamEvents> {
-    let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info else {
-        // Cannot operate in groups
-        return Ok(StreamEvents::Continue);
+    if let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info {
+        bot.send_msg(
+            contact,
+            "I cannot process files if you keep cancelling them!",
+        )
+        .reply_to(&ev.chat_item)
+        .await?;
     };
-
-    bot.send_msg(
-        contact,
-        "I cannot process files if you keep cancelling them!",
-    )
-    .reply_to(&ev.chat_item)
-    .await?;
 
     Ok(StreamEvents::Continue)
 }
@@ -104,23 +101,14 @@ async fn recv_file_complete(
 ) -> ws::ClientResult<StreamEvents> {
     println!("Received file:\n{:#?}", ev.chat_item.chat_item);
 
-    let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info else {
-        // Cannot operate in groups
-        return Ok(StreamEvents::Continue);
-    };
+    if let ChatInfo::Direct { ref contact, .. } = ev.chat_item.chat_info {
+        let crypto_file = ev.file_source().unwrap();
 
-    let crypto_file = ev
-        .chat_item
-        .chat_item
-        .file
-        .as_ref()
-        .and_then(|x| x.file_source.clone())
-        .unwrap();
-
-    bot.send_msg(contact, "Take it back!")
-        .attach(crypto_file)
-        .reply_to(&ev.chat_item)
-        .await?;
+        bot.send_msg(contact, "Take it back!")
+            .attach(crypto_file)
+            .reply_to(&ev.chat_item)
+            .await?;
+    }
 
     Ok(StreamEvents::Continue)
 }

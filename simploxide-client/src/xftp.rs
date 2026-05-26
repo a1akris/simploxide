@@ -16,7 +16,6 @@
 
 use std::sync::Arc;
 
-use dashmap::DashMap;
 use serde::Deserialize;
 use simploxide_api_types::{
     client_api::ClientApi,
@@ -27,6 +26,7 @@ use simploxide_api_types::{
 
 use crate::{Hook, id::FileId};
 
+type FxDashMap<K, V> = dashmap::DashMap<K, V, rustc_hash::FxBuildHasher>;
 type XftpDownloadResponder = tokio::sync::oneshot::Sender<XftpManagerDownloadResponse>;
 
 /// Adds [`download_file`](Self::download_file) to any [`ClientApi`].
@@ -300,7 +300,7 @@ where
 
 #[derive(Default)]
 struct XftpManager {
-    downloads: DashMap<i64, XftpDownloadResponder>,
+    downloads: FxDashMap<i64, XftpDownloadResponder>,
 }
 
 enum XftpManagerDownloadResponse {

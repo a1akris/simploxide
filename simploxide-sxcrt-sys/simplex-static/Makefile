@@ -26,7 +26,7 @@ build: simplexlib sqlcipher verify-simplexlib verify-sqlcipher
 # Fully static build — bundles GHC boot libs into libsimplex.a so no GHC installation
 # is required at runtime. Downstream binaries must be linked with -no-pie.
 # The .ghcboot_bundled marker records a completed autobuild; delete it to force a rebuild.
-autobuild:
+autobuild: libsqlcipher.a
 	cabal --store-dir=$(STORE_DIR) build lib:simplex-chat
 	bash bundle.sh --include-ghc-boot
 

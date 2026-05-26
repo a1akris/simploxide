@@ -22,4 +22,5 @@ futures = { version = "0.3", default-features = false }
 log = "0.4"
 serde_json = { version = "1" }
 serde = { version = "1", features = ["derive", "rc"] }
+serde-aux = { version = "4", default-features = false }
 tokio = { version = "1", features = ["sync"] }

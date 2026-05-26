@@ -174,6 +174,7 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
         .collect::<Result<_, _>>()?;
 
     let mut events_rs = std::fs::File::create(EVENTS_RS)?;
+    let user_id_getter = EventUserIdFmt("Event", &discriminated_records).to_string();
     let (mut top_level_enum, records) = discriminated_records.into_types("Event".to_owned());
 
     for field in top_level_enum
@@ -191,6 +192,7 @@ fn generate_events(events_md: &str) -> Result<(), Box<dyn Error>> {
     writeln!(events_rs)?;
 
     writeln!(events_rs, "{top_level_enum}\n")?;
+    writeln!(events_rs, "{user_id_getter}\n")?;
     writeln!(events_rs, "{}\n", EventKindFmt(&top_level_enum))?;
 
     writeln!(events_rs, "{EVENT_TRAITS}")?;
@@ -661,6 +663,34 @@ where
     }
 }
 "#;
+
+struct EventUserIdFmt<'a>(&'static str, &'a DisjointedDiscriminatedUnion);
+
+impl std::fmt::Display for EventUserIdFmt<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "impl {} {{", self.0)?;
+        writeln!(f, "   pub fn user_id(&self) -> Option<i64> {{")?;
+        writeln!(f, "       match self {{")?;
+
+        for item in &self.1.variants {
+            let result = if item.record.fields.iter().any(|f| f.rust_name == "user") {
+                "Some(_ev.user.user_id)"
+            } else {
+                "None"
+            };
+
+            writeln!(
+                f,
+                "           Self::{variant}(_ev) => {result},",
+                variant = item.variant.rust_name
+            )?;
+        }
+        writeln!(f, "           Self::Undocumented(_) => None,")?;
+        writeln!(f, "       }}")?;
+        writeln!(f, "   }}")?;
+        writeln!(f, "}}")
+    }
+}
 
 struct EventKindFmt<'a>(&'a DiscriminatedUnionType);
 

@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-client"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0 OR AGPL-3.0"
@@ -14,26 +14,28 @@ categories = ["network-programming", "asynchronous"]
 keywords = ["simplex-chat", "websocket", "ffi", "client"]
 
 [package.metadata.docs.rs]
-features = ["cli", "ffi", "native_crypto", "cancellation", "multimedia", "xftp"]
+features = ["cli", "ffi", "native_crypto", "cancellation", "multimedia", "xftp", "farm"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = ["cli"]
 bon = ["simploxide-api-types/bon"]
-ffi = ["dep:simploxide-ffi-core"]
-websocket = ["dep:simploxide-ws-core"]
+cancellation = ["dep:tokio-util"]
 cli = ["websocket", "simploxide-ws-core/cli"]
 crypto = ["dep:zeroize", "dep:rand"]
-native_crypto = ["crypto", "dep:salsa20", "dep:poly1305", "dep:subtle"]
-cancellation = ["dep:tokio-util"]
+farm = ["dep:dashmap", "dep:rustc-hash"]
+ffi = ["dep:simploxide-ffi-core"]
+fullcli = ["cli", "native_crypto", "cancellation", "multimedia", "xftp", "farm"]
+fullffi = ["ffi", "native_crypto", "cancellation", "multimedia", "xftp", "farm"]
 multimedia = ["dep:image"]
-fullcli = ["cli", "native_crypto", "cancellation", "multimedia", "xftp"]
-fullffi = ["ffi", "native_crypto", "cancellation", "multimedia", "xftp"]
-xftp = ["dep:dashmap"]
+native_crypto = ["crypto", "dep:salsa20", "dep:poly1305", "dep:subtle"]
+websocket = ["dep:simploxide-ws-core"]
+xftp = ["dep:dashmap", "dep:rustc-hash"]
 
 [dependencies]
 futures = { workspace = true, features = ["alloc"] }
 log.workspace = true
+serde-aux.workspace = true
 serde_json.workspace = true
 serde.workspace = true
 tokio = { workspace = true, features = ["fs", "io-util"] }
@@ -51,7 +53,8 @@ subtle = { version = "2", optional = true }
 zeroize = { version = "1", features = ["derive"], optional = true }
 tokio-util = { version = "0.7", optional = true }
 image = { version = "0.25", default-features = false, features = ["default-formats"], optional = true }
-dashmap = { version = "6.1", optional = true }
+dashmap = { version = "6", optional = true }
+rustc-hash = { version = "2", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "signal"] }

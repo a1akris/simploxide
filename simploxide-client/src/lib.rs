@@ -187,6 +187,18 @@ pub struct EventStream<P> {
     hooks: Vec<Box<dyn Hook>>,
 }
 
+impl<P> FromIterator<P> for EventStream<P> {
+    fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
+        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
+
+        for item in iter {
+            sender.send(item).unwrap();
+        }
+
+        Self::from(receiver)
+    }
+}
+
 impl<P> From<tokio::sync::mpsc::UnboundedReceiver<P>> for EventStream<P> {
     fn from(receiver: tokio::sync::mpsc::UnboundedReceiver<P>) -> Self {
         Self {
@@ -198,6 +210,11 @@ impl<P> From<tokio::sync::mpsc::UnboundedReceiver<P>> for EventStream<P> {
 }
 
 impl<P> EventStream<P> {
+    pub fn into_receiver(self) -> tokio::sync::mpsc::UnboundedReceiver<P> {
+        self.receiver
+    }
+
+    /// Allows to unconditionally intercept certain events
     pub fn add_hook(&mut self, hook: Box<dyn Hook>) {
         self.hooks.push(hook);
     }
@@ -401,8 +418,11 @@ impl<P: EventParser> Stream for EventStream<P> {
 pub trait EventParser {
     type Error;
 
-    /// Should parse kind cheaply without allocations
+    /// Parse kind cheaply without allocations
     fn parse_kind(&self) -> Result<EventKind, Self::Error>;
+
+    /// Parse user ID cheaply without allocations
+    fn parse_user_id(&self) -> Result<Option<i64>, Self::Error>;
 
     /// Parse the whole events
     fn parse_event(&self) -> Result<Event, Self::Error>;
@@ -415,6 +435,10 @@ impl EventParser for Event {
         Ok(self.kind())
     }
 
+    fn parse_user_id(&self) -> Result<Option<i64>, Self::Error> {
+        Ok(self.user_id())
+    }
+
     fn parse_event(&self) -> Result<Event, Self::Error> {
         // Cheap Arc Clone
         Ok(self.clone())
@@ -422,6 +446,8 @@ impl EventParser for Event {
 }
 
 pub trait Hook: 'static + Send {
+    /// Return true if you want to intercept the given event kind. [`Self::intercept_event`] won't
+    /// be called kinds this method returned false
     fn should_intercept(&self, kind: EventKind) -> bool;
 
     /// Hooks must not block the event stream; this method should be a cheap synchronous call.

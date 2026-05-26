@@ -161,6 +161,64 @@ pub enum Event {
 }
 
 impl Event {
+    pub fn user_id(&self) -> Option<i64> {
+        match self {
+            Self::ContactConnected(_ev) => Some(_ev.user.user_id),
+            Self::ContactUpdated(_ev) => Some(_ev.user.user_id),
+            Self::ContactDeletedByContact(_ev) => Some(_ev.user.user_id),
+            Self::ReceivedContactRequest(_ev) => Some(_ev.user.user_id),
+            Self::NewMemberContactReceivedInv(_ev) => Some(_ev.user.user_id),
+            Self::ContactSndReady(_ev) => Some(_ev.user.user_id),
+            Self::NewChatItems(_ev) => Some(_ev.user.user_id),
+            Self::ChatItemReaction(_ev) => Some(_ev.user.user_id),
+            Self::ChatItemsDeleted(_ev) => Some(_ev.user.user_id),
+            Self::ChatItemUpdated(_ev) => Some(_ev.user.user_id),
+            Self::GroupChatItemsDeleted(_ev) => Some(_ev.user.user_id),
+            Self::ChatItemsStatusesUpdated(_ev) => Some(_ev.user.user_id),
+            Self::ReceivedGroupInvitation(_ev) => Some(_ev.user.user_id),
+            Self::UserJoinedGroup(_ev) => Some(_ev.user.user_id),
+            Self::GroupUpdated(_ev) => Some(_ev.user.user_id),
+            Self::JoinedGroupMember(_ev) => Some(_ev.user.user_id),
+            Self::MemberRole(_ev) => Some(_ev.user.user_id),
+            Self::DeletedMember(_ev) => Some(_ev.user.user_id),
+            Self::LeftMember(_ev) => Some(_ev.user.user_id),
+            Self::DeletedMemberUser(_ev) => Some(_ev.user.user_id),
+            Self::GroupDeleted(_ev) => Some(_ev.user.user_id),
+            Self::ConnectedToGroupMember(_ev) => Some(_ev.user.user_id),
+            Self::MemberAcceptedByOther(_ev) => Some(_ev.user.user_id),
+            Self::MemberBlockedForAll(_ev) => Some(_ev.user.user_id),
+            Self::GroupMemberUpdated(_ev) => Some(_ev.user.user_id),
+            Self::GroupLinkDataUpdated(_ev) => Some(_ev.user.user_id),
+            Self::GroupRelayUpdated(_ev) => Some(_ev.user.user_id),
+            Self::RcvFileDescrReady(_ev) => Some(_ev.user.user_id),
+            Self::RcvFileComplete(_ev) => Some(_ev.user.user_id),
+            Self::SndFileCompleteXftp(_ev) => Some(_ev.user.user_id),
+            Self::RcvFileStart(_ev) => Some(_ev.user.user_id),
+            Self::RcvFileSndCancelled(_ev) => Some(_ev.user.user_id),
+            Self::RcvFileAccepted(_ev) => Some(_ev.user.user_id),
+            Self::RcvFileError(_ev) => Some(_ev.user.user_id),
+            Self::RcvFileWarning(_ev) => Some(_ev.user.user_id),
+            Self::SndFileError(_ev) => Some(_ev.user.user_id),
+            Self::SndFileWarning(_ev) => Some(_ev.user.user_id),
+            Self::AcceptingContactRequest(_ev) => Some(_ev.user.user_id),
+            Self::AcceptingBusinessRequest(_ev) => Some(_ev.user.user_id),
+            Self::ContactConnecting(_ev) => Some(_ev.user.user_id),
+            Self::BusinessLinkConnecting(_ev) => Some(_ev.user.user_id),
+            Self::JoinedGroupMemberConnecting(_ev) => Some(_ev.user.user_id),
+            Self::SentGroupInvitation(_ev) => Some(_ev.user.user_id),
+            Self::GroupLinkConnecting(_ev) => Some(_ev.user.user_id),
+            Self::HostConnected(_ev) => None,
+            Self::HostDisconnected(_ev) => None,
+            Self::SubscriptionStatus(_ev) => None,
+            Self::MessageError(_ev) => Some(_ev.user.user_id),
+            Self::ChatError(_ev) => None,
+            Self::ChatErrors(_ev) => None,
+            Self::Undocumented(_) => None,
+        }
+    }
+}
+
+impl Event {
     pub fn kind(&self) -> EventKind {
         match self {
             Self::ContactConnected(_) => EventKind::ContactConnected,

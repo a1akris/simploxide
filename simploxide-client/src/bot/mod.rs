@@ -3,25 +3,27 @@
 use simploxide_api_types::{
     AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, ConnectionPlan,
     Contact, CreatedConnLink, GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject,
-    LocalProfile, MsgContent, NewUser, PaginationByTime, PendingContactConnection, Preferences,
-    Profile, User,
+    LocalProfile, MsgContent, NewUser, PaginationByTime, Preferences, Profile, User,
     client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
     commands::{
         ApiAddContact, ApiConnectPlan, ApiGetChats, ApiNewGroup, ApiNewPublicGroup,
         ApiSetActiveUser, ApiSetProfileAddress, ApiSetUserAutoAcceptMemberContacts,
     },
     responses::{
-        AcceptingContactRequestResponse, ApiChatsResponse, ApiDeleteChatResponse,
-        ApiNewPublicGroupResponse, ApiUpdateChatItemResponse, ApiUpdateProfileResponse,
-        CancelFileResponse, ChatItemReactionResponse, ChatItemsDeletedResponse, CmdOkResponse,
-        ConnectResponse, ConnectionPlanResponse, ContactPrefsUpdatedResponse,
-        ContactRequestRejectedResponse, GroupCreatedResponse, GroupLinkCreatedResponse,
-        GroupLinkDeletedResponse, GroupUpdatedResponse, LeftMemberUserResponse,
-        MemberAcceptedResponse, MembersBlockedForAllUserResponse, MembersRoleUserResponse,
-        SentGroupInvitationResponse, UserAcceptedGroupSentResponse, UserDeletedMembersResponse,
-        UserProfileUpdatedResponse,
+        AcceptingContactRequestResponse, ActiveUserResponse, ApiChatsResponse,
+        ApiDeleteChatResponse, ApiNewPublicGroupResponse, ApiUpdateChatItemResponse,
+        ApiUpdateProfileResponse, CancelFileResponse, ChatItemReactionResponse,
+        ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse, ConnectionPlanResponse,
+        ContactPrefsUpdatedResponse, ContactRequestRejectedResponse, GroupCreatedResponse,
+        GroupLinkCreatedResponse, GroupLinkDeletedResponse, GroupUpdatedResponse,
+        InvitationResponse, LeftMemberUserResponse, MemberAcceptedResponse,
+        MembersBlockedForAllUserResponse, MembersRoleUserResponse, SentGroupInvitationResponse,
+        UserAcceptedGroupSentResponse, UserDeletedMembersResponse, UserProfileUpdatedResponse,
     },
 };
+
+#[cfg(feature = "farm")]
+pub mod farm;
 
 use std::sync::Arc;
 
@@ -56,78 +58,98 @@ impl<C> Bot<C> {
 }
 
 impl<C: ClientApi> Bot<C> {
+    fn new(client: C, user_id: UserId) -> Self {
+        Self {
+            client,
+            user_id: user_id.0,
+        }
+    }
+
     pub async fn init(client: C, settings: BotSettings) -> Result<Self, C::Error> {
+        let mut users = client.users().await?;
+
+        match users.iter_mut().find_map(|info| {
+            (info.user.profile.display_name == settings.display_name).then_some(&mut info.user)
+        }) {
+            Some(user) => Self::init_existing(client, user, settings).await,
+            None => Self::init_new(client, settings).await,
+        }
+    }
+
+    async fn init_existing(
+        client: C,
+        user: &mut User,
+        settings: BotSettings,
+    ) -> Result<Self, C::Error> {
+        if !user.active_user {
+            client
+                .api_set_active_user(ApiSetActiveUser::new(user.user_id))
+                .await?;
+        }
+
         let avatar = if let Some(preview) = settings.avatar {
             Some(preview.resolve().await)
         } else {
             None
         };
 
-        let mut users = client.users().await?;
+        let bot = Bot {
+            client,
+            user_id: user.user_id,
+        };
 
-        match users.iter_mut().find_map(|info| {
-            (info.user.profile.display_name == settings.display_name).then_some(&mut info.user)
-        }) {
-            Some(user) => {
-                if !user.active_user {
-                    client
-                        .api_set_active_user(ApiSetActiveUser::new(user.user_id))
-                        .await?;
-                }
+        bot.setup_auto_accept(settings.auto_accept, user.profile.contact_link.is_some())
+            .await?;
 
-                let bot = Bot {
-                    client,
-                    user_id: user.user_id,
-                };
-
-                bot.setup_auto_accept(settings.auto_accept, user.profile.contact_link.is_some())
-                    .await?;
-
-                let mut profile = match settings.profile_settings {
-                    Some(BotProfileSettings::Preferences(preferences)) => {
-                        let mut current_profile = extract_profile(&mut user.profile);
-                        current_profile.preferences = Some(preferences);
-                        current_profile
-                    }
-                    Some(BotProfileSettings::FullProfile(profile)) => profile,
-                    None => Self::default_profile(settings.display_name),
-                };
-                profile.image = avatar;
-                bot.client.api_update_profile(user.user_id, profile).await?;
-
-                Ok(bot)
+        let mut profile = match settings.profile_settings {
+            Some(BotProfileSettings::Preferences(preferences)) => {
+                let mut current_profile = extract_profile(&mut user.profile);
+                current_profile.preferences = Some(preferences);
+                current_profile
             }
-            None => {
-                let mut bot_profile = match settings.profile_settings {
-                    Some(BotProfileSettings::Preferences(preferences)) => {
-                        let mut profile = Self::default_profile(settings.display_name.clone());
-                        profile.preferences = Some(preferences);
-                        profile
-                    }
-                    Some(BotProfileSettings::FullProfile(profile)) => profile,
-                    None => Self::default_profile(settings.display_name.clone()),
-                };
-                bot_profile.image = avatar;
+            Some(BotProfileSettings::FullProfile(profile)) => profile,
+            None => Self::default_profile(settings.display_name),
+        };
+        profile.image = avatar;
+        bot.client.api_update_profile(user.user_id, profile).await?;
 
-                let response = client
-                    .new_user(NewUser {
-                        profile: Some(bot_profile),
-                        past_timestamp: false,
-                        user_chat_relay: false,
-                        undocumented: Default::default(),
-                    })
-                    .await?;
+        Ok(bot)
+    }
 
-                let bot = Bot {
-                    client,
-                    user_id: response.user.user_id,
-                };
+    async fn init_new(client: C, settings: BotSettings) -> Result<Self, C::Error> {
+        let avatar = if let Some(preview) = settings.avatar {
+            Some(preview.resolve().await)
+        } else {
+            None
+        };
 
-                bot.setup_auto_accept(settings.auto_accept, false).await?;
-
-                Ok(bot)
+        let mut bot_profile = match settings.profile_settings {
+            Some(BotProfileSettings::Preferences(preferences)) => {
+                let mut profile = Self::default_profile(settings.display_name.clone());
+                profile.preferences = Some(preferences);
+                profile
             }
-        }
+            Some(BotProfileSettings::FullProfile(profile)) => profile,
+            None => Self::default_profile(settings.display_name.clone()),
+        };
+        bot_profile.image = avatar;
+
+        let response = client
+            .new_user(NewUser {
+                profile: Some(bot_profile),
+                past_timestamp: false,
+                user_chat_relay: false,
+                undocumented: Default::default(),
+            })
+            .await?;
+
+        let bot = Bot {
+            client,
+            user_id: response.user.user_id,
+        };
+
+        bot.setup_auto_accept(settings.auto_accept, false).await?;
+        Ok(bot)
     }
 
     async fn setup_auto_accept(
@@ -210,9 +232,8 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Get full bot user info
-    pub async fn info(&self) -> Result<Arc<User>, C::Error> {
-        let response = self.client.show_active_user().await?;
-        Ok(Arc::new(response.user.clone()))
+    pub async fn info(&self) -> Result<Arc<ActiveUserResponse>, C::Error> {
+        self.client.show_active_user().await
     }
 
     /// Initiates the connection sequence.
@@ -243,7 +264,7 @@ impl<C: ClientApi> Bot<C> {
             .api_connect_plan(ApiConnectPlan {
                 user_id: self.user_id,
                 connection_link: Some(link.into()),
-                resolve_known: false,
+                resolve_known: true,
                 link_owner_sig: None,
             })
             .await
@@ -280,21 +301,19 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Create one-time-invitation link. Can be used for admin-access or for private connections
-    /// with other bots. The [PendingContactConnection::pcc_conn_id] can be matched with
+    /// with other bots. The [InvitationResponse::connection::pcc_conn_id] can be matched with
     /// [crate::types::Connection::conn_id] to recognize the user connected by this link when handling the
     /// [crate::events::ContactConnected] event(see [crate::events::ContactConnected::contact])
     pub async fn create_invitation_link(
         &self,
-    ) -> Result<(String, Arc<PendingContactConnection>), C::Error> {
+    ) -> Result<(String, Arc<InvitationResponse>), C::Error> {
         let response = self
             .client
             .api_add_contact(ApiAddContact::new(self.user_id))
             .await?;
 
         let link = extract_address(&response.conn_link_invitation);
-        let pcc = Arc::new(response.connection.clone());
-
-        Ok((link, pcc))
+        Ok((link, response))
     }
 
     pub async fn create_address(&self) -> Result<String, C::Error> {

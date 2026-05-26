@@ -27,6 +27,7 @@ use crate::{
     BadResponseError, ClientApi, ClientApiError, EventParser,
     bot::{BotProfileSettings, BotSettings},
     preview::ImagePreview,
+    util,
 };
 
 #[cfg(not(feature = "xftp"))]
@@ -104,17 +105,20 @@ impl EventParser for CoreResult<String> {
     type Error = ClientError;
 
     fn parse_kind(&self) -> Result<EventKind, Self::Error> {
-        #[derive(Deserialize)]
-        struct TypeField<'a> {
-            #[serde(rename = "type", borrow)]
-            typ: &'a str,
-        }
-
-        match parse_data::<TypeField<'_>>(self) {
+        match parse_data::<util::TypeField<'_>>(self) {
             Ok(f) => Ok(EventKind::from_type_str(f.typ)),
             Err(ClientError::BadResponse(BadResponseError::Undocumented(_))) => {
                 Ok(EventKind::Undocumented)
             }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn parse_user_id(&self) -> Result<Option<i64>, Self::Error> {
+        match parse_data::<util::UserField>(self) {
+            Ok(f) => Ok(Some(f.user.user_id)),
+            Err(ClientError::BadResponse(BadResponseError::Undocumented(_)))
+            | Err(ClientError::BadResponse(BadResponseError::InvalidJson(_))) => Ok(None),
             Err(e) => Err(e),
         }
     }
