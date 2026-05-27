@@ -35,17 +35,14 @@ async fn task<C: ClientApi>(client: C, mut requests: DelegateReceiver<C>) {
             );
         }
 
-        let mut last_bot = active_bot;
-
         // Process requests in batches and minimize bot switches
         for request in batcher.drain() {
-            if request.bot_id != last_bot {
+            if should_switch_bot(active_bot, request.bot_id) {
                 while executor.next().await.is_some() {}
 
                 if let Err(e) = try_switch_bot(&client, &mut active_bot, request.bot_id).await {
                     let _ = request.responder.send(Err(e));
                 } else {
-                    last_bot = active_bot;
                     executor.push_back(exec_request(&client, request));
                 }
             } else {
@@ -68,7 +65,7 @@ async fn try_switch_bot<C: ClientApi>(
     active_bot: &mut BotId,
     next_bot: BotId,
 ) -> Result<(), C::Error> {
-    if next_bot.is_anybot() || next_bot == *active_bot {
+    if should_switch_bot(*active_bot, next_bot) {
         return Ok(());
     }
 
@@ -81,6 +78,10 @@ async fn try_switch_bot<C: ClientApi>(
     }
 
     result.map(drop)
+}
+
+fn should_switch_bot(active_bot: BotId, next_bot: BotId) -> bool {
+    !(next_bot.is_anybot() || next_bot == active_bot)
 }
 
 struct RequestBatcher<C: ClientApi> {

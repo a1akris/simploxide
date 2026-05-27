@@ -127,7 +127,13 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
             return Ok(());
         };
 
-        self.remove(UserId(user.user_id)).await
+        let result = self.remove(UserId(user.user_id)).await;
+
+        if result.is_err() {
+            self.state.cache.insert(name.to_owned(), user);
+        }
+
+        result
     }
 
     pub async fn prepare_bot(
@@ -216,6 +222,10 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
     }
 
     fn change_active_user(&mut self, new_active_username: String) {
+        if new_active_username == self.state.active_name {
+            return;
+        }
+
         if let Some(user) = self.state.cache.get_mut(&self.state.active_name) {
             user.active_user = false;
         }
@@ -244,10 +254,12 @@ where
         let mut chan = self.state.bots.get_mut(&user_id.into()).unwrap();
 
         if chan.is_ghost() {
-            panic!("The user_id was not initialized as bot");
+            panic!("The {user_id:?} was not initialized as bot");
         }
 
-        let receiver = chan.take_receiver().expect("The bot was already taken");
+        let receiver = chan
+            .take_receiver()
+            .expect("The {user_id:?} was already taken");
 
         (
             Bot::new(self.state.client.delegate(user_id.into()), user_id),
@@ -271,14 +283,6 @@ where
             })
     }
 
-    pub fn put_bot(&self, bot: Bot<DelegateClient<C>>, events: EventStream<P>) {
-        let user_id = bot.user_id();
-
-        if let Some(mut chan) = self.state.bots.get_mut(&user_id.into()) {
-            chan.put_receiver(events.into_receiver());
-        }
-    }
-
     pub async fn create_bot(
         &self,
         settings: BotSettings,
@@ -298,7 +302,11 @@ where
     pub async fn delete(&self, user_id: UserId) -> Result<(), C::Error> {
         self.state
             .client
-            .api_delete_user(ApiDeleteUser::new(user_id.0))
+            .api_delete_user(ApiDeleteUser {
+                user_id: user_id.0,
+                del_smp_queues: true,
+                view_pwd: None,
+            })
             .await?;
 
         self.state.bots.remove(&user_id.into());
@@ -314,6 +322,11 @@ where
             return Err(CreateError::FarmUser);
         }
 
+        // TODO: In multithreaded envs the race condition between self.state.bots.insert and
+        // self.state.bots.demux() events may cause a few user events to be routed to unhandle
+        // events instead of the event queue.
+        //
+        // To prevent it the bot map must use display names instead of IDs as keys
         let mut resp = self
             .state
             .client
