@@ -3,7 +3,7 @@
 //! it there)
 //!
 //! To compile this example pass the --features flag like this:
-//! `cargo run --example squaring_bot --features bon,cli`
+//! `cargo run --example squaring_bot`
 //!
 //!
 //! ----

@@ -36,6 +36,16 @@ pub type Bot = crate::bot::Bot<Client>;
 #[cfg(feature = "xftp")]
 pub type Bot = crate::bot::Bot<crate::xftp::XftpClient<Client>>;
 
+//#[cfg(all(feature = "farm", feature = "xftp"))]
+//pub type FarmBot =
+//    crate::bot::Bot<crate::bot::farm::DelegateClient<crate::xftp::XftpClient<Client>>>;
+
+//#[cfg(all(feature = "farm", not(feature = "xftp")))]
+//pub type FarmBot = crate::bot::Bot<crate::bot::farm::DelegateClient<Client>>;
+
+#[cfg(feature = "farm")]
+pub type FarmBot = crate::bot::Bot<crate::bot::farm::DelegateClient<Client>>;
+
 pub type EventStream = crate::EventStream<CoreResult<CoreEvent>>;
 pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
 
@@ -304,6 +314,7 @@ impl std::error::Error for ConnectError {
     }
 }
 
+#[derive(Clone)]
 pub struct BotBuilder {
     name: String,
     port: u16,
@@ -326,14 +337,16 @@ impl BotBuilder {
         Self {
             name: name.into(),
             port,
-            db_prefix: "bot".into(),
-            db_key: None,
             retry_delay: std::time::Duration::from_secs(1),
             retries: 5,
             auto_accept: None,
             profile: None,
             preferences: None,
             avatar: None,
+            #[cfg(feature = "cli")]
+            db_prefix: "bot".into(),
+            #[cfg(feature = "cli")]
+            db_key: None,
             #[cfg(feature = "cli")]
             extra_args: Vec::new(),
         }
@@ -464,6 +477,127 @@ impl BotBuilder {
 
         let (bot, events) = self.connect().await?;
         Ok((bot, events, cli))
+    }
+}
+
+#[cfg(feature = "farm")]
+#[derive(Clone)]
+pub struct BotFarmBuilder {
+    name: String,
+    port: u16,
+    retry_delay: std::time::Duration,
+    retries: usize,
+    #[cfg(feature = "cli")]
+    db_prefix: String,
+    #[cfg(feature = "cli")]
+    db_key: Option<String>,
+    #[cfg(feature = "cli")]
+    extra_args: Vec<std::ffi::OsString>,
+}
+
+#[cfg(feature = "farm")]
+impl BotFarmBuilder {
+    pub fn new(name: impl Into<String>, port: u16) -> Self {
+        Self {
+            name: name.into(),
+            port,
+            retry_delay: std::time::Duration::from_secs(1),
+            retries: 5,
+            #[cfg(feature = "cli")]
+            db_prefix: "bot".into(),
+            #[cfg(feature = "cli")]
+            db_key: None,
+            #[cfg(feature = "cli")]
+            extra_args: Vec::new(),
+        }
+    }
+
+    #[cfg(feature = "cli")]
+    /// Path prefix for the SimpleX database
+    ///
+    /// "{dir}/{prefix}" creates a {dir} with `{prefix}_agent.db` and `{prefix}_chat.db`;
+    /// "{prefix}" creates `{prefix}_agent.db` and `{prefix}_chat.db` at the current dir
+    pub fn db_prefix(mut self, prefix: impl Into<String>) -> Self {
+        self.db_prefix = prefix.into();
+        self
+    }
+
+    #[cfg(feature = "cli")]
+    /// Database encryption key.
+    pub fn db_key(mut self, key: impl Into<String>) -> Self {
+        self.db_key = Some(key.into());
+        self
+    }
+
+    /// Delay between connection retry attempt. Default: 1s
+    pub fn connect_retry_delay(mut self, delay: std::time::Duration) -> Self {
+        self.retry_delay = delay;
+        self
+    }
+
+    /// Number of connection retry attempts. Default: 5
+    pub fn retries(mut self, n: usize) -> Self {
+        self.retries = n;
+        self
+    }
+
+    /// Pass extra arguments to the `simplex-chat` process.
+    #[cfg(feature = "cli")]
+    pub fn cli_args<I, S>(mut self, args: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<std::ffi::OsString>,
+    {
+        self.extra_args.extend(args.into_iter().map(|s| s.into()));
+        self
+    }
+
+    /// Connect to an already-running `simplex-chat` instance.
+    pub async fn connect(
+        self,
+    ) -> Result<
+        crate::bot::BotFarm<crate::bot::farm::Init<Client, CoreResult<CoreEvent>>>,
+        BotInitError,
+    > {
+        let url = format!("ws://127.0.0.1:{}", self.port);
+
+        let (client, events) = retry_connect(url, self.retry_delay, self.retries)
+            .await
+            .map_err(BotInitError::Connect)?;
+
+        let farm = crate::bot::BotFarm::init(self.name, client, events).await?;
+        Ok(farm)
+    }
+
+    /// Spawn `simplex-chat`, then connect and initialise.
+    ///
+    /// Returns `(farm, cli)`. The caller is responsible for calling
+    /// [`cli::SimplexCli::kill`] after the farm finishes.
+    #[cfg(feature = "cli")]
+    pub async fn launch(
+        mut self,
+    ) -> Result<
+        (
+            crate::bot::BotFarm<crate::bot::farm::Init<Client, CoreResult<CoreEvent>>>,
+            cli::SimplexCli,
+        ),
+        BotInitError,
+    > {
+        let mut builder = cli::SimplexCli::builder(&self.name, self.port)
+            .db_prefix(std::mem::take(&mut self.db_prefix));
+
+        if let Some(ref mut key) = self.db_key {
+            builder = builder.db_key(std::mem::take(key));
+        }
+
+        let cli = builder
+            .args(std::mem::take(&mut self.extra_args))
+            .spawn()
+            .await
+            .map_err(BotInitError::CliSpawn)?;
+
+        let farm = self.connect().await?;
+        Ok((farm, cli))
     }
 }
 

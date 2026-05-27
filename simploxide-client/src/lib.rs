@@ -267,6 +267,21 @@ impl<P> EventStream<P> {
         self.set_all(false)
     }
 
+    /// After this call stream stops receiving new events. You still need to consume all buffered events for graceful cleanup.
+    ///
+    /// Use [Self::discard] if you want to drop all events gracefully
+    pub fn close(&mut self) {
+        self.receiver.close();
+    }
+
+    /// Discards the stream and executes a proper cleanup
+    pub async fn discard(mut self) {
+        self.close();
+        self.reject_all();
+
+        while self.receiver.recv().await.is_some() {}
+    }
+
     fn set_all(&mut self, new: bool) {
         for old in &mut self.filter {
             *old = new;

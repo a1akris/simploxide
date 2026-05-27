@@ -156,7 +156,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
         Ok(user_id)
     }
 
-    pub async fn run(self) -> (BotFarm<Running<C, P>>, EventStream<P>)
+    pub fn run(self) -> (BotFarm<Running<C, P>>, EventStream<P>)
     where
         C: 'static + Send,
         C::Error: Send,

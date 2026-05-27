@@ -151,6 +151,7 @@ fn parse_data<'de, 'r: 'de, D: 'de + serde::Deserialize<'de>>(
 }
 
 /// Builder for an FFI-backed [`Bot`].
+#[derive(Clone)]
 pub struct BotBuilder {
     display_name: String,
     db_opts: DbOpts,
@@ -264,6 +265,67 @@ impl BotBuilder {
 
         let bot = Bot::init(client, settings).await?;
         Ok((bot, events))
+    }
+}
+
+#[cfg(feature = "farm")]
+#[derive(Clone)]
+pub struct BotFarmBuilder {
+    display_name: String,
+    db_opts: DbOpts,
+    default_user: Option<DefaultUser>,
+    worker_config: WorkerConfig,
+}
+
+#[cfg(feature = "farm")]
+impl BotFarmBuilder {
+    pub fn new(name: impl Into<String>, db_opts: DbOpts) -> Self {
+        Self {
+            display_name: name.into(),
+            db_opts,
+            default_user: None,
+            worker_config: WorkerConfig::default(),
+        }
+    }
+
+    /// Override the default user created for empty databases.
+    ///
+    /// By default the default user name matches the bot name. This setting allows to create a user
+    /// different from an active bot
+    pub fn with_default_user(mut self, user: DefaultUser) -> Self {
+        self.default_user = Some(user);
+        self
+    }
+
+    /// Set max permissible event latency. See [`WorkerConfig::max_event_latency`] for details
+    pub fn max_event_latency(mut self, latency: std::time::Duration) -> Self {
+        self.worker_config.max_event_latency = Some(latency);
+        self
+    }
+
+    /// Set max concurrent SimpleX-Chat instances. See [`WorkerConfig::max_instances`] for details
+    pub fn max_instances(mut self, instances: usize) -> Self {
+        self.worker_config.max_instances = Some(instances);
+        self
+    }
+
+    /// Initialise the SimpleX FFI runtime and return a farm
+    pub async fn launch(
+        self,
+    ) -> Result<
+        crate::bot::BotFarm<crate::bot::farm::Init<Client, CoreResult<CoreEvent>>>,
+        BotInitError,
+    > {
+        let default_user = self
+            .default_user
+            .unwrap_or_else(|| DefaultUser::bot(&self.display_name));
+
+        let (client, events) = init_with_config(default_user, self.db_opts, self.worker_config)
+            .await
+            .map_err(BotInitError::Init)?;
+
+        let bot = crate::bot::BotFarm::init(self.display_name, client, events).await?;
+        Ok(bot)
     }
 }
 

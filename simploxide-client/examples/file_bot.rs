@@ -1,8 +1,8 @@
 //! The example expects that SimpleX CLI is running on port `5225`. Run CLI with:
-//! `simplex-chat -p 5225 --create-bot-display-name Default`
+//! `simplex-chat -p 5225 -d test_db/bot --create-bot-display-name Default`
 //!
 //! To compile this example pass the --features flag like this:
-//! `cargo run --example file_bot --features websocket`
+//! `cargo run --example file_bot --no-default-features --features websocket`
 //!
 //! ----
 //!

@@ -22,9 +22,6 @@ use simploxide_api_types::{
     },
 };
 
-#[cfg(feature = "farm")]
-pub mod farm;
-
 use std::sync::Arc;
 
 use crate::{
@@ -39,6 +36,12 @@ use crate::{
     preferences,
     preview::ImagePreview,
 };
+
+#[cfg(feature = "farm")]
+pub mod farm;
+
+#[cfg(feature = "farm")]
+pub use farm::BotFarm;
 
 /// A cheaply cloneable handle to initialized SimpleX bot.
 #[derive(Clone)]
@@ -378,17 +381,20 @@ impl<C: ClientApi> Bot<C> {
         Ok(())
     }
 
+    pub async fn profile(&self) -> Result<Profile, C::Error> {
+        let mut response = self.client.show_active_user().await?;
+        let response = Arc::get_mut(&mut response).unwrap();
+
+        Ok(extract_profile(&mut response.user.profile))
+    }
+
     /// Fetches the current profile and applies `updater` to it before saving.
     pub async fn update_profile<F>(&self, updater: F) -> Result<ApiUpdateProfileResponse, C::Error>
     where
         F: 'static + Send + FnOnce(&mut Profile),
     {
-        let mut response = self.client.show_active_user().await?;
-        let response = Arc::get_mut(&mut response).unwrap();
-
-        let mut profile = extract_profile(&mut response.user.profile);
+        let mut profile = self.profile().await?;
         updater(&mut profile);
-
         self.client.api_update_profile(self.user_id, profile).await
     }
 
