@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // transoding is disabled. With the multimedia feature on `simploxide` automatically
         // transcodes image previews into jpgs satisfying SimpleX-Chat preview requirements
         .with_avatar(
-            ImagePreview::from_file("./examples/multimedia_bot_avatar.jpg")
+            ImagePreview::from_file("./examples/img/multimedia_bot_avatar.jpg")
                 .with_transcoder(Transcoder::disabled()),
         )
         .with_preferences(Preferences {

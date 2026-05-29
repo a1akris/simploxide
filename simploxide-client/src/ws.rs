@@ -36,15 +36,8 @@ pub type Bot = crate::bot::Bot<Client>;
 #[cfg(feature = "xftp")]
 pub type Bot = crate::bot::Bot<crate::xftp::XftpClient<Client>>;
 
-//#[cfg(all(feature = "farm", feature = "xftp"))]
-//pub type FarmBot =
-//    crate::bot::Bot<crate::bot::farm::DelegateClient<crate::xftp::XftpClient<Client>>>;
-
-//#[cfg(all(feature = "farm", not(feature = "xftp")))]
-//pub type FarmBot = crate::bot::Bot<crate::bot::farm::DelegateClient<Client>>;
-
 #[cfg(feature = "farm")]
-pub type FarmBot = crate::bot::Bot<crate::bot::farm::DelegateClient<Client>>;
+pub type FarmBot = crate::bot::farm::FarmBot<Client>;
 
 pub type EventStream = crate::EventStream<CoreResult<CoreEvent>>;
 pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
@@ -431,11 +424,7 @@ impl BotBuilder {
             .map_err(BotInitError::Connect)?;
 
         #[cfg(feature = "xftp")]
-        let (client, events) = {
-            let mut events = events;
-            let client = events.hook_xftp(client);
-            (client, events)
-        };
+        let (client, events) = events.hook_xftp(client);
 
         let settings = BotSettings {
             display_name: self.name,

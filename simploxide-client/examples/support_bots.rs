@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .prepare_bot(
             BotSettings::new("Carl")
                 .auto_accept_with("Welcome to the ACME customer support")
-                .with_avatar(ImagePreview::from_file("examples/carl.jpg")),
+                .with_avatar(ImagePreview::from_file("examples/img/carl.jpg")),
         )
         .await?;
 
@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .prepare_bot(
             BotSettings::new("Maggie the Specialist")
                 .auto_accept()
-                .with_avatar(ImagePreview::from_file("examples/maggie.jpg")),
+                .with_avatar(ImagePreview::from_file("examples/img/maggie.jpg")),
         )
         .await?;
 
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .prepare_bot(
             BotSettings::new("Support manager")
                 .auto_accept()
-                .with_avatar(ImagePreview::from_file("examples/mngr.jpg")),
+                .with_avatar(ImagePreview::from_file("examples/img/mngr.jpg")),
         )
         .await?;
 
@@ -112,8 +112,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         next: Arc::new(Next::new(jr_addr, jr_profile)),
         cancellation: cancellation.clone(),
         greetings: String::from("Hey, what's up, bud?"),
-        problem_reply: String::from("Ah, that one. I know the exact right guy who can help you"),
-        redirect_reply: String::from("I bet this guy will have no problems tackling your issue"),
+        problem_reply: String::from("Ah, that one. I know the right guy who can help you"),
+        redirect_reply: String::from("I bet this guy will have no problems resolving your issue"),
     })));
 
     junior_task.await?;

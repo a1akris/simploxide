@@ -221,14 +221,14 @@ impl<P> EventStream<P> {
 
     #[cfg(feature = "xftp")]
     pub fn hook_xftp<C: 'static + Clone + Send + ClientApi>(
-        &mut self,
+        mut self,
         client: C,
-    ) -> xftp::XftpClient<C> {
+    ) -> (xftp::XftpClient<C>, Self) {
         let xftp_client = xftp::XftpClient::from(client);
         let hook = xftp_client.clone();
         self.add_hook(Box::new(hook));
 
-        xftp_client
+        (xftp_client, self)
     }
 
     pub fn set_filter<I: IntoIterator<Item = EventKind>>(&mut self, f: Filter<I>) -> &mut Self {

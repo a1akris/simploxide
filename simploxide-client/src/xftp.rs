@@ -79,6 +79,17 @@ impl XftpClient<crate::ffi::Client> {
     }
 }
 
+#[cfg(feature = "farm")]
+impl<C> XftpClient<C> {
+    pub(crate) fn new(client: C, xftp: Arc<XftpManager>) -> Self {
+        Self { client, xftp }
+    }
+
+    pub(crate) fn manager(&self) -> Arc<XftpManager> {
+        self.xftp.clone()
+    }
+}
+
 impl<C: ClientApi> ClientApi for XftpClient<C> {
     type ResponseShape<'de, T: 'de + Deserialize<'de>> = C::ResponseShape<'de, T>;
     type Error = C::Error;
@@ -299,7 +310,7 @@ where
 }
 
 #[derive(Default)]
-struct XftpManager {
+pub(crate) struct XftpManager {
     downloads: FxDashMap<i64, XftpDownloadResponder>,
 }
 

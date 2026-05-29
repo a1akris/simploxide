@@ -24,6 +24,13 @@ use demux::{BotMap, Channel};
 
 use super::Bot;
 
+#[cfg(feature = "xftp")]
+pub type FarmBot<C> = Bot<crate::xftp::XftpClient<DelegateClient<C>>>;
+
+#[cfg(not(feature = "xftp"))]
+pub type FarmBot<C> = Bot<DelegateClient<C>>;
+
+#[derive(Clone)]
 pub struct BotFarm<S> {
     state: S,
 }
@@ -169,15 +176,21 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
         P: 'static + Send,
     {
         let (delegate_client, rx) = DelegateClient::new(self.state.farm_id);
-        let bots = Arc::new(self.state.bots);
-
-        let unmuxed_events = demux::start(bots.clone(), self.state.events);
         mux::start(self.state.client, rx);
+
+        let bots = Arc::new(self.state.bots);
+        let (suspender, unmuxed_events) = demux::start(bots.clone(), self.state.events);
+
+        #[cfg(feature = "xftp")]
+        let (xftp_client, unmuxed_events) = unmuxed_events.hook_xftp(delegate_client.clone());
 
         let state = Running {
             farm_name: self.state.farm_name,
             client: delegate_client,
+            suspender,
             bots,
+            #[cfg(feature = "xftp")]
+            xftp: xftp_client.manager(),
         };
 
         (BotFarm { state }, unmuxed_events)
@@ -234,23 +247,22 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
     }
 }
 
-impl<C: ClientApi, P: EventParser> BotFarm<Running<C, P>>
+impl<C: 'static + ClientApi, P: EventParser> BotFarm<Running<C, P>>
 where
     C::Error: Send,
 {
-    pub fn ghost(&self, user_id: UserId) -> Option<Bot<DelegateClient<C>>> {
-        if self.state.bots.get(&user_id.into()).is_some() {
-            Some(Bot::new(
-                self.state.client.delegate(user_id.into()),
-                user_id,
-            ))
+    pub fn ghost(&self, user_id: UserId) -> Option<FarmBot<C>> {
+        let chan = self.state.bots.get(&user_id.into())?;
+
+        if let Channel::Ghost = chan.value() {
+            Some(self.make_ghost(user_id))
         } else {
             None
         }
     }
 
     /// Panics if user_id doesn't exist, the user was never initialized as a bot, or the bot was already taken
-    pub fn take_bot(&self, user_id: UserId) -> (Bot<DelegateClient<C>>, EventStream<P>) {
+    pub fn take_bot(&self, user_id: UserId) -> (FarmBot<C>, EventStream<P>) {
         let mut chan = self.state.bots.get_mut(&user_id.into()).unwrap();
 
         if chan.is_ghost() {
@@ -261,42 +273,32 @@ where
             .take_receiver()
             .expect("The {user_id:?} was already taken");
 
-        (
-            Bot::new(self.state.client.delegate(user_id.into()), user_id),
-            EventStream::from(receiver),
-        )
+        self.make_bot(user_id, receiver)
     }
 
-    pub fn take_bot_checked(
-        &self,
-        user_id: UserId,
-    ) -> Option<(Bot<DelegateClient<C>>, EventStream<P>)> {
+    pub fn take_bot_checked(&self, user_id: UserId) -> Option<(FarmBot<C>, EventStream<P>)> {
         self.state
             .bots
             .get_mut(&user_id.into())
             .and_then(|mut chan| chan.take_receiver())
-            .map(|receiver| {
-                (
-                    Bot::new(self.state.client.delegate(user_id.into()), user_id),
-                    EventStream::from(receiver),
-                )
-            })
+            .map(|receiver| self.make_bot(user_id, receiver))
     }
 
     pub async fn create_bot(
         &self,
         settings: BotSettings,
-    ) -> Result<(Bot<DelegateClient<C>>, EventStream<P>), CreateError<C::Error>> {
-        let bot = self.create_inner(settings, true).await?;
-        let (bot, stream) = self.take_bot(bot.user_id());
+    ) -> Result<(FarmBot<C>, EventStream<P>), CreateError<C::Error>> {
+        let user_id = self.create_inner(settings, true).await?;
+        let (bot, stream) = self.take_bot(user_id);
         Ok((bot, stream))
     }
 
     pub async fn create_ghost(
         &self,
         settings: BotSettings,
-    ) -> Result<Bot<DelegateClient<C>>, CreateError<C::Error>> {
-        self.create_inner(settings, false).await
+    ) -> Result<FarmBot<C>, CreateError<C::Error>> {
+        let user_id = self.create_inner(settings, false).await?;
+        Ok(self.ghost(user_id).unwrap())
     }
 
     pub async fn delete(&self, user_id: UserId) -> Result<(), C::Error> {
@@ -317,16 +319,14 @@ where
         &self,
         settings: BotSettings,
         is_bot: bool,
-    ) -> Result<Bot<DelegateClient<C>>, CreateError<C::Error>> {
+    ) -> Result<UserId, CreateError<C::Error>> {
         if settings.display_name == self.state.farm_name {
             return Err(CreateError::FarmUser);
         }
 
-        // TODO: In multithreaded envs the race condition between self.state.bots.insert and
-        // self.state.bots.demux() events may cause a few user events to be routed to unhandle
-        // events instead of the event queue.
-        //
-        // To prevent it the bot map must use display names instead of IDs as keys
+        let (_guard, suspension) = oneshot::channel();
+        let _ = self.state.suspender.send(suspension);
+
         let mut resp = self
             .state
             .client
@@ -349,10 +349,10 @@ where
         }
 
         let resp = Arc::get_mut(&mut resp).unwrap();
-        let client = self.state.client.delegate(BotId(resp.user.user_id));
+        let client = self.state.client.delegate_to(BotId(resp.user.user_id));
 
         match Bot::init_existing(client, &mut resp.user, settings).await {
-            Ok(bot) => Ok(bot),
+            Ok(bot) => Ok(bot.user_id()),
             Err(e) => {
                 self.state
                     .bots
@@ -361,6 +361,29 @@ where
                 Err(e.into())
             }
         }
+    }
+
+    fn make_bot(
+        &self,
+        user_id: UserId,
+        receiver: UnboundedReceiver<P>,
+    ) -> (FarmBot<C>, EventStream<P>) {
+        let bot_client = self.state.client.delegate_to(user_id);
+        let stream = EventStream::from(receiver);
+
+        #[cfg(feature = "xftp")]
+        let (bot_client, stream) = stream.hook_xftp(bot_client);
+
+        (Bot::new(bot_client, user_id), stream)
+    }
+
+    fn make_ghost(&self, user_id: UserId) -> FarmBot<C> {
+        let bot_client = self.state.client.delegate_to(user_id);
+
+        #[cfg(feature = "xftp")]
+        let bot_client = crate::xftp::XftpClient::new(bot_client, self.state.xftp.clone());
+
+        Bot::new(bot_client, user_id)
     }
 }
 
@@ -374,16 +397,28 @@ pub struct Init<C, P> {
     cache: HashMap<String, User>,
 }
 
+#[derive(Clone)]
 pub struct Running<C: ClientApi, P> {
     farm_name: String,
     client: DelegateClient<C>,
+    suspender: demux::Suspender,
     bots: Arc<BotMap<P>>,
+    #[cfg(feature = "xftp")]
+    xftp: Arc<crate::xftp::XftpManager>,
 }
 
-#[derive(Clone)]
 pub struct DelegateClient<C: ClientApi> {
     bot_id: BotId,
     sender: DelegateSender<C>,
+}
+
+impl<C: ClientApi> Clone for DelegateClient<C> {
+    fn clone(&self) -> Self {
+        Self {
+            bot_id: self.bot_id,
+            sender: self.sender.clone(),
+        }
+    }
 }
 
 impl<C: ClientApi> DelegateClient<C> {
@@ -392,9 +427,9 @@ impl<C: ClientApi> DelegateClient<C> {
         (Self { bot_id, sender }, receiver)
     }
 
-    fn delegate(&self, bot_id: BotId) -> Self {
+    fn delegate_to(&self, bot_id: impl Into<BotId>) -> Self {
         Self {
-            bot_id,
+            bot_id: bot_id.into(),
             sender: self.sender.clone(),
         }
     }
@@ -426,12 +461,12 @@ where
     }
 
     async fn receive_file(&self, cmd: ReceiveFile) -> Result<ReceiveFileResponse, Self::Error> {
-        let client = self.delegate(BotId::anybot());
+        let client = self.delegate_to(BotId::anybot());
         client.send(cmd).await
     }
 
     async fn cancel_file(&self, file_id: i64) -> Result<CancelFileResponse, Self::Error> {
-        let client = self.delegate(BotId::anybot());
+        let client = self.delegate_to(BotId::anybot());
         client.send(CancelFile { file_id }).await
     }
 }
@@ -487,7 +522,7 @@ type DelegateReceiver<C> = UnboundedReceiver<DelegateRequest<C>>;
 struct BotId(i64);
 
 impl BotId {
-    // Used as an optimization for commands that can execute from any active bot account
+    /// Used as an optimization for commands that can execute from any active bot account
     fn anybot() -> Self {
         Self(0)
     }

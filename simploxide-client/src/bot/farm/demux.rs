@@ -1,37 +1,61 @@
 //! Events demultiplexer
 
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use tokio::sync::{
+    mpsc::{self, UnboundedReceiver, UnboundedSender},
+    oneshot,
+};
 
 use std::sync::Arc;
 
 use super::BotId;
 use crate::{EventParser, EventStream};
 
+pub type Suspender = UnboundedSender<oneshot::Receiver<()>>;
+pub type Blocker = UnboundedReceiver<oneshot::Receiver<()>>;
 pub type FxDashMap<K, V> = dashmap::DashMap<K, V, rustc_hash::FxBuildHasher>;
 pub type BotMap<P> = FxDashMap<BotId, Channel<P>>;
 
 pub fn start<P: 'static + Send + EventParser>(
     map: Arc<BotMap<P>>,
     global_stream: EventStream<P>,
-) -> EventStream<P> {
+) -> (Suspender, EventStream<P>) {
     let (sender, receiver) = mpsc::unbounded_channel();
-    tokio::spawn(Box::pin(task(map, sender, global_stream)));
-    EventStream::from(receiver)
+    let (suspender, blocker): (Suspender, Blocker) = mpsc::unbounded_channel();
+
+    tokio::spawn(Box::pin(task(map, blocker, sender, global_stream)));
+    (suspender, EventStream::from(receiver))
 }
 
 async fn task<P: 'static + Send + EventParser>(
     map: Arc<BotMap<P>>,
+    mut blocker: Blocker,
     fallback_sender: UnboundedSender<P>,
     global_stream: EventStream<P>,
 ) {
     // TODO: investigate if there are use-cases for global hooks
     let mut receiver = global_stream.into_receiver();
 
-    while let Some(ev) = receiver.recv().await {
-        if let Err(ev) = try_demux(&map, ev) {
-            let _ = fallback_sender.send(ev);
+    loop {
+        tokio::select! {
+            biased;
+
+            block = blocker.recv() => {
+                if let Some(suspension) = block {
+                    let _ = suspension.await;
+                }
+            }
+
+            ev = receiver.recv() => match ev {
+                Some(ev) => if let Err(ev) = try_demux(&map, ev) {
+                    let _ = fallback_sender.send(ev);
+                }
+                None => break,
+            }
         }
     }
+
+    blocker.close();
+    while blocker.recv().await.is_some() {}
 }
 
 fn try_demux<P: 'static + Send + EventParser>(map: &Arc<BotMap<P>>, ev: P) -> Result<(), P> {
@@ -66,12 +90,6 @@ impl<P> Channel<P> {
         match self {
             Self::Ghost => None,
             Self::Bot(pipe) => pipe.take_receiver(),
-        }
-    }
-
-    pub fn put_receiver(&mut self, receiver: UnboundedReceiver<P>) {
-        if let Self::Bot(pipe) = self {
-            pipe.receiver = Some(receiver);
         }
     }
 

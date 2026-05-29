@@ -1,8 +1,8 @@
 //! Commands multiplexer
 //!
-//! The multiplexing is required because most commands require user switch to be executed
-//! properly. Multiplexing ensures that the user remains active for the whole duration of its commands
-//! execution
+//! The multiplexing is required because most commands need to activate their user to execute
+//! correctly. Multiplexing ensures that the user remains active for the whole duration of its
+//! commands execution
 
 use futures::{StreamExt as _, stream::FuturesOrdered};
 use simploxide_api_types::{client_api::ClientApi, commands::ApiSetActiveUser};
@@ -65,10 +65,6 @@ async fn try_switch_bot<C: ClientApi>(
     active_bot: &mut BotId,
     next_bot: BotId,
 ) -> Result<(), C::Error> {
-    if should_switch_bot(*active_bot, next_bot) {
-        return Ok(());
-    }
-
     let result = client
         .api_set_active_user(ApiSetActiveUser::new(next_bot.0))
         .await;
