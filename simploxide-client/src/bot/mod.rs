@@ -61,6 +61,7 @@ impl<C> Bot<C> {
 }
 
 impl<C: ClientApi> Bot<C> {
+    #[cfg(feature = "farm")]
     fn new(client: C, user_id: UserId) -> Self {
         Self {
             client,
@@ -990,6 +991,10 @@ impl<C: ClientApi> Bot<C> {
         self.client
             .api_get_chats(ApiGetChats::new(self.user_id, pagination, query))
             .await
+    }
+
+    pub async fn default_relays(&self) -> Result<Vec<RelayId>, C::Error> {
+        self.client.default_relays().await
     }
 }
 

@@ -6,7 +6,10 @@ pub use crate::{
     client_api::*,
     commands::*,
     events::*,
-    ext::{ClientApiExt as _, DeleteMode, FileSourceExt as _, FilterChatItems as _, Reaction},
+    ext::{
+        ClientApiExt as _, DeleteMode, FileSourceExt as _, FilterChatItems as _, GroupLinkExt as _,
+        Reaction,
+    },
     id::*,
     messages::*,
     preferences,

@@ -536,4 +536,57 @@ pub mod preferences {
         allow: FeatureAllowed::No,
         undocumented: serde_json::Value::Null,
     });
+
+    pub mod group {
+        use simploxide_api_types::{GroupFeatureEnabled, GroupPreference};
+
+        pub mod timed_messages {
+            use crate::preferences::timed_messages::ttl_to_secs;
+            use simploxide_api_types::{GroupFeatureEnabled, TimedMessagesGroupPreference};
+
+            pub fn yes(ttl: std::time::Duration) -> Option<TimedMessagesGroupPreference> {
+                Some(TimedMessagesGroupPreference {
+                    enable: GroupFeatureEnabled::On,
+                    ttl: Some(ttl_to_secs(ttl)),
+                    undocumented: serde_json::Value::Null,
+                })
+            }
+
+            pub const NO: Option<TimedMessagesGroupPreference> =
+                Some(TimedMessagesGroupPreference {
+                    enable: GroupFeatureEnabled::Off,
+                    ttl: None,
+                    undocumented: serde_json::Value::Null,
+                });
+        }
+
+        pub const YES: Option<GroupPreference> = Some(GroupPreference {
+            enable: GroupFeatureEnabled::On,
+            undocumented: serde_json::Value::Null,
+        });
+
+        pub const NO: Option<GroupPreference> = Some(GroupPreference {
+            enable: GroupFeatureEnabled::Off,
+            undocumented: serde_json::Value::Null,
+        });
+
+        pub mod role {
+            use simploxide_api_types::{GroupFeatureEnabled, GroupMemberRole, RoleGroupPreference};
+
+            pub const fn yes(role: GroupMemberRole) -> Option<RoleGroupPreference> {
+                Some(RoleGroupPreference {
+                    enable: GroupFeatureEnabled::On,
+                    role: Some(role),
+                    undocumented: serde_json::Value::Null,
+                })
+            }
+
+            /// **WARN:** This const was not tested and may be invalid
+            pub const NO: Option<RoleGroupPreference> = Some(RoleGroupPreference {
+                enable: GroupFeatureEnabled::Off,
+                role: None,
+                undocumented: serde_json::Value::Null,
+            });
+        }
+    }
 }

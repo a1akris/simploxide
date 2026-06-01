@@ -2,8 +2,8 @@ use serde::Deserialize;
 use simploxide_api_types::{
     NewUser, User,
     client_api::ClientApi,
-    commands::{ApiDeleteUser, ApiSetActiveUser, CancelFile, ReceiveFile},
-    responses::{CancelFileResponse, ReceiveFileResponse},
+    commands::{ApiDeleteUser, ApiSetActiveUser, CancelFile, ListUsers, ReceiveFile},
+    responses::{CancelFileResponse, ListUsersResponse, ReceiveFileResponse, UsersListResponse},
 };
 use tokio::sync::{
     mpsc::{self, UnboundedReceiver, UnboundedSender},
@@ -271,7 +271,7 @@ where
 
         let receiver = chan
             .take_receiver()
-            .expect("The {user_id:?} was already taken");
+            .unwrap_or_else(|| panic!("The {user_id:?} was already taken"));
 
         self.make_bot(user_id, receiver)
     }
@@ -293,12 +293,57 @@ where
         Ok((bot, stream))
     }
 
+    pub async fn get_or_create_bot(
+        &self,
+        settings: BotSettings,
+    ) -> Result<(FarmBot<C>, EventStream<P>), CreateError<C::Error>> {
+        let resp = self.state.client.list_users().await?;
+
+        match resp.users.iter().find_map(|info| {
+            (info.user.profile.display_name == settings.display_name)
+                .then_some(BotId(info.user.user_id))
+        }) {
+            Some(user_id) => match self.state.bots.get_mut(&user_id) {
+                Some(mut entry) => match entry.value_mut() {
+                    Channel::Bot(pipe) => {
+                        let receiver = pipe.take_receiver().ok_or(CreateError::BotAlreadyTaken)?;
+                        Ok(self.make_bot(user_id.into(), receiver))
+                    }
+                    Channel::Ghost => Err(CreateError::BotIsGhost),
+                },
+                None => Err(CreateError::Desync),
+            },
+            None => self.create_bot(settings).await,
+        }
+    }
+
     pub async fn create_ghost(
         &self,
         settings: BotSettings,
     ) -> Result<FarmBot<C>, CreateError<C::Error>> {
         let user_id = self.create_inner(settings, false).await?;
         Ok(self.ghost(user_id).unwrap())
+    }
+
+    pub async fn get_or_create_ghost(
+        &self,
+        settings: BotSettings,
+    ) -> Result<FarmBot<C>, CreateError<C::Error>> {
+        let resp = self.state.client.list_users().await?;
+
+        match resp.users.iter().find_map(|info| {
+            (info.user.profile.display_name == settings.display_name)
+                .then_some(BotId(info.user.user_id))
+        }) {
+            Some(user_id) => match self.state.bots.get(&user_id) {
+                Some(entry) => match entry.value() {
+                    Channel::Bot(_) => Err(CreateError::GhostIsBot),
+                    Channel::Ghost => Ok(self.make_ghost(user_id.into())),
+                },
+                None => Err(CreateError::Desync),
+            },
+            None => self.create_ghost(settings).await,
+        }
     }
 
     pub async fn delete(&self, user_id: UserId) -> Result<(), C::Error> {
@@ -460,6 +505,12 @@ where
             .expect("Delegate client cannot outlive background task")
     }
 
+    async fn list_users(&self) -> Result<Arc<UsersListResponse>, Self::Error> {
+        let client = self.delegate_to(BotId::anybot());
+        let response: ListUsersResponse = client.send(ListUsers {}).await?;
+        Ok(response.into_inner())
+    }
+
     async fn receive_file(&self, cmd: ReceiveFile) -> Result<ReceiveFileResponse, Self::Error> {
         let client = self.delegate_to(BotId::anybot());
         client.send(cmd).await
@@ -473,7 +524,16 @@ where
 
 #[derive(Debug)]
 pub enum CreateError<E> {
+    /// Farm user cannot be interacted with directly
     FarmUser,
+    /// Bot cannot be created because ghost with same name already exists
+    BotIsGhost,
+    /// Ghost cannot be craeted because bot with same name already exists
+    GhostIsBot,
+    /// The bot already exists and was already taken with the `take_bot`
+    BotAlreadyTaken,
+    /// The in memory state is not synced with the DB, retry later
+    Desync,
     Api(E),
 }
 
@@ -493,6 +553,26 @@ where
                 f,
                 "Attempt to create a farm user. Farm user is special and cannot be interacted with directly"
             ),
+            Self::BotIsGhost => write!(
+                f,
+                "Cannot create a bot because the ghost user with the same name already exists"
+            ),
+            Self::GhostIsBot => write!(
+                f,
+                "Cannot create a ghost because the bot user with the same name already exists"
+            ),
+            Self::BotAlreadyTaken => {
+                write!(
+                    f,
+                    "The bot already exists and has been taken from the farm. Cannot recreate operational bots"
+                )
+            }
+            Self::Desync => {
+                write!(
+                    f,
+                    "The DB state was not in sync with the memory state, try again"
+                )
+            }
             Self::Api(e) => write!(f, "{e:#}"),
         }
     }

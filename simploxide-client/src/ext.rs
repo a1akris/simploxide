@@ -6,7 +6,8 @@ use simploxide_api_types::{
     GroupMember, GroupMemberRole, GroupProfile, JsonObject, MsgContent, MsgReaction, NewUser,
     UpdatedMessage, UserInfo,
     client_api::{
-        AllowUndocumentedResponses as _, ClientApi, ClientApiError as _, UndocumentedResponse,
+        AllowUndocumentedResponses as _, BadResponseError, ClientApi, ClientApiError as _,
+        ExtractResponse as _, UndocumentedResponse,
     },
     commands::{
         ApiBlockMembersForAll, ApiChatItemReaction, ApiListGroups, ApiRemoveMembers,
@@ -31,6 +32,7 @@ use crate::{
         ChatId, ContactId, ContactRequestId, FileId, GroupId, MemberId, MessageId, RelayId, UserId,
     },
     messages::{MessageBuilder, MessageLike, MulticastBuilder},
+    util,
 };
 
 pub type InitiateConnectionResponse<C> =
@@ -76,6 +78,8 @@ pub type GetGroupRelaysResponse<C> = Result<Arc<GroupRelaysResponse>, <C as Clie
 pub type AddGroupRelaysResponse<C> = Result<ApiAddGroupRelaysResponse, <C as ClientApi>::Error>;
 pub type AllowRelayGroupsResponse<C> =
     Result<Arc<RelayGroupAllowedResponse>, <C as ClientApi>::Error>;
+
+pub type DefaultRelaysResponse<C> = Result<Vec<RelayId>, <C as ClientApi>::Error>;
 
 pub trait ClientApiExt: ClientApi {
     fn users(&self) -> impl Future<Output = UsersResponse<Self>>;
@@ -360,6 +364,8 @@ pub trait ClientApiExt: ClientApi {
         &self,
         group_id: GID,
     ) -> impl Future<Output = AllowRelayGroupsResponse<Self>>;
+
+    fn default_relays(&self) -> impl Future<Output = DefaultRelaysResponse<Self>>;
 }
 
 impl<C> ClientApiExt for C
@@ -746,6 +752,22 @@ where
     ) -> impl Future<Output = AllowRelayGroupsResponse<Self>> {
         self.api_allow_relay_group(group_id.into().0)
     }
+
+    async fn default_relays(&self) -> DefaultRelaysResponse<Self> {
+        let raw = self.send_raw("/relays".to_owned()).await?;
+        let response: Self::ResponseShape<'_, util::RelaysResp> =
+            serde_json::from_str(&raw).map_err(BadResponseError::InvalidJson)?;
+
+        let response = response.extract_response()?;
+        let ids = response
+            .user_servers
+            .into_iter()
+            .flat_map(|g| g.chat_relays)
+            .filter_map(|r| r.enabled.then_some(RelayId(r.chat_relay_id)))
+            .collect();
+
+        Ok(ids)
+    }
 }
 
 pub trait FilterChatItems {
@@ -875,5 +897,19 @@ impl FileSourceExt for CIFile {
 impl FileSourceExt for simploxide_api_types::events::RcvFileComplete {
     fn file_source(&self) -> Option<CryptoFile> {
         self.chat_item.chat_item.file.as_ref()?.file_source.clone()
+    }
+}
+
+/// Convenience accessor for group links
+pub trait GroupLinkExt {
+    fn link(&self) -> String;
+}
+
+impl GroupLinkExt for simploxide_api_types::GroupLink {
+    fn link(&self) -> String {
+        self.conn_link_contact
+            .conn_short_link
+            .clone()
+            .unwrap_or_else(|| self.conn_link_contact.conn_full_link.clone())
     }
 }

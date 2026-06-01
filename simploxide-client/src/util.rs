@@ -28,3 +28,26 @@ pub struct UserIdField {
     #[serde(rename = "userId", deserialize_with = "deserialize_number_from_string")]
     pub user_id: i64,
 }
+
+#[derive(Deserialize)]
+pub struct RelaysResp {
+    #[serde(rename = "userServers")]
+    pub user_servers: Vec<UserServerGroup>,
+}
+
+#[derive(Deserialize)]
+pub struct UserServerGroup {
+    #[serde(rename = "chatRelays", default)]
+    pub chat_relays: Vec<ChatRelay>,
+}
+
+#[derive(Deserialize)]
+pub struct ChatRelay {
+    #[serde(
+        rename = "chatRelayId",
+        deserialize_with = "deserialize_number_from_string"
+    )]
+    pub chat_relay_id: i64,
+    #[serde(default)]
+    pub enabled: bool,
+}
