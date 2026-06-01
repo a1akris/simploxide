@@ -703,11 +703,27 @@ impl<C: ClientApi> Bot<C> {
     /// Create a new group. The bot's user becomes the owner.
     pub async fn create_group(
         &self,
-        profile: GroupProfile,
+        mut profile: GroupProfile,
     ) -> Result<Arc<GroupCreatedResponse>, C::Error> {
-        self.client
-            .api_new_group(ApiNewGroup::new(self.user_id, profile))
+        match self
+            .client
+            .api_new_group(ApiNewGroup::new(self.user_id, profile.clone()))
             .await
+        {
+            Ok(resp) => Ok(resp),
+            Err(e) => match e.bad_response().and_then(|e| {
+                e.chat_error()
+                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
+            }) {
+                Some(err) => {
+                    profile.display_name = err.valid_name.clone();
+                    self.client
+                        .api_new_group(ApiNewGroup::new(self.user_id, profile))
+                        .await
+                }
+                None => Err(e),
+            },
+        }
     }
 
     /// Create a new public group with relay members. The bot's user becomes the owner.
@@ -715,15 +731,33 @@ impl<C: ClientApi> Bot<C> {
     pub async fn create_public_group<I: IntoIterator<Item = RelayId>>(
         &self,
         relay_ids: I,
-        profile: GroupProfile,
+        mut profile: GroupProfile,
     ) -> Result<ApiNewPublicGroupResponse, C::Error> {
-        self.client
+        let relays: Vec<_> = relay_ids.into_iter().map(|id| id.0).collect();
+
+        match self
+            .client
             .api_new_public_group(ApiNewPublicGroup::new(
                 self.user_id,
-                relay_ids.into_iter().map(|id| id.0).collect(),
-                profile,
+                relays.clone(),
+                profile.clone(),
             ))
             .await
+        {
+            Ok(resp) => Ok(resp),
+            Err(e) => match e.bad_response().and_then(|e| {
+                e.chat_error()
+                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
+            }) {
+                Some(err) => {
+                    profile.display_name = err.valid_name.clone();
+                    self.client
+                        .api_new_public_group(ApiNewPublicGroup::new(self.user_id, relays, profile))
+                        .await
+                }
+                None => Err(e),
+            },
+        }
     }
 
     /// Enable or disable automatically accepting contacts from group members.
