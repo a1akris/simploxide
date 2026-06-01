@@ -488,6 +488,21 @@ pub trait Hook: 'static + Send {
 pub mod preferences {
     use simploxide_api_types::{FeatureAllowed, SimplePreference};
 
+    pub const ALWAYS: Option<SimplePreference> = Some(SimplePreference {
+        allow: FeatureAllowed::Always,
+        undocumented: serde_json::Value::Null,
+    });
+
+    pub const YES: Option<SimplePreference> = Some(SimplePreference {
+        allow: FeatureAllowed::Yes,
+        undocumented: serde_json::Value::Null,
+    });
+
+    pub const NO: Option<SimplePreference> = Some(SimplePreference {
+        allow: FeatureAllowed::No,
+        undocumented: serde_json::Value::Null,
+    });
+
     pub mod timed_messages {
         use super::*;
         use simploxide_api_types::TimedMessagesPreference;
@@ -522,23 +537,18 @@ pub mod preferences {
         });
     }
 
-    pub const ALWAYS: Option<SimplePreference> = Some(SimplePreference {
-        allow: FeatureAllowed::Always,
-        undocumented: serde_json::Value::Null,
-    });
-
-    pub const YES: Option<SimplePreference> = Some(SimplePreference {
-        allow: FeatureAllowed::Yes,
-        undocumented: serde_json::Value::Null,
-    });
-
-    pub const NO: Option<SimplePreference> = Some(SimplePreference {
-        allow: FeatureAllowed::No,
-        undocumented: serde_json::Value::Null,
-    });
-
     pub mod group {
         use simploxide_api_types::{GroupFeatureEnabled, GroupPreference};
+
+        pub const YES: Option<GroupPreference> = Some(GroupPreference {
+            enable: GroupFeatureEnabled::On,
+            undocumented: serde_json::Value::Null,
+        });
+
+        pub const NO: Option<GroupPreference> = Some(GroupPreference {
+            enable: GroupFeatureEnabled::Off,
+            undocumented: serde_json::Value::Null,
+        });
 
         pub mod timed_messages {
             use crate::preferences::timed_messages::ttl_to_secs;
@@ -560,16 +570,6 @@ pub mod preferences {
                 });
         }
 
-        pub const YES: Option<GroupPreference> = Some(GroupPreference {
-            enable: GroupFeatureEnabled::On,
-            undocumented: serde_json::Value::Null,
-        });
-
-        pub const NO: Option<GroupPreference> = Some(GroupPreference {
-            enable: GroupFeatureEnabled::Off,
-            undocumented: serde_json::Value::Null,
-        });
-
         pub mod role {
             use simploxide_api_types::{GroupFeatureEnabled, GroupMemberRole, RoleGroupPreference};
 
@@ -585,6 +585,20 @@ pub mod preferences {
             pub const NO: Option<RoleGroupPreference> = Some(RoleGroupPreference {
                 enable: GroupFeatureEnabled::Off,
                 role: None,
+                undocumented: serde_json::Value::Null,
+            });
+        }
+
+        pub mod support {
+            use simploxide_api_types::{GroupFeatureEnabled, SupportGroupPreference};
+
+            pub const YES: Option<SupportGroupPreference> = Some(SupportGroupPreference {
+                enable: GroupFeatureEnabled::On,
+                undocumented: serde_json::Value::Null,
+            });
+
+            pub const NO: Option<SupportGroupPreference> = Some(SupportGroupPreference {
+                enable: GroupFeatureEnabled::Off,
                 undocumented: serde_json::Value::Null,
             });
         }
