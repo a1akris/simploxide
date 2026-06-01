@@ -913,3 +913,12 @@ impl GroupLinkExt for simploxide_api_types::GroupLink {
             .unwrap_or_else(|| self.conn_link_contact.conn_full_link.clone())
     }
 }
+
+impl GroupLinkExt for simploxide_api_types::PreparedGroup {
+    fn link(&self) -> String {
+        self.conn_link_to_connect
+            .conn_short_link
+            .clone()
+            .unwrap_or_else(|| self.conn_link_to_connect.conn_full_link.clone())
+    }
+}

@@ -40,7 +40,7 @@ impl Default for ImagePreview {
         Self {
             source: PreviewSource::Default,
             #[cfg(feature = "multimedia")]
-            transcoder: Transcoder::default(),
+            transcoder: Transcoder::thumbnail(),
         }
     }
 }
@@ -68,7 +68,7 @@ impl ImagePreview {
         Self {
             source: PreviewSource::Bytes(bytes.into()),
             #[cfg(feature = "multimedia")]
-            transcoder: Transcoder::default(),
+            transcoder: Transcoder::thumbnail(),
         }
     }
 
@@ -77,7 +77,7 @@ impl ImagePreview {
         Self {
             source: PreviewSource::DataUri(uri.into()),
             #[cfg(feature = "multimedia")]
-            transcoder: Transcoder::default(),
+            transcoder: Transcoder::thumbnail(),
         }
     }
 
@@ -86,7 +86,7 @@ impl ImagePreview {
         Self {
             source: PreviewSource::File(path.as_ref().to_path_buf()),
             #[cfg(feature = "multimedia")]
-            transcoder: Transcoder::default(),
+            transcoder: Transcoder::thumbnail(),
         }
     }
 
@@ -107,7 +107,7 @@ impl ImagePreview {
         Self {
             source: PreviewSource::CryptoFile(file),
             #[cfg(feature = "multimedia")]
-            transcoder: Transcoder::default(),
+            transcoder: Transcoder::thumbnail(),
         }
     }
 
@@ -220,19 +220,35 @@ pub mod transcoder {
         fn default() -> Self {
             Self {
                 enabled: true,
-                size: (128, 128),
-                quality: 60,
+                size: (0, 0),
+                quality: 100,
                 blur: 0.0,
             }
         }
     }
 
     impl Transcoder {
-        /// Disable transcoding. Useful for pre-made thumbnails.
+        /// Disable transcoding entirely. Useful for pre-made and pictures thumbnails.
         pub fn disabled() -> Self {
             Self {
                 enabled: false,
                 ..Default::default()
+            }
+        }
+
+        /// Only convert the image to JPEG(the best quality) without applying any other
+        /// transformations. Use builder methods to add transformations on top
+        pub fn jpeg() -> Self {
+            Self::default()
+        }
+
+        /// The default transcoder for thumbnails. Modify defaults with builder methods.
+        pub fn thumbnail() -> Self {
+            Self {
+                enabled: true,
+                size: (128, 128),
+                quality: 60,
+                blur: 0.0,
             }
         }
 
@@ -288,7 +304,11 @@ pub mod transcoder {
                 .with_guessed_format()?
                 .decode()?;
 
-            let img = img.thumbnail(self.size.0.into(), self.size.1.into());
+            let img = if self.size != (0, 0) {
+                img.thumbnail(self.size.0.into(), self.size.1.into())
+            } else {
+                img
+            };
 
             let img = if self.blur >= 1.0 {
                 img.fast_blur(self.blur)

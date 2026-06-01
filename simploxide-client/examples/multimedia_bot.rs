@@ -284,7 +284,7 @@ async fn process_image(
     bot.send_msg(chat, Image::new(path).with_crypto_args(crypto_args))
         // modifying the default image preview transcoder. The default transcoded produces pixelated
         // previews similar to SimpleX-Chat clients, this transcoder creates blurred previews instead
-        .with_transcoder(Transcoder::default().with_blur(1.5).with_quality(80))
+        .with_transcoder(Transcoder::thumbnail().with_blur(1.5).with_quality(80))
         .await?;
 
     Ok(())

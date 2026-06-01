@@ -61,7 +61,7 @@
 //! // Override transcoder settings(requires `multimedia` feature)
 //! bot.send_msg(chat, Image::new("img.jpg"))
 //!     .with_transcoder(
-//!         Transcoder::default()
+//!         Transcoder::thumbnail()
 //!             .with_size(200, 200)
 //!             .with_quality(80)
 //!             .with_blur(1.5)
@@ -110,7 +110,7 @@
 //! bot.send_msg(chat, Video::new("vid.mp4", Duration::from_secs(30)))
 //!     .with_preview(
 //!         ImagePreview::from_file("thumb.jpg")
-//!             .with_transcoder(Transcoder::default().with_size(255, 255))
+//!             .with_transcoder(Transcoder::thumbnail().with_size(255, 255))
 //!     )
 //!     .await?;
 //! ```
