@@ -550,10 +550,6 @@ where
     ) -> DeleteChatResponse<Self> {
         let chat_id = chat_id.into();
 
-        if let ChatId::Group { id, .. } = chat_id {
-            self.leave_group(id).await?;
-        }
-
         self.api_delete_chat(chat_id.into_chat_ref(), mode.into())
             .await
     }
