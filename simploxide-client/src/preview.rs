@@ -218,6 +218,24 @@ pub mod transcoder {
 
     impl Default for Transcoder {
         fn default() -> Self {
+            Self::jpeg()
+        }
+    }
+
+    impl Transcoder {
+        /// Disable transcoding entirely. Useful for pre-made and pictures thumbnails.
+        pub const fn disabled() -> Self {
+            Self {
+                enabled: false,
+                size: (0, 0),
+                quality: 100,
+                blur: 0.0,
+            }
+        }
+
+        /// Only convert the image to JPEG(the best quality) without applying any other
+        /// transformations. Use builder methods to add transformations on top
+        pub const fn jpeg() -> Self {
             Self {
                 enabled: true,
                 size: (0, 0),
@@ -225,25 +243,9 @@ pub mod transcoder {
                 blur: 0.0,
             }
         }
-    }
-
-    impl Transcoder {
-        /// Disable transcoding entirely. Useful for pre-made and pictures thumbnails.
-        pub fn disabled() -> Self {
-            Self {
-                enabled: false,
-                ..Default::default()
-            }
-        }
-
-        /// Only convert the image to JPEG(the best quality) without applying any other
-        /// transformations. Use builder methods to add transformations on top
-        pub fn jpeg() -> Self {
-            Self::default()
-        }
 
         /// The default transcoder for thumbnails. Modify defaults with builder methods.
-        pub fn thumbnail() -> Self {
+        pub const fn thumbnail() -> Self {
             Self {
                 enabled: true,
                 size: (128, 128),
@@ -252,22 +254,21 @@ pub mod transcoder {
             }
         }
 
-        pub fn is_enabled(&self) -> bool {
+        pub const fn is_enabled(&self) -> bool {
             self.enabled
         }
 
         /// Bound between 32x32 and 255x255
-        pub fn with_size(mut self, x: u8, y: u8) -> Self {
-            let x = std::cmp::max(32, x);
-            let y = std::cmp::max(32, y);
+        pub const fn with_size(mut self, x: u8, y: u8) -> Self {
+            let x: u8 = if x < 32 { 32 } else { x };
+            let y: u8 = if y < 32 { 32 } else { y };
 
             self.size = (x, y);
-
             self
         }
 
         /// Quality is bound between 1..=100 where 1 is the worst
-        pub fn with_quality(mut self, quality: u8) -> Self {
+        pub const fn with_quality(mut self, quality: u8) -> Self {
             if quality == 0 {
                 self.quality = 1;
             } else if quality > 100 {
@@ -280,7 +281,7 @@ pub mod transcoder {
         }
 
         /// sigma < 1.0 - no blur. sigma = 100.0 - max blur
-        pub fn with_blur(mut self, sigma: f32) -> Self {
+        pub const fn with_blur(mut self, sigma: f32) -> Self {
             if sigma < 1.0 {
                 self.blur = 0.0;
             } else if sigma > 100.0 {
