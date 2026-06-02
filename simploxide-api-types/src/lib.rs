@@ -4200,6 +4200,14 @@ pub enum Format {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "simplexName")]
+    SimplexName {
+        #[serde(rename = "nameInfo")]
+        name_info: SimplexNameInfo,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(rename = "command")]
     Command {
         #[serde(rename = "commandStr")]
@@ -4279,6 +4287,13 @@ impl Format {
             link_type,
             simplex_uri,
             smp_hosts,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn make_simplex_name(name_info: SimplexNameInfo) -> Self {
+        Self::SimplexName {
+            name_info,
             undocumented: Default::default(),
         }
     }
@@ -4365,6 +4380,13 @@ impl Format {
                 simplex_uri,
                 smp_hosts,
             })
+        } else {
+            None
+        }
+    }
+    pub fn simplex_name(&self) -> Option<&SimplexNameInfo> {
+        if let Self::SimplexName { name_info, .. } = self {
+            Some(name_info)
         } else {
             None
         }
@@ -4912,6 +4934,14 @@ pub enum GroupLinkPlan {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "updateRequired")]
+    UpdateRequired {
+        #[serde(rename = "groupSLinkData_", skip_serializing_if = "Option::is_none")]
+        group_s_link_data: Option<GroupShortLinkData>,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(untagged)]
     Undocumented(JsonObject),
 }
@@ -4965,6 +4995,13 @@ impl GroupLinkPlan {
 
     pub fn make_no_relays(group_s_link_data: Option<GroupShortLinkData>) -> Self {
         Self::NoRelays {
+            group_s_link_data,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn make_update_required(group_s_link_data: Option<GroupShortLinkData>) -> Self {
+        Self::UpdateRequired {
             group_s_link_data,
             undocumented: Default::default(),
         }
@@ -5027,6 +5064,16 @@ impl GroupLinkPlan {
     }
     pub fn no_relays(&self) -> Option<&Option<GroupShortLinkData>> {
         if let Self::NoRelays {
+            group_s_link_data, ..
+        } = self
+        {
+            Some(group_s_link_data)
+        } else {
+            None
+        }
+    }
+    pub fn update_required(&self) -> Option<&Option<GroupShortLinkData>> {
+        if let Self::UpdateRequired {
             group_s_link_data, ..
         } = self
         {
@@ -5378,6 +5425,9 @@ pub struct GroupRelay {
 
     #[serde(rename = "relayLink", skip_serializing_if = "Option::is_none")]
     pub relay_link: Option<String>,
+
+    #[serde(rename = "relayCap")]
+    pub relay_cap: RelayCapabilities,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -6788,6 +6838,27 @@ pub struct Profile {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct PublicGroupAccess {
+    #[serde(rename = "groupWebPage", skip_serializing_if = "Option::is_none")]
+    pub group_web_page: Option<String>,
+
+    #[serde(rename = "groupDomain", skip_serializing_if = "Option::is_none")]
+    pub group_domain: Option<String>,
+
+    #[serde(rename = "domainWebPage", default)]
+    pub domain_web_page: bool,
+
+    #[serde(rename = "allowEmbedding", default)]
+    pub allow_embedding: bool,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct PublicGroupData {
     #[serde(
         rename = "publicMemberCount",
@@ -6812,6 +6883,9 @@ pub struct PublicGroupProfile {
 
     #[serde(rename = "publicGroupId")]
     pub public_group_id: String,
+
+    #[serde(rename = "publicGroupAccess", skip_serializing_if = "Option::is_none")]
+    pub public_group_access: Option<PublicGroupAccess>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -7593,6 +7667,18 @@ pub struct RcvGroupEventMemberProfileUpdatedRef<'a> {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct RelayCapabilities {
+    #[serde(rename = "webDomain", skip_serializing_if = "Option::is_none")]
+    pub web_domain: Option<String>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct RelayProfile {
     #[serde(rename = "displayName")]
     pub display_name: String,
@@ -7701,6 +7787,61 @@ pub enum SimplexLinkType {
     Channel,
     #[serde(rename = "relay")]
     Relay,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct SimplexNameDomain {
+    #[serde(rename = "nameTLD")]
+    pub name_tld: SimplexTLD,
+
+    #[serde(rename = "domain")]
+    pub domain: String,
+
+    #[serde(rename = "subDomain")]
+    pub sub_domain: Vec<String>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct SimplexNameInfo {
+    #[serde(rename = "nameType")]
+    pub name_type: SimplexNameType,
+
+    #[serde(rename = "nameDomain")]
+    pub name_domain: SimplexNameDomain,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum SimplexNameType {
+    #[default]
+    #[serde(rename = "publicGroup")]
+    PublicGroup,
+    #[serde(rename = "contact")]
+    Contact,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum SimplexTLD {
+    #[default]
+    #[serde(rename = "simplex")]
+    Simplex,
+    #[serde(rename = "testing")]
+    Testing,
+    #[serde(rename = "web")]
+    Web,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
