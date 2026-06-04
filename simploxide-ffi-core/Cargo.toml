@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-ffi-core"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 license = "AGPL-3.0"
@@ -22,7 +22,7 @@ serde_json.workspace = true
 
 slab = "0.4"
 simploxide-sxcrt-sys = { path = "../simploxide-sxcrt-sys", version = "0.2.0" }
-simploxide-core = { path = "../simploxide-core", version = "0.5.0" }
+simploxide-core = { path = "../simploxide-core", version = "0.6.0" }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "time", "macros"] }
