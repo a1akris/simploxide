@@ -120,14 +120,19 @@ impl EventParser for CoreResult<String> {
     fn parse_user_id(&self) -> Result<Option<i64>, Self::Error> {
         match parse_data::<util::UserField>(self) {
             Ok(f) => Ok(Some(f.user.user_id)),
-            Err(ClientError::BadResponse(BadResponseError::Undocumented(_)))
-            | Err(ClientError::BadResponse(BadResponseError::InvalidJson(_))) => Ok(None),
+            Err(ClientError::BadResponse(_)) => Ok(None),
             Err(e) => Err(e),
         }
     }
 
     fn parse_event(&self) -> Result<Event, Self::Error> {
-        parse_data(self)
+        match parse_data(self) {
+            Ok(ev) => Ok(ev),
+            Err(ClientError::BadResponse(BadResponseError::Undocumented(json))) => {
+                Ok(Event::Undocumented(json))
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 

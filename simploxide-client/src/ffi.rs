@@ -118,6 +118,11 @@ impl EventParser for CoreResult<CoreEvent> {
     fn parse_kind(&self) -> Result<EventKind, Self::Error> {
         match parse_data::<util::TypeField<'_>>(self) {
             Ok(f) => Ok(EventKind::from_type_str(f.typ)),
+            // FFI chat error shapes are the same for events and responses which confuses the parser therefore
+            // chat errors must be handled manually
+            Err(ClientError::BadResponse(BadResponseError::ChatError(_))) => {
+                Ok(EventKind::ChatError)
+            }
             Err(ClientError::BadResponse(BadResponseError::Undocumented(_))) => {
                 Ok(EventKind::Undocumented)
             }
@@ -128,14 +133,27 @@ impl EventParser for CoreResult<CoreEvent> {
     fn parse_user_id(&self) -> Result<Option<i64>, Self::Error> {
         match parse_data::<util::UserField>(self) {
             Ok(f) => Ok(Some(f.user.user_id)),
-            Err(ClientError::BadResponse(BadResponseError::Undocumented(_)))
-            | Err(ClientError::BadResponse(BadResponseError::InvalidJson(_))) => Ok(None),
+            Err(ClientError::BadResponse(_)) => Ok(None),
             Err(e) => Err(e),
         }
     }
 
     fn parse_event(&self) -> Result<Event, Self::Error> {
-        parse_data(self)
+        match parse_data(self) {
+            Ok(ev) => Ok(ev),
+            // FFI chat error shapes are the same for events and responses which confuses the parser therefore
+            // chat errors must be handled manually
+            Err(ClientError::BadResponse(BadResponseError::ChatError(err))) => Ok(
+                Event::ChatError(Arc::new(simploxide_api_types::events::ChatError {
+                    chat_error: err.as_ref().clone(),
+                    undocumented: Default::default(),
+                })),
+            ),
+            Err(ClientError::BadResponse(BadResponseError::Undocumented(json))) => {
+                Ok(Event::Undocumented(json))
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 

@@ -447,13 +447,6 @@ where
 {
     let mut join_set: tokio::task::JoinSet<Result<StreamEvents, D::Error>> =
         tokio::task::JoinSet::new();
-    let (cancellator, cancellation) = tokio::sync::oneshot::channel::<()>();
-
-    // A dummy task to avoid a busy select! loop when JoinSet is empty.
-    join_set.spawn(async move {
-        let _ = cancellation.await;
-        Ok(StreamEvents::Continue)
-    });
 
     let mut stop = std::pin::pin!(stop);
 
@@ -472,7 +465,7 @@ where
                 Ok(None) => break Ok(Ok(StreamEvents::Break)),
                 Err(e) => break Ok(Err(e.into())),
             },
-            result = join_set.join_next() => match result {
+            result = join_set.join_next(), if !join_set.is_empty() => match result {
                 Some(Ok(Ok(StreamEvents::Continue))) => continue,
                 Some(Ok(Ok(StreamEvents::Break))) => break Ok(Ok(StreamEvents::Break)),
                 Some(err) => break err,
@@ -481,7 +474,6 @@ where
         }
     };
 
-    let _ = cancellator.send(());
     let mut event_buffer = Vec::new();
 
     loop {
