@@ -49,7 +49,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
         let resp = client.list_users().await?;
 
         for info in &resp.users {
-            let bot_id = BotId(info.user.user_id);
+            let bot_id: BotId = UserId::from(info).into();
 
             if info.user.active_user {
                 active_name = info.user.profile.display_name.clone();
@@ -64,19 +64,22 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
             cache.insert(info.user.profile.display_name.clone(), info.user.clone());
         }
 
-        if farm_id.is_anybot() {
-            let resp = client
-                .create_active_user(NewUser {
-                    profile: Some(Bot::<C>::default_profile(farm_name.clone())),
-                    past_timestamp: false,
-                    user_chat_relay: false,
-                    undocumented: Default::default(),
-                })
-                .await?;
+        let farm_id = match farm_id.get() {
+            Some(user_id) => user_id,
+            None => {
+                let resp = client
+                    .create_active_user(NewUser {
+                        profile: Some(Bot::<C>::default_profile(farm_name.clone())),
+                        past_timestamp: false,
+                        user_chat_relay: false,
+                        undocumented: Default::default(),
+                    })
+                    .await?;
 
-            farm_id = BotId(resp.user.user_id);
-            active_name = farm_name.clone();
-        }
+                active_name = farm_name.clone();
+                UserId::from(&resp.user)
+            }
+        };
 
         let state = Init {
             client,
@@ -106,7 +109,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
     pub async fn remove(&mut self, user_id: UserId) -> Result<(), C::Error> {
         self.state
             .client
-            .api_set_active_user(ApiSetActiveUser::new(self.state.farm_id.0))
+            .api_set_active_user(ApiSetActiveUser::new(self.state.farm_id.raw()))
             .await?;
 
         self.state.active_name = self.state.farm_name.clone();
@@ -115,7 +118,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
             .state
             .client
             .api_delete_user(ApiDeleteUser {
-                user_id: user_id.0,
+                user_id: user_id.raw(),
                 del_smp_queues: true,
                 view_pwd: None,
             })
@@ -134,7 +137,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
             return Ok(());
         };
 
-        let result = self.remove(UserId(user.user_id)).await;
+        let result = self.remove(UserId::from(&user)).await;
 
         if result.is_err() {
             self.state.cache.insert(name.to_owned(), user);
@@ -175,7 +178,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
         C::Error: Send,
         P: 'static + Send,
     {
-        let (delegate_client, rx) = DelegateClient::new(self.state.farm_id);
+        let (delegate_client, rx) = DelegateClient::new(self.state.farm_id.into());
         mux::start(self.state.client, rx);
 
         let bots = Arc::new(self.state.bots);
@@ -300,14 +303,13 @@ where
         let resp = self.state.client.list_users().await?;
 
         match resp.users.iter().find_map(|info| {
-            (info.user.profile.display_name == settings.display_name)
-                .then_some(BotId(info.user.user_id))
+            (info.user.profile.display_name == settings.display_name).then_some(UserId::from(info))
         }) {
-            Some(user_id) => match self.state.bots.get_mut(&user_id) {
+            Some(user_id) => match self.state.bots.get_mut(&user_id.into()) {
                 Some(mut entry) => match entry.value_mut() {
                     Channel::Bot(pipe) => {
                         let receiver = pipe.take_receiver().ok_or(CreateError::BotAlreadyTaken)?;
-                        Ok(self.make_bot(user_id.into(), receiver))
+                        Ok(self.make_bot(user_id, receiver))
                     }
                     Channel::Ghost => Err(CreateError::BotIsGhost),
                 },
@@ -333,12 +335,12 @@ where
 
         match resp.users.iter().find_map(|info| {
             (info.user.profile.display_name == settings.display_name)
-                .then_some(BotId(info.user.user_id))
+                .then_some(UserId::from(&info.user))
         }) {
-            Some(user_id) => match self.state.bots.get(&user_id) {
+            Some(user_id) => match self.state.bots.get(&user_id.into()) {
                 Some(entry) => match entry.value() {
                     Channel::Bot(_) => Err(CreateError::GhostIsBot),
-                    Channel::Ghost => Ok(self.make_ghost(user_id.into())),
+                    Channel::Ghost => Ok(self.make_ghost(user_id)),
                 },
                 None => Err(CreateError::Desync),
             },
@@ -350,7 +352,7 @@ where
         self.state
             .client
             .api_delete_user(ApiDeleteUser {
-                user_id: user_id.0,
+                user_id: user_id.raw(),
                 del_smp_queues: true,
                 view_pwd: None,
             })
@@ -386,22 +388,22 @@ where
         if is_bot {
             self.state
                 .bots
-                .insert(BotId(resp.user.user_id), Channel::new_bot());
+                .insert(UserId::from(&resp.user).into(), Channel::new_bot());
         } else {
             self.state
                 .bots
-                .insert(BotId(resp.user.user_id), Channel::Ghost);
+                .insert(UserId::from(&resp.user).into(), Channel::Ghost);
         }
 
         let resp = Arc::get_mut(&mut resp).unwrap();
-        let client = self.state.client.delegate_to(BotId(resp.user.user_id));
+        let client = self.state.client.delegate_to(UserId::from(&resp.user));
 
         match Bot::init_existing(client, &mut resp.user, settings).await {
             Ok(bot) => Ok(bot.user_id()),
             Err(e) => {
                 self.state
                     .bots
-                    .insert(BotId(resp.user.user_id), Channel::Ghost);
+                    .insert(UserId::from(&resp.user).into(), Channel::Ghost);
 
                 Err(e.into())
             }
@@ -435,7 +437,7 @@ where
 pub struct Init<C, P> {
     client: C,
     events: EventStream<P>,
-    farm_id: BotId,
+    farm_id: UserId,
     farm_name: String,
     active_name: String,
     bots: BotMap<P>,
@@ -599,27 +601,21 @@ type DelegateReceiver<C> = UnboundedReceiver<DelegateRequest<C>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
-struct BotId(i64);
+struct BotId(Option<UserId>);
 
 impl BotId {
     /// Used as an optimization for commands that can execute from any active bot account
     fn anybot() -> Self {
-        Self(0)
+        Self(None)
     }
 
-    fn is_anybot(self) -> bool {
-        self.0 == 0
+    fn get(&self) -> Option<UserId> {
+        self.0
     }
 }
 
 impl From<UserId> for BotId {
     fn from(user_id: UserId) -> Self {
-        Self(user_id.0)
-    }
-}
-
-impl From<BotId> for UserId {
-    fn from(bot_id: BotId) -> Self {
-        Self(bot_id.0)
+        Self(Some(user_id))
     }
 }

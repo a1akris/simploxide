@@ -168,6 +168,8 @@ use std::{
     task::{Context, Poll},
 };
 
+use crate::id::UserId;
+
 /// The high level event stream that embeds event filtering.
 ///
 /// Parsing SimpleX events may be costly, they are quite large deeply nested structs with a lot of
@@ -182,6 +184,7 @@ use std::{
 /// zerocost, manage filters internally, and provide a high-level easy to use API covering the
 /// absolute majority of use cases.
 pub struct EventStream<P> {
+    owner: Option<id::UserId>,
     filter: [bool; EventKind::COUNT],
     receiver: tokio::sync::mpsc::UnboundedReceiver<P>,
     hooks: Vec<Box<dyn Hook>>,
@@ -202,6 +205,7 @@ impl<P> FromIterator<P> for EventStream<P> {
 impl<P> From<tokio::sync::mpsc::UnboundedReceiver<P>> for EventStream<P> {
     fn from(receiver: tokio::sync::mpsc::UnboundedReceiver<P>) -> Self {
         Self {
+            owner: None,
             filter: [true; EventKind::COUNT],
             receiver,
             hooks: Vec::new(),
@@ -214,9 +218,10 @@ impl<P> EventStream<P> {
         self.receiver
     }
 
-    /// Allows to unconditionally intercept certain events
-    pub fn add_hook(&mut self, hook: Box<dyn Hook>) {
+    /// Allows to unconditionally intercept events as described by the [`Hook`] trait
+    pub fn add_hook(&mut self, hook: Box<dyn Hook>) -> &mut Self {
         self.hooks.push(hook);
+        self
     }
 
     #[cfg(feature = "xftp")]
@@ -229,6 +234,21 @@ impl<P> EventStream<P> {
         self.add_hook(Box::new(hook));
 
         (xftp_client, self)
+    }
+
+    pub fn owner(&self) -> Option<id::UserId> {
+        self.owner
+    }
+
+    /// Set stream owner. Events with different UserIds will be filtered out
+    pub fn set_owner(&mut self, id: id::UserId) -> &mut Self {
+        self.owner = Some(id);
+        self
+    }
+
+    pub fn unset_owner(&mut self) -> &mut Self {
+        self.owner = None;
+        self
     }
 
     pub fn set_filter<I: IntoIterator<Item = EventKind>>(&mut self, f: Filter<I>) -> &mut Self {
@@ -285,6 +305,13 @@ impl<P> EventStream<P> {
     fn set_all(&mut self, new: bool) {
         for old in &mut self.filter {
             *old = new;
+        }
+    }
+
+    fn owner_matches(&self, user: Option<id::UserId>) -> bool {
+        match (self.owner, user) {
+            (Some(owner), Some(user)) => owner == user,
+            _ => true,
         }
     }
 }
@@ -396,6 +423,15 @@ impl<P: EventParser> Stream for EventStream<P> {
         loop {
             match self.receiver.poll_recv(cx) {
                 Poll::Ready(Some(raw_event)) => {
+                    match raw_event.parse_user_id() {
+                        Ok(owner) => {
+                            if !self.owner_matches(owner) {
+                                continue;
+                            }
+                        }
+                        Err(e) => break Poll::Ready(Some(Err(e))),
+                    };
+
                     let kind = match raw_event.parse_kind() {
                         Ok(kind) => kind,
                         Err(e) => break Poll::Ready(Some(Err(e))),
@@ -437,7 +473,7 @@ pub trait EventParser {
     fn parse_kind(&self) -> Result<EventKind, Self::Error>;
 
     /// Parse user ID cheaply without allocations
-    fn parse_user_id(&self) -> Result<Option<i64>, Self::Error>;
+    fn parse_user_id(&self) -> Result<Option<id::UserId>, Self::Error>;
 
     /// Parse the whole events
     fn parse_event(&self) -> Result<Event, Self::Error>;
@@ -450,8 +486,11 @@ impl EventParser for Event {
         Ok(self.kind())
     }
 
-    fn parse_user_id(&self) -> Result<Option<i64>, Self::Error> {
-        Ok(self.user_id())
+    fn parse_user_id(&self) -> Result<Option<id::UserId>, Self::Error> {
+        // SAFETY: In fully parsed event the ID cannot be zero.
+        Ok(self
+            .user_id()
+            .map(|id| unsafe { UserId::from_raw_unchecked(id) }))
     }
 
     fn parse_event(&self) -> Result<Event, Self::Error> {

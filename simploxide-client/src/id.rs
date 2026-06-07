@@ -6,15 +6,57 @@
 use simploxide_api_types::{
     AChatItem, CIFile, CIMeta, ChatInfo, ChatItem, ChatRef, ChatType, Contact, FileTransferMeta,
     GroupChatScope, GroupInfo, GroupMember, GroupRelay, RcvFileTransfer, SndFileTransfer, User,
-    UserContactRequest,
+    UserContactRequest, UserInfo,
 };
+
+use std::num::NonZeroI64;
 
 macro_rules! typesafe_ids {
     ($($name:ident),*) => {
         $(
             #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
             #[repr(transparent)]
-            pub struct $name(pub i64);
+            pub struct $name(NonZeroI64);
+
+            impl $name {
+                /// # Safety
+                ///
+                /// All SimpleX IDs are starting from 1 which is guaranteed by Sqlite and
+                /// PostgreSQL DBs so it is generally safe to call this method when passing an
+                /// ID value received from SimpleX backend.
+                ///
+                /// In other cases of if in doubts - use [from_raw](Self::from_raw) for version that panics or
+                /// [Self::try_from] for version that returns an error.
+                pub unsafe fn from_raw_unchecked(id: i64) -> Self {
+                    unsafe {
+                        Self(NonZeroI64::new_unchecked(id))
+                    }
+                }
+
+                /// Panics when `id == 0`. Use [Self::try_from] to handle an error
+                pub fn from_raw(id: i64) -> Self {
+                    Self(NonZeroI64::try_from(id).unwrap())
+                }
+
+                pub fn raw(&self) -> i64 {
+                    self.0.get()
+                }
+            }
+
+            impl TryFrom<i64> for $name {
+                type Error = Zero;
+
+                fn try_from(id: i64) -> Result<Self, Self::Error> {
+                    let id = NonZeroI64::new(id).ok_or(Zero(stringify!($name)))?;
+                    Ok(Self(id))
+                }
+            }
+
+            impl From<NonZeroI64> for $name {
+                fn from(id: NonZeroI64) -> Self {
+                    Self(id)
+                }
+            }
 
             impl ::std::fmt::Display for $name {
                 fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -68,16 +110,22 @@ impl ChatId {
     /// Converts a [`ChatRef`] from a SimpleX API response. Returns `None` for unrecognised chat types.
     pub fn from_chat_ref(chat_ref: &ChatRef) -> Option<Self> {
         match chat_ref.chat_type {
-            ChatType::Direct => Some(Self::Direct(ContactId(chat_ref.chat_id))),
+            ChatType::Direct => Some(Self::Direct(unsafe {
+                ContactId::from_raw_unchecked(chat_ref.chat_id)
+            })),
             ChatType::Group => Some(Self::Group {
-                id: GroupId(chat_ref.chat_id),
+                id: unsafe { GroupId::from_raw_unchecked(chat_ref.chat_id) },
                 scope: chat_ref.chat_scope.as_ref().and_then(|scope| {
-                    scope
-                        .member_support()
-                        .and_then(|id| id.as_ref().copied().map(MemberId))
+                    scope.member_support().and_then(|id| {
+                        id.as_ref()
+                            .copied()
+                            .map(|id| unsafe { MemberId::from_raw_unchecked(id) })
+                    })
                 }),
             }),
-            ChatType::Local => Some(Self::Local(UserId(chat_ref.chat_id))),
+            ChatType::Local => Some(Self::Local(unsafe {
+                UserId::from_raw_unchecked(chat_ref.chat_id)
+            })),
             _ => None,
         }
     }
@@ -85,20 +133,22 @@ impl ChatId {
     /// Converts a [`ChatInfo`] from a SimpleX API response. Returns `None` for unrecognised chat types.
     pub fn from_chat_info(chat_info: &ChatInfo) -> Option<Self> {
         match chat_info {
-            ChatInfo::Direct { contact, .. } => Some(Self::Direct(ContactId(contact.contact_id))),
+            ChatInfo::Direct { contact, .. } => Some(Self::Direct(ContactId::from(contact))),
             ChatInfo::Group {
                 group_info,
                 group_chat_scope,
                 ..
             } => Some(Self::Group {
-                id: GroupId(group_info.group_id),
+                id: GroupId::from(group_info),
                 scope: group_chat_scope.as_ref().and_then(|scope| {
                     scope
                         .member_support()
-                        .and_then(|member| member.as_ref().map(|member| MemberId(member.group_id)))
+                        .and_then(|member| member.as_ref().map(MemberId::from))
                 }),
             }),
-            ChatInfo::Local { note_folder, .. } => Some(Self::Local(UserId(note_folder.user_id))),
+            ChatInfo::Local { note_folder, .. } => Some(Self::Local(unsafe {
+                UserId::from_raw_unchecked(note_folder.user_id)
+            })),
             _ => None,
         }
     }
@@ -106,19 +156,19 @@ impl ChatId {
     /// Converts back into a [`ChatRef`] for use in raw API calls.
     pub fn into_chat_ref(self) -> ChatRef {
         let (chat_type, chat_id, chat_scope) = match self {
-            Self::Direct(contact_id) => (ChatType::Direct, contact_id.0, None),
+            Self::Direct(contact_id) => (ChatType::Direct, contact_id.raw(), None),
             Self::Group {
                 id: group_id,
                 scope,
             } => (
                 ChatType::Group,
-                group_id.0,
+                group_id.raw(),
                 scope.map(|member_id| GroupChatScope::MemberSupport {
-                    group_member_id: Some(member_id.0),
+                    group_member_id: Some(member_id.raw()),
                     undocumented: Default::default(),
                 }),
             ),
-            Self::Local(user_id) => (ChatType::Local, user_id.0, None),
+            Self::Local(user_id) => (ChatType::Local, user_id.raw(), None),
         };
 
         ChatRef {
@@ -160,6 +210,17 @@ impl From<UserId> for ChatId {
     }
 }
 
+#[derive(Debug)]
+pub struct Zero(&'static str);
+
+impl std::fmt::Display for Zero {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Got {} equal to zero", self.0)
+    }
+}
+
+impl std::error::Error for Zero {}
+
 macro_rules! impl_id_from_struct {
     ($strct:ty as $id:ty, $val:ident, $conversion:expr) => {
         impl From<$strct> for $id {
@@ -182,32 +243,47 @@ macro_rules! impl_id_from_struct {
     };
 }
 
-impl_id_from_struct!(User as UserId, user, UserId(user.user_id));
+impl_id_from_struct!(User as UserId, user, unsafe {
+    UserId::from_raw_unchecked(user.user_id)
+});
+impl_id_from_struct!(UserInfo as UserId, info, UserId::from(&info.user));
 
-impl_id_from_struct!(Contact as ContactId, contact, ContactId(contact.contact_id));
+impl_id_from_struct!(Contact as ContactId, contact, unsafe {
+    ContactId::from_raw_unchecked(contact.contact_id)
+});
 impl_id_from_struct!(Contact as ChatId, contact, ContactId::from(contact).into());
 
-impl_id_from_struct!(
-    UserContactRequest as ContactRequestId,
-    req,
-    ContactRequestId(req.contact_request_id)
-);
+impl_id_from_struct!(UserContactRequest as ContactRequestId, req, unsafe {
+    ContactRequestId::from_raw_unchecked(req.contact_request_id)
+});
 
-impl_id_from_struct!(GroupInfo as GroupId, group, GroupId(group.group_id));
+impl_id_from_struct!(GroupInfo as GroupId, group, unsafe {
+    GroupId::from_raw_unchecked(group.group_id)
+});
 impl_id_from_struct!(GroupInfo as ChatId, group, GroupId::from(group).into());
 
-impl_id_from_struct!(CIMeta as MessageId, meta, MessageId(meta.item_id));
+impl_id_from_struct!(CIMeta as MessageId, meta, unsafe {
+    MessageId::from_raw_unchecked(meta.item_id)
+});
 impl_id_from_struct!(ChatItem as MessageId, item, MessageId::from(&item.meta));
 impl_id_from_struct!(AChatItem as MessageId, it, MessageId::from(&it.chat_item));
 
-impl_id_from_struct!(CIFile as FileId, file, FileId(file.file_id));
-impl_id_from_struct!(RcvFileTransfer as FileId, ft, FileId(ft.file_id));
-impl_id_from_struct!(FileTransferMeta as FileId, ft, FileId(ft.file_id));
-impl_id_from_struct!(SndFileTransfer as FileId, ft, FileId(ft.file_id));
+impl_id_from_struct!(CIFile as FileId, file, unsafe {
+    FileId::from_raw_unchecked(file.file_id)
+});
+impl_id_from_struct!(RcvFileTransfer as FileId, ft, unsafe {
+    FileId::from_raw_unchecked(ft.file_id)
+});
+impl_id_from_struct!(FileTransferMeta as FileId, ft, unsafe {
+    FileId::from_raw_unchecked(ft.file_id)
+});
+impl_id_from_struct!(SndFileTransfer as FileId, ft, unsafe {
+    FileId::from_raw_unchecked(ft.file_id)
+});
 
-impl_id_from_struct!(
-    GroupMember as MemberId,
-    member,
-    MemberId(member.group_member_id)
-);
-impl_id_from_struct!(GroupRelay as RelayId, relay, RelayId(relay.group_relay_id));
+impl_id_from_struct!(GroupMember as MemberId, member, unsafe {
+    MemberId::from_raw_unchecked(member.group_member_id)
+});
+impl_id_from_struct!(GroupRelay as RelayId, relay, unsafe {
+    RelayId::from_raw_unchecked(relay.group_relay_id)
+});

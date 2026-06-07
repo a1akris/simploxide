@@ -63,7 +63,7 @@ fn try_demux<P: 'static + Send + EventParser>(map: &Arc<BotMap<P>>, ev: P) -> Re
         return Err(ev);
     };
 
-    let Some(entry) = map.get(&BotId(id)) else {
+    let Some(entry) = map.get(&BotId::from(id)) else {
         return Err(ev);
     };
 

@@ -893,7 +893,7 @@ impl<'a, C, M> MessageBuilder<'a, C, M> {
     }
 
     pub fn reply_to(mut self, msg_id: impl Into<MessageId>) -> Self {
-        self.msg.quoted_item_id = Some(msg_id.into().0);
+        self.msg.quoted_item_id = Some(msg_id.into().raw());
         self
     }
 

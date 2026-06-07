@@ -123,7 +123,7 @@ impl<C: ClientApi> XftpExt for XftpClient<C> {
     fn download_file<FID: Into<FileId>>(&self, file_id: FID) -> DownloadFileBuilder<'_, Self> {
         DownloadFileBuilder {
             client: self,
-            cmd: ReceiveFile::new(file_id.into().0),
+            cmd: ReceiveFile::new(file_id.into().raw()),
         }
     }
 }

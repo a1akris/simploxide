@@ -24,6 +24,7 @@ use std::sync::Arc;
 use crate::{
     BadResponseError, ClientApi, ClientApiError, EventParser,
     bot::{BotProfileSettings, BotSettings},
+    id::UserId,
     preview::ImagePreview,
     util,
 };
@@ -130,9 +131,9 @@ impl EventParser for CoreResult<CoreEvent> {
         }
     }
 
-    fn parse_user_id(&self) -> Result<Option<i64>, Self::Error> {
+    fn parse_user_id(&self) -> Result<Option<UserId>, Self::Error> {
         match parse_data::<util::UserField>(self) {
-            Ok(f) => Ok(Some(f.user.user_id)),
+            Ok(f) => Ok(UserId::try_from(f.user.user_id).ok()),
             Err(ClientError::BadResponse(_)) => Ok(None),
             Err(e) => Err(e),
         }
@@ -281,6 +282,10 @@ impl BotBuilder {
         };
 
         let bot = Bot::init(client, settings).await?;
+
+        let mut events = events;
+        events.set_owner(bot.user_id());
+
         Ok((bot, events))
     }
 }

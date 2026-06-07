@@ -26,6 +26,7 @@ use simploxide_ws_core::RawClient;
 use crate::{
     BadResponseError, ClientApi, ClientApiError, EventParser,
     bot::{BotProfileSettings, BotSettings},
+    id::UserId,
     preview::ImagePreview,
     util,
 };
@@ -117,9 +118,9 @@ impl EventParser for CoreResult<String> {
         }
     }
 
-    fn parse_user_id(&self) -> Result<Option<i64>, Self::Error> {
+    fn parse_user_id(&self) -> Result<Option<UserId>, Self::Error> {
         match parse_data::<util::UserField>(self) {
-            Ok(f) => Ok(Some(f.user.user_id)),
+            Ok(f) => Ok(UserId::try_from(f.user.user_id).ok()),
             Err(ClientError::BadResponse(_)) => Ok(None),
             Err(e) => Err(e),
         }
@@ -447,6 +448,10 @@ impl BotBuilder {
         };
 
         let bot = Bot::init(client, settings).await?;
+
+        let mut events = events;
+        events.set_owner(bot.user_id());
+
         Ok((bot, events))
     }
 
@@ -535,8 +540,8 @@ impl BotFarmBuilder {
         self
     }
 
-    /// Pass extra arguments to the `simplex-chat` process.
     #[cfg(feature = "cli")]
+    /// Pass extra arguments to the `simplex-chat` process.
     pub fn cli_args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -563,11 +568,11 @@ impl BotFarmBuilder {
         Ok(farm)
     }
 
+    #[cfg(feature = "cli")]
     /// Spawn `simplex-chat`, then connect and initialise.
     ///
     /// Returns `(farm, cli)`. The caller is responsible for calling
     /// [`cli::SimplexCli::kill`] after the farm finishes.
-    #[cfg(feature = "cli")]
     pub async fn launch(
         mut self,
     ) -> Result<

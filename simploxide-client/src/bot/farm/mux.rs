@@ -7,6 +7,8 @@
 use futures::{StreamExt as _, stream::FuturesOrdered};
 use simploxide_api_types::{client_api::ClientApi, commands::ApiSetActiveUser};
 
+use crate::id::UserId;
+
 use super::{BotId, DelegateReceiver, DelegateRequest};
 
 pub fn start<C: 'static + Send + ClientApi>(client: C, requests: DelegateReceiver<C>)
@@ -37,10 +39,10 @@ async fn task<C: ClientApi>(client: C, mut requests: DelegateReceiver<C>) {
 
         // Process requests in batches and minimize bot switches
         for request in batcher.drain() {
-            if should_switch_bot(active_bot, request.bot_id) {
+            if let Some(user_id) = should_switch_bot(active_bot, request.bot_id) {
                 while executor.next().await.is_some() {}
 
-                if let Err(e) = try_switch_bot(&client, &mut active_bot, request.bot_id).await {
+                if let Err(e) = try_switch_bot(&client, &mut active_bot, user_id).await {
                     let _ = request.responder.send(Err(e));
                 } else {
                     executor.push_back(exec_request(&client, request));
@@ -63,21 +65,25 @@ async fn exec_request<C: ClientApi>(client: &C, request: DelegateRequest<C>) {
 async fn try_switch_bot<C: ClientApi>(
     client: &C,
     active_bot: &mut BotId,
-    next_bot: BotId,
+    next_bot: UserId,
 ) -> Result<(), C::Error> {
     let result = client
-        .api_set_active_user(ApiSetActiveUser::new(next_bot.0))
+        .api_set_active_user(ApiSetActiveUser::new(next_bot.raw()))
         .await;
 
     if result.is_ok() {
-        *active_bot = next_bot;
+        *active_bot = next_bot.into();
     }
 
     result.map(drop)
 }
 
-fn should_switch_bot(active_bot: BotId, next_bot: BotId) -> bool {
-    !(next_bot.is_anybot() || next_bot == active_bot)
+fn should_switch_bot(active_bot: BotId, next_bot: BotId) -> Option<UserId> {
+    if next_bot != active_bot {
+        next_bot.get()
+    } else {
+        None
+    }
 }
 
 struct RequestBatcher<C: ClientApi> {

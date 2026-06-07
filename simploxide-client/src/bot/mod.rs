@@ -56,7 +56,7 @@ impl<C> Bot<C> {
     }
 
     pub fn user_id(&self) -> UserId {
-        UserId(self.user_id)
+        UserId::from_raw(self.user_id)
     }
 }
 
@@ -65,7 +65,7 @@ impl<C: ClientApi> Bot<C> {
     fn new(client: C, user_id: UserId) -> Self {
         Self {
             client,
-            user_id: user_id.0,
+            user_id: user_id.raw(),
         }
     }
 
@@ -480,7 +480,7 @@ impl<C: ClientApi> Bot<C> {
         preferences: Preferences,
     ) -> Result<Arc<ContactPrefsUpdatedResponse>, C::Error> {
         self.client
-            .api_set_contact_prefs(contact_id.into().0, preferences)
+            .api_set_contact_prefs(contact_id.into().raw(), preferences)
             .await
     }
 
@@ -501,7 +501,7 @@ impl<C: ClientApi> Bot<C> {
         updater(&mut preferences);
 
         self.client
-            .api_set_contact_prefs(contact_id.into().0, preferences)
+            .api_set_contact_prefs(contact_id.into().raw(), preferences)
             .await
     }
 
@@ -733,7 +733,7 @@ impl<C: ClientApi> Bot<C> {
         relay_ids: I,
         mut profile: GroupProfile,
     ) -> Result<ApiNewPublicGroupResponse, C::Error> {
-        let relays: Vec<_> = relay_ids.into_iter().map(|id| id.0).collect();
+        let relays: Vec<_> = relay_ids.into_iter().map(|id| id.raw()).collect();
 
         match self
             .client

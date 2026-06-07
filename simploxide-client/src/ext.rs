@@ -380,7 +380,7 @@ where
     }
 
     async fn contacts<UID: Into<UserId>>(&self, user_id: UID) -> ContactsResponse<Self> {
-        let mut response = self.api_list_contacts(user_id.into().0).await?;
+        let mut response = self.api_list_contacts(user_id.into().raw()).await?;
         let response = Arc::get_mut(&mut response).unwrap();
 
         Ok(std::mem::take(&mut response.contacts))
@@ -388,7 +388,7 @@ where
 
     async fn groups<UID: Into<UserId>>(&self, user_id: UID) -> GroupsResponse<Self> {
         let mut response = self
-            .api_list_groups(ApiListGroups::new(user_id.into().0))
+            .api_list_groups(ApiListGroups::new(user_id.into().raw()))
             .await?;
         let response = Arc::get_mut(&mut response).unwrap();
 
@@ -415,14 +415,14 @@ where
         &self,
         contact_request_id: CRID,
     ) -> impl Future<Output = AcceptContactResponse<Self>> {
-        self.api_accept_contact(contact_request_id.into().0)
+        self.api_accept_contact(contact_request_id.into().raw())
     }
 
     fn reject_contact<CRID: Into<ContactRequestId>>(
         &self,
         contact_request_id: CRID,
     ) -> impl Future<Output = RejectContactResponse<Self>> {
-        self.api_reject_contact(contact_request_id.into().0)
+        self.api_reject_contact(contact_request_id.into().raw())
     }
 
     fn send_message<CID: Into<ChatId>, M: MessageLike>(
@@ -464,7 +464,7 @@ where
     ) -> impl Future<Output = UpdateMessageResponse<Self>> {
         self.api_update_chat_item(ApiUpdateChatItem {
             chat_ref: chat_id.into().into_chat_ref(),
-            chat_item_id: message_id.into().0,
+            chat_item_id: message_id.into().raw(),
             live_message: false,
             updated_message: UpdatedMessage {
                 msg_content: new_content,
@@ -482,7 +482,7 @@ where
     ) -> impl Future<Output = DeleteMessageResponse<Self>> {
         self.api_delete_chat_item(
             chat_id.into().into_chat_ref(),
-            message_ids.into_iter().map(|id| id.0).collect(),
+            message_ids.into_iter().map(|id| id.raw()).collect(),
             mode,
         )
     }
@@ -508,7 +508,7 @@ where
 
             self.api_chat_item_reaction(ApiChatItemReaction {
                 chat_ref: chat_id.into_chat_ref(),
-                chat_item_id: message_id.0,
+                chat_item_id: message_id.raw(),
                 add,
                 reaction: MsgReaction::Emoji {
                     emoji,
@@ -521,7 +521,7 @@ where
     fn accept_file<FID: Into<FileId>>(&self, file_id: FID) -> AcceptFileBuilder<'_, Self> {
         AcceptFileBuilder {
             client: self,
-            cmd: ReceiveFile::new(file_id.into().0),
+            cmd: ReceiveFile::new(file_id.into().raw()),
         }
     }
 
@@ -529,7 +529,7 @@ where
         &self,
         file_id: FID,
     ) -> impl Future<Output = RejectFileResponse<Self>> {
-        self.cancel_file(file_id.into().0)
+        self.cancel_file(file_id.into().raw())
     }
 
     fn initiate_connection(
@@ -560,14 +560,14 @@ where
         contact_id: CID,
         role: GroupMemberRole,
     ) -> impl Future<Output = AddMemberResponse<Self>> {
-        self.api_add_member(group_id.into().0, contact_id.into().0, role)
+        self.api_add_member(group_id.into().raw(), contact_id.into().raw(), role)
     }
 
     fn join_group<GID: Into<GroupId>>(
         &self,
         group_id: GID,
     ) -> impl Future<Output = JoinGroupResponse<Self>> {
-        self.api_join_group(group_id.into().0)
+        self.api_join_group(group_id.into().raw())
     }
 
     fn accept_member<GID: Into<GroupId>, MID: Into<MemberId>>(
@@ -576,7 +576,7 @@ where
         member_id: MID,
         role: GroupMemberRole,
     ) -> impl Future<Output = AcceptMemberResponse<Self>> {
-        self.api_accept_member(group_id.into().0, member_id.into().0, role)
+        self.api_accept_member(group_id.into().raw(), member_id.into().raw(), role)
     }
 
     fn set_members_role<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
@@ -586,8 +586,8 @@ where
         role: GroupMemberRole,
     ) -> impl Future<Output = SetMembersRoleResponse<Self>> {
         self.api_members_role(
-            group_id.into().0,
-            member_ids.into_iter().map(|id| id.0).collect(),
+            group_id.into().raw(),
+            member_ids.into_iter().map(|id| id.raw()).collect(),
             role,
         )
     }
@@ -598,8 +598,8 @@ where
         member_ids: I,
     ) -> impl Future<Output = BlockMembersResponse<Self>> {
         self.api_block_members_for_all(ApiBlockMembersForAll {
-            group_id: group_id.into().0,
-            group_member_ids: member_ids.into_iter().map(|id| id.0).collect(),
+            group_id: group_id.into().raw(),
+            group_member_ids: member_ids.into_iter().map(|id| id.raw()).collect(),
             blocked: true,
         })
     }
@@ -610,8 +610,8 @@ where
         member_ids: I,
     ) -> impl Future<Output = BlockMembersResponse<Self>> {
         self.api_block_members_for_all(ApiBlockMembersForAll {
-            group_id: group_id.into().0,
-            group_member_ids: member_ids.into_iter().map(|id| id.0).collect(),
+            group_id: group_id.into().raw(),
+            group_member_ids: member_ids.into_iter().map(|id| id.raw()).collect(),
             blocked: false,
         })
     }
@@ -622,8 +622,8 @@ where
         member_ids: I,
     ) -> impl Future<Output = RemoveMembersResponse<Self>> {
         self.api_remove_members(ApiRemoveMembers {
-            group_id: group_id.into().0,
-            group_member_ids: member_ids.into_iter().map(|id| id.0).collect(),
+            group_id: group_id.into().raw(),
+            group_member_ids: member_ids.into_iter().map(|id| id.raw()).collect(),
             with_messages: false,
         })
     }
@@ -634,8 +634,8 @@ where
         member_ids: I,
     ) -> impl Future<Output = RemoveMembersResponse<Self>> {
         self.api_remove_members(ApiRemoveMembers {
-            group_id: group_id.into().0,
-            group_member_ids: member_ids.into_iter().map(|id| id.0).collect(),
+            group_id: group_id.into().raw(),
+            group_member_ids: member_ids.into_iter().map(|id| id.raw()).collect(),
             with_messages: true,
         })
     }
@@ -644,11 +644,11 @@ where
         &self,
         group_id: GID,
     ) -> impl Future<Output = LeaveGroupResponse<Self>> {
-        self.api_leave_group(group_id.into().0)
+        self.api_leave_group(group_id.into().raw())
     }
 
     async fn list_members<GID: Into<GroupId>>(&self, group_id: GID) -> ListMembersResponse<Self> {
-        let mut response = self.api_list_members(group_id.into().0).await?;
+        let mut response = self.api_list_members(group_id.into().raw()).await?;
         let response = Arc::get_mut(&mut response).unwrap();
         Ok(std::mem::take(&mut response.group.members))
     }
@@ -659,8 +659,8 @@ where
         message_ids: I,
     ) -> impl Future<Output = DeleteMessageResponse<Self>> {
         self.api_delete_member_chat_item(
-            group_id.into().0,
-            message_ids.into_iter().map(|id| id.0).collect(),
+            group_id.into().raw(),
+            message_ids.into_iter().map(|id| id.raw()).collect(),
         )
     }
 
@@ -669,7 +669,7 @@ where
         group_id: GID,
         profile: GroupProfile,
     ) -> impl Future<Output = UpdateGroupProfileResponse<Self>> {
-        self.api_update_group_profile(group_id.into().0, profile)
+        self.api_update_group_profile(group_id.into().raw(), profile)
     }
 
     fn set_group_custom_data<GID: Into<GroupId>>(
@@ -678,7 +678,7 @@ where
         data: Option<JsonObject>,
     ) -> impl Future<Output = SetGroupCustomDataResponse<Self>> {
         self.api_set_group_custom_data(ApiSetGroupCustomData {
-            group_id: group_id.into().0,
+            group_id: group_id.into().raw(),
             custom_data: data,
         })
     }
@@ -689,7 +689,7 @@ where
         data: Option<JsonObject>,
     ) -> impl Future<Output = SetContactCustomDataResponse<Self>> {
         self.api_set_contact_custom_data(ApiSetContactCustomData {
-            contact_id: contact_id.into().0,
+            contact_id: contact_id.into().raw(),
             custom_data: data,
         })
     }
@@ -699,7 +699,7 @@ where
         group_id: GID,
         role: GroupMemberRole,
     ) -> impl Future<Output = CreateGroupLinkResult<Self>> {
-        self.api_create_group_link(group_id.into().0, role)
+        self.api_create_group_link(group_id.into().raw(), role)
     }
 
     fn set_group_link_role<GID: Into<GroupId>>(
@@ -707,28 +707,28 @@ where
         group_id: GID,
         role: GroupMemberRole,
     ) -> impl Future<Output = GroupLinkResult<Self>> {
-        self.api_group_link_member_role(group_id.into().0, role)
+        self.api_group_link_member_role(group_id.into().raw(), role)
     }
 
     fn delete_group_link<GID: Into<GroupId>>(
         &self,
         group_id: GID,
     ) -> impl Future<Output = DeleteGroupLinkResult<Self>> {
-        self.api_delete_group_link(group_id.into().0)
+        self.api_delete_group_link(group_id.into().raw())
     }
 
     fn get_group_link<GID: Into<GroupId>>(
         &self,
         group_id: GID,
     ) -> impl Future<Output = GroupLinkResult<Self>> {
-        self.api_get_group_link(group_id.into().0)
+        self.api_get_group_link(group_id.into().raw())
     }
 
     fn get_group_relays<GID: Into<GroupId>>(
         &self,
         group_id: GID,
     ) -> impl Future<Output = GetGroupRelaysResponse<Self>> {
-        self.api_get_group_relays(group_id.into().0)
+        self.api_get_group_relays(group_id.into().raw())
     }
 
     fn add_group_relays<GID: Into<GroupId>, I: IntoIterator<Item = RelayId>>(
@@ -737,8 +737,8 @@ where
         relay_ids: I,
     ) -> impl Future<Output = AddGroupRelaysResponse<Self>> {
         self.api_add_group_relays(
-            group_id.into().0,
-            relay_ids.into_iter().map(|id| id.0).collect(),
+            group_id.into().raw(),
+            relay_ids.into_iter().map(|id| id.raw()).collect(),
         )
     }
 
@@ -746,7 +746,7 @@ where
         &self,
         group_id: GID,
     ) -> impl Future<Output = AllowRelayGroupsResponse<Self>> {
-        self.api_allow_relay_group(group_id.into().0)
+        self.api_allow_relay_group(group_id.into().raw())
     }
 
     async fn default_relays(&self) -> DefaultRelaysResponse<Self> {
@@ -759,7 +759,13 @@ where
             .user_servers
             .into_iter()
             .flat_map(|g| g.chat_relays)
-            .filter_map(|r| r.enabled.then_some(RelayId(r.chat_relay_id)))
+            .filter_map(|r| {
+                if r.enabled {
+                    RelayId::try_from(r.chat_relay_id).ok()
+                } else {
+                    None
+                }
+            })
             .collect();
 
         Ok(ids)
