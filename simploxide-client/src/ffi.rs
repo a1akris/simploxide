@@ -7,8 +7,8 @@
 //! Requires AGPL-3.0 and additional build configuration. See `simploxide-sxcrt-sys`.
 
 pub use simploxide_ffi_core::{
-    CallError, DbOpts, DefaultUser, InitError as CoreInitError, SimplexVersion, VersionError,
-    WorkerConfig,
+    CallError, DbOpts, DefaultUser, Event as CoreEvent, InitError as CoreInitError, RawClient,
+    Result as CoreResult, SimplexVersion, VersionError, WorkerConfig,
 };
 
 use simploxide_api_types::{
@@ -17,7 +17,6 @@ use simploxide_api_types::{
     events::{Event, EventKind},
 };
 use simploxide_core::{MAX_SUPPORTED_VERSION, MIN_SUPPORTED_VERSION};
-use simploxide_ffi_core::{Event as CoreEvent, RawClient, Result as CoreResult};
 
 use std::sync::Arc;
 
@@ -29,6 +28,10 @@ use crate::{
     util,
 };
 
+pub type EventResult = CoreResult<CoreEvent>;
+pub type EventStream = crate::EventStream<EventResult>;
+pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
+
 #[cfg(not(feature = "xftp"))]
 pub type Bot = crate::bot::Bot<Client>;
 
@@ -38,8 +41,11 @@ pub type Bot = crate::bot::Bot<crate::xftp::XftpClient<Client>>;
 #[cfg(feature = "farm")]
 pub type FarmBot = crate::bot::farm::FarmBot<Client>;
 
-pub type EventStream = crate::EventStream<CoreResult<CoreEvent>>;
-pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
+#[cfg(feature = "farm")]
+pub type InitFarm = crate::bot::farm::InitFarm<Client, EventResult>;
+
+#[cfg(feature = "farm")]
+pub type RunningFarm = crate::bot::farm::RunningFarm<Client, EventResult>;
 
 pub async fn init(
     default_user: DefaultUser,
@@ -113,7 +119,7 @@ impl ClientApi for Client {
     }
 }
 
-impl EventParser for CoreResult<CoreEvent> {
+impl EventParser for EventResult {
     type Error = ClientError;
 
     fn parse_kind(&self) -> Result<EventKind, Self::Error> {
@@ -159,7 +165,7 @@ impl EventParser for CoreResult<CoreEvent> {
 }
 
 fn parse_data<'de, 'r: 'de, D: 'de + serde::Deserialize<'de>>(
-    result: &'r CoreResult<CoreEvent>,
+    result: &'r EventResult,
 ) -> Result<D, ClientError> {
     result
         .as_ref()
@@ -252,9 +258,7 @@ impl BotBuilder {
     }
 
     /// Initialise the SimpleX FFI runtime and return a ready-to-use bot.
-    pub async fn launch(
-        self,
-    ) -> Result<(Bot, crate::EventStream<CoreResult<CoreEvent>>), BotInitError> {
+    pub async fn launch(self) -> Result<(Bot, EventStream), BotInitError> {
         let default_user = self
             .default_user
             .unwrap_or_else(|| DefaultUser::bot(&self.display_name));
@@ -332,12 +336,7 @@ impl BotFarmBuilder {
     }
 
     /// Initialise the SimpleX FFI runtime and return a farm
-    pub async fn launch(
-        self,
-    ) -> Result<
-        crate::bot::BotFarm<crate::bot::farm::Init<Client, CoreResult<CoreEvent>>>,
-        BotInitError,
-    > {
+    pub async fn launch(self) -> Result<InitFarm, BotInitError> {
         let default_user = self
             .default_user
             .unwrap_or_else(|| DefaultUser::bot(&self.display_name));

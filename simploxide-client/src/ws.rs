@@ -31,6 +31,10 @@ use crate::{
     util,
 };
 
+pub type EventResult = CoreResult<CoreEvent>;
+pub type EventStream = crate::EventStream<EventResult>;
+pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
+
 #[cfg(not(feature = "xftp"))]
 pub type Bot = crate::bot::Bot<Client>;
 
@@ -40,8 +44,11 @@ pub type Bot = crate::bot::Bot<crate::xftp::XftpClient<Client>>;
 #[cfg(feature = "farm")]
 pub type FarmBot = crate::bot::farm::FarmBot<Client>;
 
-pub type EventStream = crate::EventStream<CoreResult<CoreEvent>>;
-pub type ClientResult<T = ()> = ::std::result::Result<T, ClientError>;
+#[cfg(feature = "farm")]
+pub type InitFarm = crate::bot::farm::InitFarm<Client, EventResult>;
+
+#[cfg(feature = "farm")]
+pub type RunningFarm = crate::bot::farm::RunningFarm<Client, EventResult>;
 
 /// Connects to a `simplex-chat` WebSocket server, returning a [`Client`] and an [`EventStream`]
 /// that handle serialization/deserialization of commands and events.
@@ -105,7 +112,7 @@ pub async fn retry_connect<S: AsRef<str>>(
     }
 }
 
-impl EventParser for CoreResult<String> {
+impl EventParser for EventResult {
     type Error = ClientError;
 
     fn parse_kind(&self) -> Result<EventKind, Self::Error> {
@@ -137,9 +144,7 @@ impl EventParser for CoreResult<String> {
     }
 }
 
-fn parse_data<'de, 'r: 'de, D: 'de + Deserialize<'de>>(
-    res: &'r CoreResult<String>,
-) -> ClientResult<D> {
+fn parse_data<'de, 'r: 'de, D: 'de + Deserialize<'de>>(res: &'r EventResult) -> ClientResult<D> {
     res.as_ref()
         .map_err(|e| ClientError::WebSocketFailure(e.clone()))
         .and_then(|ev| {
@@ -552,12 +557,7 @@ impl BotFarmBuilder {
     }
 
     /// Connect to an already-running `simplex-chat` instance.
-    pub async fn connect(
-        self,
-    ) -> Result<
-        crate::bot::BotFarm<crate::bot::farm::Init<Client, CoreResult<CoreEvent>>>,
-        BotInitError,
-    > {
+    pub async fn connect(self) -> Result<InitFarm, BotInitError> {
         let url = format!("ws://127.0.0.1:{}", self.port);
 
         let (client, events) = retry_connect(url, self.retry_delay, self.retries)
@@ -573,15 +573,7 @@ impl BotFarmBuilder {
     ///
     /// Returns `(farm, cli)`. The caller is responsible for calling
     /// [`cli::SimplexCli::kill`] after the farm finishes.
-    pub async fn launch(
-        mut self,
-    ) -> Result<
-        (
-            crate::bot::BotFarm<crate::bot::farm::Init<Client, CoreResult<CoreEvent>>>,
-            cli::SimplexCli,
-        ),
-        BotInitError,
-    > {
+    pub async fn launch(mut self) -> Result<(InitFarm, cli::SimplexCli), BotInitError> {
         let mut builder = cli::SimplexCli::builder(&self.name, self.port)
             .db_prefix(std::mem::take(&mut self.db_prefix));
 

@@ -32,6 +32,10 @@ pub type FarmBot<C> = Bot<crate::xftp::XftpClient<DelegateClient<C>>>;
 #[cfg(not(feature = "xftp"))]
 pub type FarmBot<C> = Bot<DelegateClient<C>>;
 
+pub type InitFarm<C, P> = BotFarm<Init<C, P>>;
+
+pub type RunningFarm<C, P> = BotFarm<Running<C, P>>;
+
 #[derive(Clone)]
 pub struct BotFarm<S> {
     state: S,
