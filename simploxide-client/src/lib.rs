@@ -184,8 +184,8 @@ use crate::id::UserId;
 /// zerocost, manage filters internally, and provide a high-level easy to use API covering the
 /// absolute majority of use cases.
 pub struct EventStream<P> {
-    owner: Option<id::UserId>,
-    filter: [bool; EventKind::COUNT],
+    user_filter: Option<UserFilter>,
+    kind_filter: [bool; EventKind::COUNT],
     receiver: tokio::sync::mpsc::UnboundedReceiver<P>,
     hooks: Vec<Box<dyn Hook>>,
 }
@@ -205,8 +205,8 @@ impl<P> FromIterator<P> for EventStream<P> {
 impl<P> From<tokio::sync::mpsc::UnboundedReceiver<P>> for EventStream<P> {
     fn from(receiver: tokio::sync::mpsc::UnboundedReceiver<P>) -> Self {
         Self {
-            owner: None,
-            filter: [true; EventKind::COUNT],
+            user_filter: None,
+            kind_filter: [true; EventKind::COUNT],
             receiver,
             hooks: Vec::new(),
         }
@@ -218,7 +218,7 @@ impl<P> EventStream<P> {
         self.receiver
     }
 
-    /// Allows to unconditionally intercept events as described by the [`Hook`] trait
+    /// Allows to unconditionally intercept events as specified by the [`Hook`] trait
     pub fn add_hook(&mut self, hook: Box<dyn Hook>) -> &mut Self {
         self.hooks.push(hook);
         self
@@ -236,18 +236,24 @@ impl<P> EventStream<P> {
         (xftp_client, self)
     }
 
-    pub fn owner(&self) -> Option<id::UserId> {
-        self.owner
-    }
-
     /// Set stream owner. Events with different UserIds will be filtered out
     pub fn set_owner(&mut self, id: id::UserId) -> &mut Self {
-        self.owner = Some(id);
+        self.user_filter = Some(UserFilter::Include(id));
         self
     }
 
-    pub fn unset_owner(&mut self) -> &mut Self {
-        self.owner = None;
+    /// Events for the specified user ID will be filtered out.
+    ///
+    /// Currently, only a single user ID can be excluded, calling this method multiple times
+    /// overwrites the excluded user ID.
+    pub fn exclude_user(&mut self, id: id::UserId) -> &mut Self {
+        self.user_filter = Some(UserFilter::Exclude(id));
+        self
+    }
+
+    /// Remove stream/owner or user exclusion
+    pub fn unset_user(&mut self) -> &mut Self {
+        self.user_filter = None;
         self
     }
 
@@ -256,13 +262,13 @@ impl<P> EventStream<P> {
             Filter::Accept(kinds) => {
                 self.reject_all();
                 for kind in kinds {
-                    self.filter[kind.as_usize()] = true;
+                    self.kind_filter[kind.as_usize()] = true;
                 }
             }
             Filter::AcceptAllExcept(kinds) => {
                 self.accept_all();
                 for kind in kinds {
-                    self.filter[kind.as_usize()] = false;
+                    self.kind_filter[kind.as_usize()] = false;
                 }
             }
             Filter::AcceptAll => self.accept_all(),
@@ -272,11 +278,11 @@ impl<P> EventStream<P> {
     }
 
     pub fn accept(&mut self, kind: EventKind) {
-        self.filter[kind.as_usize()] = true;
+        self.kind_filter[kind.as_usize()] = true;
     }
 
     pub fn reject(&mut self, kind: EventKind) {
-        self.filter[kind.as_usize()] = false;
+        self.kind_filter[kind.as_usize()] = false;
     }
 
     pub fn accept_all(&mut self) {
@@ -303,14 +309,15 @@ impl<P> EventStream<P> {
     }
 
     fn set_all(&mut self, new: bool) {
-        for old in &mut self.filter {
+        for old in &mut self.kind_filter {
             *old = new;
         }
     }
 
-    fn owner_matches(&self, user: Option<id::UserId>) -> bool {
-        match (self.owner, user) {
-            (Some(owner), Some(user)) => owner == user,
+    fn matches_user_filter(&self, owner: Option<id::UserId>) -> bool {
+        match (self.user_filter, owner) {
+            (Some(UserFilter::Include(user)), Some(owner)) => user == owner,
+            (Some(UserFilter::Exclude(user)), Some(owner)) => user != owner,
             _ => true,
         }
     }
@@ -425,7 +432,7 @@ impl<P: EventParser> Stream for EventStream<P> {
                 Poll::Ready(Some(raw_event)) => {
                     match raw_event.parse_user_id() {
                         Ok(owner) => {
-                            if !self.owner_matches(owner) {
+                            if !self.matches_user_filter(owner) {
                                 continue;
                             }
                         }
@@ -438,7 +445,7 @@ impl<P: EventParser> Stream for EventStream<P> {
                     };
 
                     if !self.hooks.iter().any(|h| h.should_intercept(kind))
-                        && !self.filter[kind.as_usize()]
+                        && !self.kind_filter[kind.as_usize()]
                     {
                         continue;
                     }
@@ -451,7 +458,7 @@ impl<P: EventParser> Stream for EventStream<P> {
                                 }
                             }
 
-                            if self.filter[kind.as_usize()] {
+                            if self.kind_filter[kind.as_usize()] {
                                 break Poll::Ready(Some(Ok(event)));
                             }
                         }
@@ -507,6 +514,12 @@ pub trait Hook: 'static + Send {
     /// Hooks must not block the event stream; this method should be a cheap synchronous call.
     /// Delegate heavy work to another thread or spawn async tasks internally.
     fn intercept_event(&mut self, event: Event);
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum UserFilter {
+    Include(id::UserId),
+    Exclude(id::UserId),
 }
 
 /// Syntactic sugar for constructing [`Preferences`](simploxide_api_types::Preferences) values.

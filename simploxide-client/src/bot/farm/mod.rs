@@ -1,3 +1,5 @@
+//! Bot farm managing multiple bots on the same SimpleX instance
+
 use serde::Deserialize;
 use simploxide_api_types::{
     NewUser, User,
@@ -36,6 +38,8 @@ pub struct BotFarm<S> {
 }
 
 impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
+    /// The `farm_name` is the name of the special bot managing the bot farm, it cannot be accessed
+    /// directly. It is mostly used as an intermediary user deleting other users under the hood.
     pub async fn init(
         farm_name: String,
         client: C,
@@ -94,10 +98,12 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
         Ok(Self { state })
     }
 
+    /// Total users count on the farm excluding the farm user
     pub fn users_count(&self) -> usize {
         self.state.cache.len()
     }
 
+    /// Iterate over all users excluding the farm user
     pub fn users(&self) -> impl Iterator<Item = &User> {
         self.state.cache.values()
     }
@@ -146,6 +152,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
         result
     }
 
+    /// Prepare a user with its own event stream. Use `take_bot` to extract the bot then.
     pub async fn prepare_bot(
         &mut self,
         settings: BotSettings,
@@ -159,6 +166,8 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
         Ok(user_id)
     }
 
+    /// Prepare a ghost user. Ghosts don't have their own event streams, all their events end up in
+    /// the general bot farm stream.
     pub async fn prepare_ghost(
         &mut self,
         settings: BotSettings,
@@ -172,6 +181,15 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
         Ok(user_id)
     }
 
+    /// Transition the farm to the running state by starting dispatching and routing events.
+    ///
+    /// Returns a running farm and a general [`EventStream`] that receives:
+    /// - events belonging to ghost users
+    /// - general events not addressed to a specific user(events without [`User`] struct)
+    ///
+    /// Farm user events are filtered out
+    ///
+    /// Handle events or [discard](EventStream::discard) the returned event stream to avoid memory leaks.
     pub fn run(self) -> (BotFarm<Running<C, P>>, EventStream<P>)
     where
         C: 'static + Send,
@@ -182,7 +200,9 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
         mux::start(self.state.client, rx);
 
         let bots = Arc::new(self.state.bots);
-        let (suspender, unmuxed_events) = demux::start(bots.clone(), self.state.events);
+        let (suspender, mut unmuxed_events) = demux::start(bots.clone(), self.state.events);
+
+        unmuxed_events.exclude_user(self.state.farm_id);
 
         #[cfg(feature = "xftp")]
         let (xftp_client, unmuxed_events) = unmuxed_events.hook_xftp(delegate_client.clone());
@@ -254,6 +274,12 @@ impl<C: 'static + ClientApi, P: EventParser> BotFarm<Running<C, P>>
 where
     C::Error: Send,
 {
+    /// Return a ghost handle for `user_id`, or `None` if the user does not exist or is a bot.
+    ///
+    /// Each call produces a new independent [`FarmBot`] handle. Multiple handles for the same
+    /// ghost share the underlying command channel and with the `xftp` feature enabled the same
+    /// download table, so concurrent `download_file` calls on different handles will work
+    /// correctly.
     pub fn ghost(&self, user_id: UserId) -> Option<FarmBot<C>> {
         let chan = self.state.bots.get(&user_id.into())?;
 
@@ -264,7 +290,11 @@ where
         }
     }
 
-    /// Panics if user_id doesn't exist, the user was never initialized as a bot, or the bot was already taken
+    /// Take the bot handle and its [`EventStream`] out of the farm.
+    ///
+    /// This is a one-shot operation: the internal event receiver is consumed and cannot be taken
+    /// again. Panics if `user_id` is unknown, was registered as a ghost, or was already taken.
+    /// Use [`take_bot_checked`](Self::take_bot_checked) to avoid the panic.
     pub fn take_bot(&self, user_id: UserId) -> (FarmBot<C>, EventStream<P>) {
         let mut chan = self.state.bots.get_mut(&user_id.into()).unwrap();
 
@@ -279,6 +309,8 @@ where
         self.make_bot(user_id, receiver)
     }
 
+    /// Non-panicking variant of [`take_bot`](Self::take_bot). Returns `None` if the user is
+    /// unknown, is a ghost, or was already taken.
     pub fn take_bot_checked(&self, user_id: UserId) -> Option<(FarmBot<C>, EventStream<P>)> {
         self.state
             .bots
@@ -287,6 +319,11 @@ where
             .map(|receiver| self.make_bot(user_id, receiver))
     }
 
+    /// Create a new SimpleX user, as a bot, and return its handle and event stream.
+    ///
+    /// Unlike `prepare_bot`, this is available at runtime after [`run`](crate::bot::BotFarm::run).
+    /// In order to route events correctly **all** event streams are paused and don't receive any
+    /// events during the bot creation process.
     pub async fn create_bot(
         &self,
         settings: BotSettings,
@@ -296,6 +333,14 @@ where
         Ok((bot, stream))
     }
 
+    /// Return the existing bot if a user with the given display name is already known, otherwise
+    /// create one via [`create_bot`](Self::create_bot).
+    ///
+    /// # Eventual consistency
+    ///
+    /// This method is eventually consistent and may return [CreateError::Desync] if the same bot
+    /// is getting created/deleted from multiple threads. You're supposed to retry this call to get
+    /// the actual result on [CreateError::Desync]
     pub async fn get_or_create_bot(
         &self,
         settings: BotSettings,
@@ -319,6 +364,9 @@ where
         }
     }
 
+    /// Create a new SimpleX user, register it as a ghost, and return a handle to it.
+    ///
+    /// The ghost's events are routed to the general [`EventStream`] returned when running a farm.
     pub async fn create_ghost(
         &self,
         settings: BotSettings,
@@ -327,6 +375,10 @@ where
         Ok(self.ghost(user_id).unwrap())
     }
 
+    /// Return a ghost handle for the named user if it already exists, otherwise create one via
+    /// [`create_ghost`](Self::create_ghost).
+    ///
+    /// Same eventual consistency caveats as [`get_or_create_bot`](Self::get_or_create_bot).
     pub async fn get_or_create_ghost(
         &self,
         settings: BotSettings,
@@ -348,6 +400,10 @@ where
         }
     }
 
+    /// Permanently delete a user and remove it from the routing table.
+    ///
+    /// Any [`FarmBot`] handles that were already taken for this user remain alive but all
+    /// subsequent commands on them will fail with an API error.
     pub async fn delete(&self, user_id: UserId) -> Result<(), C::Error> {
         self.state
             .client

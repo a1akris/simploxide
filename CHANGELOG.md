@@ -1,3 +1,45 @@
+# v0.12.0 - Bot farms to manage multibot instances
+
+- New `BotFarm` type and `BotFarmBuilders` (available in both `ws` and `ffi` modules) for running
+  multiple independent SimpleX identities on a single SimpleX-Chat instance. Commands are automatically
+  multiplexed so each user stays active for the duration of its own requests; incoming events are
+  demultiplexed and delivered to the corresponding user `EventStream`.
+
+  The farm supports two user kinds: **bots** have dedicated `EventStreams` and are suited for
+  interactive scenarios handling events independently; **ghosts** share the farm's stream and are
+  suited for background or fire-and-forget tasks.
+
+- A new `support_bots` example demonstrating how to set up and use a bot farm.
+
+- `Bot::default_relays()` to return default relay IDs configured for the active user.
+
+- `create_group` and `create_public_group` now automatically retry with the
+  corrected display name when SimpleX rejects the requested one as invalid, instead of returning
+  an error.
+
+- `preferences` module adds `YES`, `NO` and other constants for different group preferences.
+
+- `GroupLinkExt` trait with a `.link()` shorthand for extracting the group link
+  from data structures containing them
+
+- `Transcoder::jpeg()` and `Transcoder::thumbnail()` named constructors cover the two most common
+  preview configurations without having to specify every field manually.
+
+- Types updated to cover SimpleX-Chat `v6.5.4`.
+
+- Fixed a bug where a bot's `EventStream` could receive events belonging to
+  other users still present in the database, potentially causing spurious
+  `StoreError`s. Streams are now filtered by owner user ID when constructed via
+  `BotBuilder` or `BotFarmBuilder`. Manually-constructed streams can enable
+  this behaviour with `EventStream::set_owner`/`EventStream::exclude_user`.
+
+- Fixed error events being incorrectly handled as critical errors in certain
+  scenarios.
+
+- Fixed incorrect `delete_chat` behaviour.
+
+[Full diff](https://github.com/a1akris/simploxide/compare/v0.11.0...v0.12.0)
+
 # v0.11.0 - Fully static builds for FFI
 
 - `simploxide-sxcrt-sys` now comes with an option to enable automatic fully

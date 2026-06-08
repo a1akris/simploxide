@@ -1,4 +1,18 @@
-//! The highest-level API
+//! High-level bot API.
+//!
+//! # Construction
+//!
+//! Bots are supposed to be constructed via concrete backend builders. See [`ffi::BotBuilder`] and
+//! [`ws::BotBuilder`].
+//!
+//! # Bots vs Bot Farms
+//!
+//! Constructing multiple bots via multiple `BotBuilder` invocations creates bots on separate
+//! SimpleX-Chat instances. For `ws` this would require spawning multiple CLI processes, for `ffi`
+//! the new chat controller is being created per bot under the hood. This is useful if you want to
+//! separate bot states completely(e.g. different databases encrypted by different keys). To manage
+//! multiple bots on the same SimpleX-Chat instance use bot [farms](farm). See
+//! [`ws::BotFarmBuilder`] and [`ffi::BotFarmBuilder`].
 
 use simploxide_api_types::{
     AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, ConnectionPlan,
@@ -727,7 +741,7 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Create a new public group with relay members. The bot's user becomes the owner.
-    /// Relay IDs can be obtained from [`Bot::get_group_relays`]
+    /// Relay IDs can be obtained from [`Bot::default_relays`]
     pub async fn create_public_group<I: IntoIterator<Item = RelayId>>(
         &self,
         relay_ids: I,
@@ -1027,6 +1041,7 @@ impl<C: ClientApi> Bot<C> {
             .await
     }
 
+    /// Get a list of default user relays
     pub async fn default_relays(&self) -> Result<Vec<RelayId>, C::Error> {
         self.client.default_relays().await
     }
