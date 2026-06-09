@@ -21,7 +21,6 @@ where
 async fn task<C: ClientApi>(client: C, mut requests: DelegateReceiver<C>) {
     let mut active_bot = BotId::anybot();
     let mut batcher = RequestBatcher::with_capacity(64);
-    let mut executor = FuturesOrdered::new();
 
     while let Some(request) = requests.recv().await {
         batcher.push(request);
@@ -40,20 +39,14 @@ async fn task<C: ClientApi>(client: C, mut requests: DelegateReceiver<C>) {
         // Process requests in batches and minimize bot switches
         for request in batcher.drain() {
             if let Some(user_id) = should_switch_bot(active_bot, request.bot_id) {
-                while executor.next().await.is_some() {}
-
                 if let Err(e) = try_switch_bot(&client, &mut active_bot, user_id).await {
                     let _ = request.responder.send(Err(e));
-                } else {
-                    executor.push_back(exec_request(&client, request));
+                    continue;
                 }
-            } else {
-                executor.push_back(exec_request(&client, request));
             }
-        }
 
-        // Execute requests from the latest batch
-        while executor.next().await.is_some() {}
+            exec_request(&client, request).await;
+        }
     }
 }
 
