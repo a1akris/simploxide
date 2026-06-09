@@ -4,7 +4,6 @@
 //! correctly. Multiplexing ensures that the user remains active for the whole duration of its
 //! commands execution
 
-use futures::{StreamExt as _, stream::FuturesOrdered};
 use simploxide_api_types::{client_api::ClientApi, commands::ApiSetActiveUser};
 
 use crate::id::UserId;
@@ -38,11 +37,11 @@ async fn task<C: ClientApi>(client: C, mut requests: DelegateReceiver<C>) {
 
         // Process requests in batches and minimize bot switches
         for request in batcher.drain() {
-            if let Some(user_id) = should_switch_bot(active_bot, request.bot_id) {
-                if let Err(e) = try_switch_bot(&client, &mut active_bot, user_id).await {
-                    let _ = request.responder.send(Err(e));
-                    continue;
-                }
+            if let Some(user_id) = should_switch_bot(active_bot, request.bot_id)
+                && let Err(e) = try_switch_bot(&client, &mut active_bot, user_id).await
+            {
+                let _ = request.responder.send(Err(e));
+                continue;
             }
 
             exec_request(&client, request).await;
