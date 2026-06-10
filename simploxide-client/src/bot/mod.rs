@@ -126,7 +126,7 @@ impl<C: ClientApi> Bot<C> {
                 current_profile
             }
             Some(BotProfileSettings::FullProfile(profile)) => profile,
-            None => Self::default_profile(settings.display_name),
+            None => Self::default_profile(user.profile.display_name.clone()),
         };
         profile.image = avatar;
         bot.client.api_update_profile(user.user_id, profile).await?;
@@ -410,7 +410,23 @@ impl<C: ClientApi> Bot<C> {
     {
         let mut profile = self.profile().await?;
         updater(&mut profile);
-        self.client.api_update_profile(self.user_id, profile).await
+        match self
+            .client
+            .api_update_profile(self.user_id, profile.clone())
+            .await
+        {
+            Ok(resp) => Ok(resp),
+            Err(e) => match e.bad_response().and_then(|e| {
+                e.chat_error()
+                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
+            }) {
+                Some(err) => {
+                    profile.display_name = err.valid_name.clone();
+                    self.client.api_update_profile(self.user_id, profile).await
+                }
+                None => Err(e),
+            },
+        }
     }
 
     pub async fn set_display_name(

@@ -461,10 +461,9 @@ where
         match Bot::init_existing(client, &mut resp.user, settings).await {
             Ok(bot) => Ok(bot.user_id()),
             Err(e) => {
-                self.state
-                    .bots
-                    .insert(UserId::from(&resp.user).into(), Channel::Ghost);
-
+                if let Err(err) = self.delete(UserId::from(&resp.user)).await {
+                    log::warn!("Failed to delete incorrectly initialized bot: {err}")
+                }
                 Err(e.into())
             }
         }
