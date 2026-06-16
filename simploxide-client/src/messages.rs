@@ -336,7 +336,7 @@ impl std::fmt::Display for Text<'_> {
             Self::Secret(s) => ("#", s, "#"),
             Self::Red(s) => ("!1 ", s, "!"),
             Self::Green(s) => ("!2 ", s, "!"),
-            Self::Blue(s) => ("!3, ", s, "!"),
+            Self::Blue(s) => ("!3 ", s, "!"),
             Self::Yellow(s) => ("!4 ", s, "!"),
             Self::Cyan(s) => ("!5 ", s, "!"),
             Self::Magenta(s) => ("!6 ", s, "!"),

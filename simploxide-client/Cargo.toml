@@ -1,6 +1,6 @@
 [package]
 name = "simploxide-client"
-version = "0.12.0"
+version = "0.13.0"
 authors = ["a1akris <alkrivitskiy@pm.me>"]
 edition = "2024"
 license = "MIT OR Apache-2.0 OR AGPL-3.0"
@@ -38,7 +38,7 @@ log.workspace = true
 serde-aux.workspace = true
 serde_json.workspace = true
 serde.workspace = true
-tokio = { workspace = true, features = ["fs", "io-util"] }
+tokio = { workspace = true, features = ["fs", "io-util", "macros"] }
 
 simploxide-core = { version = "0.6.0", path = "../simploxide-core" }
 simploxide-ws-core = { version = "0.3.0", path = "../simploxide-ws-core", optional = true }
@@ -57,5 +57,5 @@ dashmap = { version = "6", optional = true }
 rustc-hash = { version = "2", optional = true }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread", "signal"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "signal", "time"] }
 async-trait = "0.1.89"

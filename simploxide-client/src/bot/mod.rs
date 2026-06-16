@@ -7,12 +7,12 @@
 //!
 //! # Bots vs Bot Farms
 //!
-//! Constructing multiple bots via multiple `BotBuilder` invocations creates bots on separate
-//! SimpleX-Chat instances. For `ws` this would require spawning multiple CLI processes, for `ffi`
-//! the new chat controller is being created per bot under the hood. This is useful if you want to
-//! separate bot states completely(e.g. different databases encrypted by different keys). To manage
-//! multiple bots on the same SimpleX-Chat instance use bot [farms](farm). See
-//! [`ws::BotFarmBuilder`] and [`ffi::BotFarmBuilder`].
+//! Constructing multiple bots via multiple `BotBuilder` invocations creates separate SimpleX-Chat
+//! instances. For `ws` spawning multiple CLI processes is required, for `ffi` a new chat
+//! controller is being created per bot under the hood. This is useful if you want to separate bot
+//! states completely(e.g. different databases encrypted by different keys). To manage multiple
+//! bots on the same SimpleX-Chat instance use bot [farms](farm). See [`ws::BotFarmBuilder`] and
+//! [`ffi::BotFarmBuilder`].
 
 use simploxide_api_types::{
     AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, ConnectionPlan,
@@ -1060,6 +1060,22 @@ impl<C: ClientApi> Bot<C> {
     /// Get a list of default user relays
     pub async fn default_relays(&self) -> Result<Vec<RelayId>, C::Error> {
         self.client.default_relays().await
+    }
+
+    /// Accept an incoming remote control session from a SimpleX Desktop client.
+    ///
+    /// Requires a [`RemoteCtrlHandle`](crate::remote::RemoteCtrlHandle) installed on the event
+    /// stream via [`EventStream::hook_remote_ctrl`](crate::EventStream::hook_remote_ctrl).
+    ///
+    /// # Deadlock warning
+    ///
+    /// See [`RemoteCtrlHandle::accept_remote_ctrl`](crate::remote::RemoteCtrlHandle::accept_remote_ctrl).
+    pub async fn accept_remote_ctrl(
+        &self,
+        handle: &crate::remote::CtrlHandle,
+        link: &str,
+    ) -> Result<(), crate::remote::CtrlError<C::Error>> {
+        handle.accept_remote_ctrl(&self.client, link).await
     }
 }
 

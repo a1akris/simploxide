@@ -14,6 +14,7 @@ pub use crate::{
     messages::*,
     preferences,
     preview::ImagePreview,
+    remote::{CtrlError, CtrlHandle},
     responses::*,
     types::{
         AddressSettings, CIContent, CIDeleteMode, CIFile, ChatBotCommand, ChatDeleteMode, ChatInfo,

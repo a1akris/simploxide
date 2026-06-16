@@ -143,6 +143,7 @@ pub mod id;
 pub mod messages;
 pub mod prelude;
 pub mod preview;
+pub mod remote;
 
 mod util;
 
@@ -187,7 +188,7 @@ pub struct EventStream<P> {
     user_filter: Option<UserFilter>,
     kind_filter: [bool; EventKind::COUNT],
     receiver: tokio::sync::mpsc::UnboundedReceiver<P>,
-    hooks: Vec<Box<dyn Hook>>,
+    hooks: Vec<Arc<dyn Hook>>,
 }
 
 impl<P> FromIterator<P> for EventStream<P> {
@@ -219,7 +220,7 @@ impl<P> EventStream<P> {
     }
 
     /// Allows to unconditionally intercept events as specified by the [`Hook`] trait
-    pub fn add_hook(&mut self, hook: Box<dyn Hook>) -> &mut Self {
+    pub fn add_hook(&mut self, hook: Arc<dyn Hook>) -> &mut Self {
         self.hooks.push(hook);
         self
     }
@@ -230,10 +231,21 @@ impl<P> EventStream<P> {
         client: C,
     ) -> (xftp::XftpClient<C>, Self) {
         let xftp_client = xftp::XftpClient::from(client);
-        let hook = xftp_client.clone();
-        self.add_hook(Box::new(hook));
+        let hook = xftp_client.manager();
+
+        self.add_hook(hook);
 
         (xftp_client, self)
+    }
+
+    /// Setting this hook enables support for remote control sessions
+    ///
+    /// See [`remote::CtrlHandle`]
+    pub fn hook_remote_control(mut self) -> (Arc<remote::CtrlHandle>, Self) {
+        let handle = Arc::new(remote::CtrlHandle::new());
+        self.add_hook(handle.clone());
+
+        (handle, self)
     }
 
     /// Set stream owner. Events with different UserIds will be filtered out
@@ -506,14 +518,14 @@ impl EventParser for Event {
     }
 }
 
-pub trait Hook: 'static + Send {
+pub trait Hook: 'static + Send + Sync {
     /// Return true if you want to intercept the given event kind. [`Self::intercept_event`] won't
     /// be called kinds this method returned false
     fn should_intercept(&self, kind: EventKind) -> bool;
 
     /// Hooks must not block the event stream; this method should be a cheap synchronous call.
     /// Delegate heavy work to another thread or spawn async tasks internally.
-    fn intercept_event(&mut self, event: Event);
+    fn intercept_event(&self, event: Event);
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]

@@ -53,6 +53,12 @@ pub struct XftpClient<C> {
     xftp: Arc<XftpManager>,
 }
 
+impl<C> XftpClient<C> {
+    pub(crate) fn manager(&self) -> Arc<XftpManager> {
+        self.xftp.clone()
+    }
+}
+
 #[cfg(feature = "websocket")]
 impl XftpClient<crate::ws::Client> {
     pub fn version(
@@ -83,10 +89,6 @@ impl XftpClient<crate::ffi::Client> {
 impl<C> XftpClient<C> {
     pub(crate) fn new(client: C, xftp: Arc<XftpManager>) -> Self {
         Self { client, xftp }
-    }
-
-    pub(crate) fn manager(&self) -> Arc<XftpManager> {
-        self.xftp.clone()
     }
 }
 
@@ -128,7 +130,7 @@ impl<C: ClientApi> XftpExt for XftpClient<C> {
     }
 }
 
-impl<C: 'static + ClientApi + Send> Hook for XftpClient<C> {
+impl Hook for XftpManager {
     fn should_intercept(&self, kind: EventKind) -> bool {
         const EVENT_KINDS: [EventKind; 3] = [
             EventKind::RcvFileSndCancelled,
@@ -139,11 +141,10 @@ impl<C: 'static + ClientApi + Send> Hook for XftpClient<C> {
         EVENT_KINDS.contains(&kind)
     }
 
-    fn intercept_event(&mut self, event: Event) {
+    fn intercept_event(&self, event: Event) {
         match event {
             Event::RcvFileComplete(ev) => {
                 if let Some((_, responder)) = self
-                    .xftp
                     .downloads
                     .remove(&ev.chat_item.chat_item.file.as_ref().unwrap().file_id)
                 {
@@ -151,16 +152,12 @@ impl<C: 'static + ClientApi + Send> Hook for XftpClient<C> {
                 }
             }
             Event::RcvFileSndCancelled(ev) => {
-                if let Some((_, responder)) =
-                    self.xftp.downloads.remove(&ev.rcv_file_transfer.file_id)
-                {
+                if let Some((_, responder)) = self.downloads.remove(&ev.rcv_file_transfer.file_id) {
                     let _ = responder.send(XftpManagerDownloadResponse::Cancelled(ev));
                 }
             }
             Event::RcvFileError(ev) => {
-                if let Some((_, responder)) =
-                    self.xftp.downloads.remove(&ev.rcv_file_transfer.file_id)
-                {
+                if let Some((_, responder)) = self.downloads.remove(&ev.rcv_file_transfer.file_id) {
                     let _ = responder.send(XftpManagerDownloadResponse::Error(ev));
                 }
             }
