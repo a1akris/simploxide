@@ -98,7 +98,7 @@ async fn ping_task(bot: ffi::Bot) {
         tokio::time::sleep(std::time::Duration::from_secs(15)).await;
 
         let broadcast = async {
-            let results = bot.prepare_broadcast("Ping".blue()).await?.send().await;
+            let results = bot.prepare_broadcast("Ping".blue()).await?.deliver().await;
 
             match results.into_iter().find_map(|res| res.err()) {
                 Some(err) => Err(err),

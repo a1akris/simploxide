@@ -107,20 +107,23 @@
 //!   [`preview::ImagePreview`] automatically tries to transcode its sources to JPEGs with this
 //!   feature on
 //!
-//! - **`xftp`**: XFTP file transfer support. Enables [`xftp::XftpClient`], which intercepts
-//!   streamlines file downlaods with a `download_file` method.
+//! - **`xftp`**: Enables [`xftp::XftpClient`], which streamlines file downloads via
+//!   `download_file` method.
 //!
 //! - **`cancellation`**: Re-exports [`tokio_util::sync::CancellationToken`] and enables helper
 //!   methods for cooperative shutdown.
 //!
-//! - **`crypto`**: Low-level cryptographic primitives (zeroize, rand). Pulled in automatically by
+//! - **`crypto`**: Enables `zeroize` and `rand` crates and exposes interfaces allowing end-users
+//!   to reimplement SimpleX crypto in a way compatible with `simploxide`. Pulled in automatically by
 //!   `native_crypto`. Useful on its own if you wish to use your own crypto implementation.
 //!
+//! - **`farm`**: Enables bot farms that manage multiple bots on the same SimpleX instance.
+//!
 //! - **`fullcli`**: Convenience bundle: `cli` + `native_crypto` + `multimedia` + `xftp` +
-//!   `cancellation`.
+//!   `cancellation` + `farm`.
 //!
 //! - **`fullffi`**: Convenience bundle: `ffi` + `native_crypto` + `multimedia` + `xftp` +
-//!   `cancellation`.
+//!   `cancellation` + `farm`.
 //!
 //! ### How to work with this documentation?
 //!

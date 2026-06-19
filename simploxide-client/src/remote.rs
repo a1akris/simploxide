@@ -6,7 +6,7 @@
 //! # Usage
 //!
 //! ```ignore
-//! let (rc, events) = events.hook_remote_ctrl();
+//! let (rc, events) = events.hook_remote_control();
 //!
 //! tokio::spawn(async move { bot.run(events).await });
 //!
@@ -27,8 +27,7 @@ use crate::{Hook, util::TypeField};
 
 type Slot = Mutex<Option<oneshot::Sender<Result<String, JsonObject>>>>;
 
-/// Can be obtained via [`EventStream::hook_remote_ctrl`](crate::EventStream::hook_remote_ctrl) or
-/// [`RemoteCtrlHook::handle`]
+/// Can be obtained via [`EventStream::hook_remote_control`](crate::EventStream::hook_remote_control).
 pub struct CtrlHandle {
     slot: Slot,
 }

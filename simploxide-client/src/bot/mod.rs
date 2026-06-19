@@ -2,8 +2,8 @@
 //!
 //! # Construction
 //!
-//! Bots are supposed to be constructed via concrete backend builders. See [`ffi::BotBuilder`] and
-//! [`ws::BotBuilder`].
+//! Bots are supposed to be constructed via concrete backend builders. See
+//! [`ffi::BotBuilder`](crate::ffi::BotBuilder) and [`ws::BotBuilder`](crate::ws::BotBuilder).
 //!
 //! # Bots vs Bot Farms
 //!
@@ -11,8 +11,8 @@
 //! instances. For `ws` spawning multiple CLI processes is required, for `ffi` a new chat
 //! controller is being created per bot under the hood. This is useful if you want to separate bot
 //! states completely(e.g. different databases encrypted by different keys). To manage multiple
-//! bots on the same SimpleX-Chat instance use bot [farms](farm). See [`ws::BotFarmBuilder`] and
-//! [`ffi::BotFarmBuilder`].
+//! bots on the same SimpleX-Chat instance use [bot farms](farm). See
+//! [`ffi::BotBuilder`](crate::ffi::BotBuilder) and [`ws::BotBuilder`](crate::ws::BotBuilder).
 
 use simploxide_api_types::{
     AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, ConnectionPlan,
@@ -320,7 +320,7 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Create one-time-invitation link. Can be used for admin-access or for private connections
-    /// with other bots. The [InvitationResponse::connection::pcc_conn_id] can be matched with
+    /// with other bots. The [`connection.pcc_conn_id`](crate::types::PendingContactConnection::pcc_conn_id) can be matched with
     /// [crate::types::Connection::conn_id] to recognize the user connected by this link when handling the
     /// [crate::events::ContactConnected] event(see [crate::events::ContactConnected::contact])
     pub async fn create_invitation_link(
@@ -607,7 +607,7 @@ impl<C: ClientApi> Bot<C> {
     /// ```rust
     /// bot.prepare_broadcast("Hey, what's up?!")
     ///    .await
-    ///    .send()
+    ///    .deliver()
     ///    .await?;
     /// ```
     pub async fn prepare_broadcast<M: MessageLike>(
@@ -626,7 +626,7 @@ impl<C: ClientApi> Bot<C> {
     /// bot.prepare_broadcast_with("What do you think about this logo?", |chat| chat.is_direct())
     ///    .await
     ///    .with_image(Image::new("logo.jpg"))
-    ///    .send()
+    ///    .deliver()
     ///    .await?;
     /// ```
     pub async fn prepare_broadcast_with<M, F>(
@@ -1065,12 +1065,12 @@ impl<C: ClientApi> Bot<C> {
 
     /// Accept an incoming remote control session from a SimpleX Desktop client.
     ///
-    /// Requires a [`RemoteCtrlHandle`](crate::remote::RemoteCtrlHandle) installed on the event
-    /// stream via [`EventStream::hook_remote_ctrl`](crate::EventStream::hook_remote_ctrl).
+    /// Requires a [`CtrlHandle`](crate::remote::CtrlHandle) installed on the event
+    /// stream via [`EventStream::hook_remote_control`](crate::EventStream::hook_remote_control).
     ///
     /// # Deadlock warning
     ///
-    /// See [`RemoteCtrlHandle::accept_remote_ctrl`](crate::remote::RemoteCtrlHandle::accept_remote_ctrl).
+    /// See [`CtrlHandle::accept_remote_ctrl`](crate::remote::CtrlHandle::accept_remote_ctrl).
     pub async fn accept_remote_ctrl(
         &self,
         handle: &crate::remote::CtrlHandle,

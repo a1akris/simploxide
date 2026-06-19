@@ -1,3 +1,29 @@
+# v0.13.0 - Remote control support
+
+- New `remote` module for accepting incoming SimpleX Desktop remote control
+  sessions. See the `remote_control.rs` example for a demonstration
+
+- Add extra `farm` bots and bot-farms type aliases simplifying naming `farm`
+  types in the function signatures.
+
+- Update types to support SimpleX-Chat `v6.5.5`
+
+- Fixed a bug where creating a bot in a `BotFarm` would fail permanently if
+  SimpleX rejected the requested display name as invalid. The farm now
+  automatically retries with the corrected name.
+
+- Renamed `send()` helper on `MessageBuilders` to `deliver()` to eliminate
+  thautologies.
+
+- Fixed a bug where failure to create a bot in a running farm would not cleanup
+  the user slot properly preventing the bot from being recreated or accessed
+  later.
+
+- Fixed incorrect parallel execution of requests within a `BotFarm` that could
+  cause commands to arrive out of order at the SimpleX backend.
+
+[Full diff](https://github.com/a1akris/simploxide/compare/v0.12.0...v0.13.0)
+
 # v0.12.0 - Bot farms to manage multibot instances
 
 - New `BotFarm` type and `BotFarmBuilders` (available in both `ws` and `ffi` modules) for running

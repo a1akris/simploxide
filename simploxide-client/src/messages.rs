@@ -17,7 +17,7 @@
 //!     .await?;
 //!
 //! // Formatted text
-//! bot.send_msg(chat, Text::yellow("Warning: operation is cancelledd")).await?;
+//! bot.send_msg(chat, "Warning: operation is cancelled".yellow()).await?;
 //!
 //! // Heavily-formatted text
 //! bot.send_msg(
@@ -239,7 +239,7 @@
 //!     .await;
 //!
 //! // Explicit set of chat IDs
-//! bot.multicast_message(chat_ids, Image::new("/tmp/photo.jpg"))
+//! bot.multicast(chat_ids, Image::new("/tmp/photo.jpg"))
 //!     .with_preview(ImagePreview::from_bytes(thumb_bytes))
 //!     .await;
 //! ```
@@ -902,9 +902,9 @@ impl<'a, C, M> MessageBuilder<'a, C, M> {
         self
     }
 
-    /// A syntactic sugar to avoid double awaits(`.await.await` -> `.await.send().await`) in
+    /// A syntactic sugar to avoid double awaits(`.await.await` -> `.await.deliver().await`) in
     /// certain use-cases
-    pub fn send(self) -> <Self as IntoFuture>::IntoFuture
+    pub fn deliver(self) -> <Self as IntoFuture>::IntoFuture
     where
         Self: IntoFuture,
     {
@@ -1085,9 +1085,9 @@ impl<'a, I, C, M> MulticastBuilder<'a, I, C, M> {
         self
     }
 
-    /// A syntactic sugar to avoid double awaits(`.await.await` -> `.await.send().await`) in
+    /// A syntactic sugar to avoid double awaits(`.await.await` -> `.await.deliver().await`) in
     /// certain use-cases
-    pub fn send(self) -> <Self as IntoFuture>::IntoFuture
+    pub fn deliver(self) -> <Self as IntoFuture>::IntoFuture
     where
         Self: IntoFuture,
     {
