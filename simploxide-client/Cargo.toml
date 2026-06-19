@@ -40,10 +40,10 @@ serde_json.workspace = true
 serde.workspace = true
 tokio = { workspace = true, features = ["fs", "io-util", "macros"] }
 
-simploxide-core = { version = "0.6.0", path = "../simploxide-core" }
-simploxide-ws-core = { version = "0.3.0", path = "../simploxide-ws-core", optional = true }
-simploxide-ffi-core = { version = "0.3.0", path = "../simploxide-ffi-core", optional = true }
-simploxide-api-types = { version = "0.10.0", path = "../simploxide-api-types" }
+simploxide-core = { version = "0.7.0", path = "../simploxide-core" }
+simploxide-ws-core = { version = "0.4.0", path = "../simploxide-ws-core", optional = true }
+simploxide-ffi-core = { version = "0.4.0", path = "../simploxide-ffi-core", optional = true }
+simploxide-api-types = { version = "0.11.0", path = "../simploxide-api-types" }
 
 base64 = "0.22"
 poly1305 = { version = "0.9", features = ["zeroize"], optional = true }

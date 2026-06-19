@@ -244,6 +244,7 @@ impl<C: ClientApi> Bot<C> {
                 commands: None,
                 undocumented: Default::default(),
             }),
+            badge: None,
             peer_type: Some(ChatPeerType::Bot),
             undocumented: serde_json::Value::Null,
         }
@@ -1147,6 +1148,8 @@ impl BotSettings {
     }
 }
 
+// ~350 vs ~650 bytes
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub enum BotProfileSettings {
     /// Apply only the given preferences; leave all other profile fields unchanged.
@@ -1201,6 +1204,7 @@ fn extract_profile(local: &mut LocalProfile) -> Profile {
         contact_link: local.contact_link.take(),
         preferences: local.preferences.take(),
         peer_type: local.peer_type.take(),
+        badge: None,
         undocumented: std::mem::take(&mut local.undocumented),
     }
 }

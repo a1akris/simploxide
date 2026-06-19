@@ -119,6 +119,76 @@ pub struct AutoAccept {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct BadgeInfo {
+    #[serde(rename = "badgeType")]
+    pub badge_type: BadgeType,
+
+    #[serde(rename = "badgeExpiry", skip_serializing_if = "Option::is_none")]
+    pub badge_expiry: Option<UtcTime>,
+
+    #[serde(rename = "badgeExtra")]
+    pub badge_extra: String,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct BadgeProof {
+    #[serde(
+        rename = "badgeKeyIdx",
+        deserialize_with = "deserialize_number_from_string"
+    )]
+    pub badge_key_idx: i32,
+
+    #[serde(rename = "presHeader")]
+    pub pres_header: String,
+
+    #[serde(rename = "proof")]
+    pub proof: String,
+
+    #[serde(rename = "badgeInfo")]
+    pub badge_info: BadgeInfo,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum BadgeStatus {
+    #[default]
+    #[serde(rename = "active")]
+    Active,
+    #[serde(rename = "expired")]
+    Expired,
+    #[serde(rename = "expiredOld")]
+    ExpiredOld,
+    #[serde(rename = "failed")]
+    Failed,
+    #[serde(rename = "unknownKey")]
+    UnknownKey,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum BadgeType {
+    #[default]
+    #[serde(rename = "supporter")]
+    Supporter,
+    #[serde(rename = "legend")]
+    Legend,
+    #[serde(rename = "investor")]
+    Investor,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct BlockingInfo {
     #[serde(rename = "reason")]
     pub reason: BlockingReason,
@@ -3788,6 +3858,9 @@ pub struct ContactShortLinkData {
     #[serde(rename = "business", default)]
     pub business: bool,
 
+    #[serde(rename = "localBadge", skip_serializing_if = "Option::is_none")]
+    pub local_badge: Option<LocalBadge>,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -5898,6 +5971,21 @@ pub struct LinkPreview {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct LocalBadge {
+    #[serde(rename = "badge")]
+    pub badge: BadgeInfo,
+
+    #[serde(rename = "status")]
+    pub status: BadgeStatus,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct LocalProfile {
     #[serde(
         rename = "profileId",
@@ -5925,6 +6013,9 @@ pub struct LocalProfile {
 
     #[serde(rename = "peerType", skip_serializing_if = "Option::is_none")]
     pub peer_type: Option<ChatPeerType>,
+
+    #[serde(rename = "localBadge", skip_serializing_if = "Option::is_none")]
+    pub local_badge: Option<LocalBadge>,
 
     #[serde(rename = "localAlias")]
     pub local_alias: String,
@@ -6829,6 +6920,9 @@ pub struct Profile {
 
     #[serde(rename = "peerType", skip_serializing_if = "Option::is_none")]
     pub peer_type: Option<ChatPeerType>,
+
+    #[serde(rename = "badge", skip_serializing_if = "Option::is_none")]
+    pub badge: Option<BadgeProof>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -8719,7 +8813,7 @@ pub struct UserContactRequest {
     pub profile_id: i64,
 
     #[serde(rename = "profile")]
-    pub profile: Profile,
+    pub profile: LocalProfile,
 
     #[serde(rename = "createdAt")]
     pub created_at: UtcTime,

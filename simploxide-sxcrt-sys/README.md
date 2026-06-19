@@ -23,8 +23,8 @@ Download the pre-built library bundle from the [simplex-chat-libs
 releases](https://github.com/simplex-chat/simplex-chat-libs/releases) and
 extract it into a `sxcrt/` directory at the root of your crate:
 
-```
-your-crate/
+```md
+your_crate/
   sxcrt/
     .gitignore   <- tracks the dir, ignores its contents
     libsimplex.so
