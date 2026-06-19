@@ -155,6 +155,7 @@ impl<C: ClientApi> Bot<C> {
         let response = client
             .new_user(NewUser {
                 profile: Some(bot_profile),
+                client_service: false,
                 past_timestamp: false,
                 user_chat_relay: false,
                 undocumented: Default::default(),

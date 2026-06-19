@@ -6609,6 +6609,9 @@ pub struct NewUser {
     #[serde(rename = "userChatRelay", default)]
     pub user_chat_relay: bool,
 
+    #[serde(rename = "clientService", default)]
+    pub client_service: bool,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -8663,11 +8666,14 @@ pub struct User {
     )]
     pub user_member_profile_updated_at: Option<UtcTime>,
 
-    #[serde(rename = "uiThemes", skip_serializing_if = "Option::is_none")]
-    pub ui_themes: Option<UIThemeEntityOverrides>,
-
     #[serde(rename = "userChatRelay", default)]
     pub user_chat_relay: bool,
+
+    #[serde(rename = "clientService", default)]
+    pub client_service: bool,
+
+    #[serde(rename = "uiThemes", skip_serializing_if = "Option::is_none")]
+    pub ui_themes: Option<UIThemeEntityOverrides>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]

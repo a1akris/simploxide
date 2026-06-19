@@ -78,6 +78,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
                 let resp = client
                     .create_active_user(NewUser {
                         profile: Some(Bot::<C>::default_profile(farm_name.clone())),
+                        client_service: false,
                         past_timestamp: false,
                         user_chat_relay: false,
                         undocumented: Default::default(),
@@ -439,6 +440,7 @@ where
             .client
             .new_user(NewUser {
                 profile: Some(Bot::<C>::default_profile(&settings.display_name)),
+                client_service: false,
                 past_timestamp: false,
                 user_chat_relay: false,
                 undocumented: Default::default(),
