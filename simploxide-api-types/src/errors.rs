@@ -599,8 +599,6 @@ pub enum ChatErrorType {
     },
     #[serde(rename = "userUnknown")]
     UserUnknown,
-    #[serde(rename = "activeUserExists")]
-    ActiveUserExists,
     #[serde(rename = "userExists")]
     UserExists {
         #[serde(rename = "contactName")]
@@ -1103,9 +1101,6 @@ impl ChatErrorType {
     }
     pub fn is_user_unknown(&self) -> bool {
         matches!(self, Self::UserUnknown)
-    }
-    pub fn is_active_user_exists(&self) -> bool {
-        matches!(self, Self::ActiveUserExists)
     }
     pub fn user_exists(&self) -> Option<&String> {
         if let Self::UserExists { contact_name, .. } = self {
