@@ -8,7 +8,7 @@ use std::str::FromStr;
 use serde::Deserialize;
 
 pub const MIN_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 5, 0);
-pub const MAX_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 5, 99);
+pub const MAX_SUPPORTED_VERSION: SimplexVersion = SimplexVersion::new(6, 5, 6, 99);
 
 /// Parses SimpleX version numbers in the form `MAJOR.MINOR.PATCH.HOTFIX`.
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash)]
