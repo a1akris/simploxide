@@ -99,6 +99,17 @@ pub enum ChatId {
 }
 
 impl ChatId {
+    /// Returns a raw ID regardless of the chat type.
+    ///
+    /// Prefer to use getters like `chat_id.direct().unwrap().raw()` to avoid confusing ID types.
+    pub fn raw(&self) -> i64 {
+        match self {
+            Self::Direct(id) => id.raw(),
+            Self::Group { id, scope: _ } => id.raw(),
+            Self::Local(id) => id.raw(),
+        }
+    }
+
     /// Creates a [`ChatId::Group`] scoped to a member support thread.
     pub fn with_group_scope(id: GroupId, group_member_support_id: MemberId) -> Self {
         Self::Group {
@@ -179,16 +190,40 @@ impl ChatId {
         }
     }
 
+    pub fn direct(&self) -> Option<ContactId> {
+        if let Self::Direct(contact) = self {
+            Some(*contact)
+        } else {
+            None
+        }
+    }
+
+    pub fn group(&self) -> Option<(GroupId, Option<MemberId>)> {
+        if let Self::Group { id, scope } = self {
+            Some((*id, *scope))
+        } else {
+            None
+        }
+    }
+
+    pub fn local(&self) -> Option<UserId> {
+        if let Self::Local(id) = self {
+            Some(*id)
+        } else {
+            None
+        }
+    }
+
     pub fn is_direct(&self) -> bool {
-        matches!(self, Self::Direct(_))
+        self.direct().is_some()
     }
 
     pub fn is_group(&self) -> bool {
-        matches!(self, Self::Group { .. })
+        self.group().is_some()
     }
 
     pub fn is_local(&self) -> bool {
-        matches!(self, Self::Local(_))
+        self.local().is_some()
     }
 }
 

@@ -318,12 +318,12 @@ impl<S: SimplexSecretBox> Drop for EncryptedFile<S> {
 }
 
 /// An async file that is either plaintext or SimpleX-SecretBox encrypted.
-pub enum TokioMaybeCryptoFile<S: SimplexSecretBox> {
+pub enum MaybeCryptoFile<S: SimplexSecretBox> {
     Plain(::tokio::fs::File),
     Encrypted(EncryptedFile<S>),
 }
 
-impl<S: SimplexSecretBox> TokioMaybeCryptoFile<S> {
+impl<S: SimplexSecretBox> MaybeCryptoFile<S> {
     /// Opens the file read+write so that [`Self::prepare_for_overwrite`] works.
     /// Use [`Self::open_read_only`] when write access is not needed or not available.
     pub async fn open<P: AsRef<Path>>(
@@ -435,7 +435,7 @@ impl<S: SimplexSecretBox> TokioMaybeCryptoFile<S> {
     }
 }
 
-impl<S: SimplexSecretBox> AsyncRead for TokioMaybeCryptoFile<S> {
+impl<S: SimplexSecretBox> AsyncRead for MaybeCryptoFile<S> {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -449,7 +449,7 @@ impl<S: SimplexSecretBox> AsyncRead for TokioMaybeCryptoFile<S> {
     }
 }
 
-impl<S: SimplexSecretBox> AsyncWrite for TokioMaybeCryptoFile<S> {
+impl<S: SimplexSecretBox> AsyncWrite for MaybeCryptoFile<S> {
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,

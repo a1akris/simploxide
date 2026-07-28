@@ -17,7 +17,8 @@
 use simploxide_api_types::{
     AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, ConnectionPlan,
     Contact, CreatedConnLink, GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject,
-    LocalProfile, MsgContent, NewUser, PaginationByTime, Preferences, Profile, User,
+    LocalProfile, MsgContent, NewUser, PaginationByTime, PlanResolveMode, Preferences, Profile,
+    User,
     client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
     commands::{
         ApiAddContact, ApiConnectPlan, ApiGetChats, ApiNewGroup, ApiNewPublicGroup,
@@ -232,8 +233,10 @@ impl<C: ClientApi> Bot<C> {
             display_name: name.into(),
             full_name: String::default(),
             short_descr: None,
+            description: None,
             image: None,
             contact_link: None,
+            contact_domain: None,
             preferences: Some(Preferences {
                 timed_messages: preferences::timed_messages::NO,
                 full_delete: preferences::YES,
@@ -274,17 +277,17 @@ impl<C: ClientApi> Bot<C> {
         self.client.initiate_connection(link).await
     }
 
-    /// Inspect a SimpleX link before connecting: resolves its type (contact address, group link,
+    /// Inspect a SimpleX target before connecting: resolves its type (name, contact address, group link,
     /// or 1-time invitation) and reports whether the bot is already connected via it.
     pub async fn check_connection_plan(
         &self,
-        link: impl Into<String>,
+        target: impl Into<String>,
     ) -> Result<Arc<ConnectionPlanResponse>, C::Error> {
         self.client
             .api_connect_plan(ApiConnectPlan {
                 user_id: self.user_id,
-                connection_link: Some(link.into()),
-                resolve_known: true,
+                connect_target: Some(target.into()),
+                resolve_mode: PlanResolveMode::Unknown,
                 link_owner_sig: None,
             })
             .await
@@ -649,6 +652,7 @@ impl<C: ClientApi> Bot<C> {
             client: self.client(),
             chat_ids: ids,
             ttl: None,
+            sign: false,
             msg,
             kind,
         })
@@ -1201,8 +1205,10 @@ fn extract_profile(local: &mut LocalProfile) -> Profile {
         display_name: std::mem::take(&mut local.display_name),
         full_name: std::mem::take(&mut local.full_name),
         short_descr: local.short_descr.take(),
+        description: local.description.take(),
         image: local.image.take(),
         contact_link: local.contact_link.take(),
+        contact_domain: local.contact_domain.take(),
         preferences: local.preferences.take(),
         peer_type: local.peer_type.take(),
         badge: None,

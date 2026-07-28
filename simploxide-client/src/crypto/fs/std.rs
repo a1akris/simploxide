@@ -191,12 +191,12 @@ impl<S: SimplexSecretBox> Drop for EncryptedFile<S> {
 }
 
 /// A sync file that is either plaintext or SimpleX-SecretBox encrypted.
-pub enum StdMaybeCryptoFile<S: SimplexSecretBox> {
+pub enum MaybeCryptoFile<S: SimplexSecretBox> {
     Plain(::std::fs::File),
     Encrypted(EncryptedFile<S>),
 }
 
-impl<S: SimplexSecretBox> StdMaybeCryptoFile<S> {
+impl<S: SimplexSecretBox> MaybeCryptoFile<S> {
     /// Opens the file read+write so that [`Self::prepare_for_overwrite`] works.
     /// Use [`Self::open_read_only`] when write access is not needed or not available.
     pub fn open<P: AsRef<Path>>(
@@ -303,7 +303,7 @@ impl<S: SimplexSecretBox> StdMaybeCryptoFile<S> {
     }
 }
 
-impl<S: SimplexSecretBox> Read for StdMaybeCryptoFile<S> {
+impl<S: SimplexSecretBox> Read for MaybeCryptoFile<S> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         match self {
             Self::Plain(f) => f.read(buf),
@@ -312,7 +312,7 @@ impl<S: SimplexSecretBox> Read for StdMaybeCryptoFile<S> {
     }
 }
 
-impl<S: SimplexSecretBox> Write for StdMaybeCryptoFile<S> {
+impl<S: SimplexSecretBox> Write for MaybeCryptoFile<S> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match self {
             Self::Plain(f) => f.write(buf),

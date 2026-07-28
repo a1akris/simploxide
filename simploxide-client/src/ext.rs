@@ -435,6 +435,7 @@ where
             client: self,
             chat_id: cid.into(),
             live: false,
+            sign: false,
             ttl: None,
             msg: composed,
             kind,
@@ -451,6 +452,7 @@ where
             client: self,
             chat_ids,
             ttl: None,
+            sign: false,
             msg,
             kind,
         }
@@ -532,13 +534,14 @@ where
         self.cancel_file(file_id.into().raw())
     }
 
+    /// `target` can be SimpleX link or SimpleX name.
     fn initiate_connection(
         &self,
-        link: impl Into<String>,
+        target: impl Into<String>,
     ) -> impl Future<Output = InitiateConnectionResponse<Self>> {
         self.connect(Connect {
             incognito: false,
-            conn_link: Some(link.into()),
+            conn_target: Some(target.into()),
         })
         .map(|res| res.allow_undocumented())
     }

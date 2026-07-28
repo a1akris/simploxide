@@ -264,21 +264,32 @@ use std::{path::Path, pin::Pin, sync::Arc, time::Duration};
 /// A kind for simple text messsages
 pub struct TextKind;
 
+impl sealed::MessageKind for TextKind {}
+impl sealed::SimplySendable for TextKind {}
+
 /// A kind for complex messages(simple attachments, reports, etc) that don't require any
 /// pre-processing to be sent
 pub struct RichKind;
 
+impl sealed::MessageKind for RichKind {}
+impl sealed::SimplySendable for RichKind {}
+
 /// Builder kind for [`ComposedMessage`]. Content is sent verbatim so no builder methods are
 /// available for this kind.
 pub struct RawKind;
+
+impl sealed::MessageKind for RawKind {}
+impl sealed::SimplySendable for RawKind {}
 
 /// Builder kind for messages requiring preview processing. Exposes `with_preview` to override the
 /// thumbnail. With the `multimedia` feature, also exposes `with_transcoder` to control JPEG
 /// re-encoding at send time.
 pub struct PreviewableKind(ImagePreview);
 
+impl sealed::MessageKind for PreviewableKind {}
+
 pub trait MessageLike {
-    type Kind;
+    type Kind: sealed::MessageKind;
     fn into_builder_parts(self) -> (ComposedMessage, Self::Kind);
 }
 
@@ -876,6 +887,7 @@ pub struct MessageBuilder<'a, C: 'a + ?Sized, M = TextKind> {
     pub(crate) client: &'a C,
     pub(crate) chat_id: ChatId,
     pub(crate) live: bool,
+    pub(crate) sign: bool,
     pub(crate) ttl: Option<Duration>,
     pub(crate) msg: ComposedMessage,
     pub(crate) kind: M,
@@ -902,6 +914,11 @@ impl<'a, C, M> MessageBuilder<'a, C, M> {
         self
     }
 
+    pub fn sign(mut self, sign: bool) -> Self {
+        self.sign = sign;
+        self
+    }
+
     /// A syntactic sugar to avoid double awaits(`.await.await` -> `.await.deliver().await`) in
     /// certain use-cases
     pub fn deliver(self) -> <Self as IntoFuture>::IntoFuture
@@ -920,6 +937,7 @@ impl<'a, C> MessageBuilder<'a, C, TextKind> {
             client: self.client,
             chat_id: self.chat_id,
             live: self.live,
+            sign: self.sign,
             ttl: self.ttl,
             msg,
             kind,
@@ -933,6 +951,7 @@ impl<'a, C> MessageBuilder<'a, C, TextKind> {
             client: self.client,
             chat_id: self.chat_id,
             live: self.live,
+            sign: self.sign,
             ttl: self.ttl,
             msg,
             kind,
@@ -946,6 +965,7 @@ impl<'a, C> MessageBuilder<'a, C, TextKind> {
             client: self.client,
             chat_id: self.chat_id,
             live: self.live,
+            sign: self.sign,
             ttl: self.ttl,
             msg,
             kind,
@@ -959,6 +979,7 @@ impl<'a, C> MessageBuilder<'a, C, TextKind> {
             client: self.client,
             chat_id: self.chat_id,
             live: self.live,
+            sign: self.sign,
             ttl: self.ttl,
             msg,
             kind,
@@ -972,6 +993,7 @@ impl<'a, C> MessageBuilder<'a, C, TextKind> {
             client: self.client,
             chat_id: self.chat_id,
             live: self.live,
+            sign: self.sign,
             ttl: self.ttl,
             msg,
             kind,
@@ -985,6 +1007,7 @@ impl<'a, C> MessageBuilder<'a, C, TextKind> {
             client: self.client,
             chat_id: self.chat_id,
             live: self.live,
+            sign: self.sign,
             ttl: self.ttl,
             msg,
             kind,
@@ -1016,9 +1039,8 @@ impl<'a, C> MessageBuilder<'a, C, PreviewableKind> {
 
 mod sealed {
     pub trait SimplySendable {}
-    impl SimplySendable for super::TextKind {}
-    impl SimplySendable for super::RichKind {}
-    impl SimplySendable for super::RawKind {}
+
+    pub trait MessageKind {}
 }
 
 impl<'a, C, M> IntoFuture for MessageBuilder<'a, C, M>
@@ -1034,6 +1056,7 @@ where
         Box::pin(self.client.api_send_messages(ApiSendMessages {
             send_ref: self.chat_id.into_chat_ref(),
             live_message: self.live,
+            sign_messages: self.sign,
             ttl: self.ttl.map(preferences::timed_messages::ttl_to_secs),
             composed_messages: vec![self.msg],
         }))
@@ -1058,6 +1081,7 @@ where
                 .api_send_messages(ApiSendMessages {
                     send_ref: self.chat_id.into_chat_ref(),
                     live_message: self.live,
+                    sign_messages: self.sign,
                     ttl: self.ttl.map(preferences::timed_messages::ttl_to_secs),
                     composed_messages: vec![msg],
                 })
@@ -1070,6 +1094,7 @@ pub struct MulticastBuilder<'a, I, C: 'a + ?Sized, M = TextKind> {
     pub(crate) client: &'a C,
     pub(crate) chat_ids: I,
     pub(crate) ttl: Option<Duration>,
+    pub(crate) sign: bool,
     pub(crate) msg: ComposedMessage,
     pub(crate) kind: M,
 }
@@ -1082,6 +1107,11 @@ impl<'a, I, C, M> MulticastBuilder<'a, I, C, M> {
 
     pub fn set_text(mut self, text: impl Into<String>) -> Self {
         self.msg.msg_content.set_text_part(text);
+        self
+    }
+
+    pub fn sign(mut self, sign: bool) -> Self {
+        self.sign = sign;
         self
     }
 
@@ -1103,6 +1133,7 @@ impl<'a, I, C> MulticastBuilder<'a, I, C, TextKind> {
             client: self.client,
             chat_ids: self.chat_ids,
             ttl: self.ttl,
+            sign: self.sign,
             msg,
             kind,
         }
@@ -1115,6 +1146,7 @@ impl<'a, I, C> MulticastBuilder<'a, I, C, TextKind> {
             client: self.client,
             chat_ids: self.chat_ids,
             ttl: self.ttl,
+            sign: self.sign,
             msg,
             kind,
         }
@@ -1127,6 +1159,7 @@ impl<'a, I, C> MulticastBuilder<'a, I, C, TextKind> {
             client: self.client,
             chat_ids: self.chat_ids,
             ttl: self.ttl,
+            sign: self.sign,
             msg,
             kind,
         }
@@ -1139,6 +1172,7 @@ impl<'a, I, C> MulticastBuilder<'a, I, C, TextKind> {
             client: self.client,
             chat_ids: self.chat_ids,
             ttl: self.ttl,
+            sign: self.sign,
             msg,
             kind,
         }
@@ -1151,6 +1185,7 @@ impl<'a, I, C> MulticastBuilder<'a, I, C, TextKind> {
             client: self.client,
             chat_ids: self.chat_ids,
             ttl: self.ttl,
+            sign: self.sign,
             msg,
             kind,
         }
@@ -1163,6 +1198,7 @@ impl<'a, I, C> MulticastBuilder<'a, I, C, TextKind> {
             client: self.client,
             chat_ids: self.chat_ids,
             ttl: self.ttl,
+            sign: self.sign,
             msg,
             kind,
         }
@@ -1205,6 +1241,7 @@ where
             client,
             chat_ids,
             ttl,
+            sign,
             msg,
             kind: _,
         } = self;
@@ -1215,6 +1252,7 @@ where
                 let command = ApiSendMessages {
                     send_ref: id.into_chat_ref(),
                     live_message: false,
+                    sign_messages: sign,
                     ttl: ttl.map(preferences::timed_messages::ttl_to_secs),
                     composed_messages: vec![msg],
                 };
@@ -1241,6 +1279,7 @@ where
             client,
             chat_ids,
             ttl,
+            sign,
             mut msg,
             kind,
         } = self;
@@ -1255,6 +1294,7 @@ where
                     let command = ApiSendMessages {
                         send_ref: id.into_chat_ref(),
                         live_message: false,
+                        sign_messages: sign,
                         ttl: ttl.map(preferences::timed_messages::ttl_to_secs),
                         composed_messages: vec![msg],
                     };

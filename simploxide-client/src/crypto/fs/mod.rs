@@ -19,10 +19,10 @@ pub type StdEncryptedFile = std::EncryptedFile<super::native::SecretBox>;
 pub type TokioEncryptedFile = tokio::EncryptedFile<super::native::SecretBox>;
 
 #[cfg(feature = "native_crypto")]
-pub type StdMaybeCryptoFile = std::StdMaybeCryptoFile<super::native::SecretBox>;
+pub type StdMaybeCryptoFile = std::MaybeCryptoFile<super::native::SecretBox>;
 
 #[cfg(feature = "native_crypto")]
-pub type TokioMaybeCryptoFile = tokio::TokioMaybeCryptoFile<super::native::SecretBox>;
+pub type TokioMaybeCryptoFile = tokio::MaybeCryptoFile<super::native::SecretBox>;
 
 #[derive(ZeroizeOnDrop)]
 pub struct FileCryptoArgs {
@@ -288,7 +288,7 @@ impl<S: SimplexSecretBox> EncryptedFileState<S> {
             Err(InvalidAuthTag::io_error())
         };
 
-        self.buf.truncate(0);
+        self.buf.clear();
         self.remaining_data_len = 0;
 
         result
