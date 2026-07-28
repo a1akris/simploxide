@@ -187,7 +187,7 @@ impl CommandSyntax for ApiSetAddressSettings {
 /// *Syntax:*
 ///
 /// ```
-/// /_send <str(sendRef)>[ live=on][ ttl=<ttl>] json <json(composedMessages)>
+/// /_send <str(sendRef)>[ live=on][ ttl=<ttl>][ sign=on] json <json(composedMessages)>
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
@@ -195,6 +195,7 @@ pub struct ApiSendMessages {
     pub send_ref: ChatRef,
     pub live_message: bool,
     pub ttl: Option<i32>,
+    pub sign_messages: bool,
     pub composed_messages: Vec<ComposedMessage>,
 }
 
@@ -205,6 +206,7 @@ impl ApiSendMessages {
             send_ref,
             live_message: false,
             ttl: None,
+            sign_messages: false,
             composed_messages,
         }
     }
@@ -225,6 +227,11 @@ impl CommandSyntax for ApiSendMessages {
             buf.push(' ');
             buf.push_str("ttl=");
             write!(buf, "{}", ttl).unwrap();
+        }
+        if self.sign_messages {
+            buf.push(' ');
+            buf.push_str("sign=");
+            buf.push_str("on");
         }
         buf.push(' ');
         buf.push_str("json ");
@@ -1445,31 +1452,31 @@ impl CommandSyntax for ApiAddContact {
 ///
 /// ----
 ///
-/// Determine SimpleX link type and if the bot is already connected via this link.
+/// Determine SimpleX link type and if the bot is already connected via this link or name.
 ///
 /// *Network usage*: interactive.
 ///
 /// *Syntax:*
 ///
 /// ```
-/// /_connect plan <userId> <connectionLink>
+/// /_connect plan <userId> <connectTarget>
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 pub struct ApiConnectPlan {
     pub user_id: i64,
-    pub connection_link: Option<String>,
-    pub resolve_known: bool,
+    pub connect_target: Option<String>,
+    pub resolve_mode: PlanResolveMode,
     pub link_owner_sig: Option<LinkOwnerSig>,
 }
 
 impl ApiConnectPlan {
     /// Creates a command with all `Option` parameters set to `None` and all `bool` parameters set to false
-    pub fn new(user_id: i64) -> Self {
+    pub fn new(user_id: i64, resolve_mode: PlanResolveMode) -> Self {
         Self {
             user_id,
-            connection_link: None,
-            resolve_known: false,
+            connect_target: None,
+            resolve_mode,
             link_owner_sig: None,
         }
     }
@@ -1486,7 +1493,7 @@ impl CommandSyntax for ApiConnectPlan {
         write!(
             buf,
             "{}",
-            self.connection_link.as_deref().unwrap_or_default()
+            self.connect_target.as_deref().unwrap_or_default()
         )
         .unwrap();
     }
@@ -1545,20 +1552,20 @@ impl CommandSyntax for ApiConnect {
 ///
 /// ----
 ///
-/// Connect via SimpleX link as string in the active user profile.
+/// Connect via SimpleX link or name as string in the active user profile.
 ///
 /// *Network usage*: interactive.
 ///
 /// *Syntax:*
 ///
 /// ```
-/// /connect[ <connLink_>]
+/// /connect[ <connTarget_>]
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 pub struct Connect {
     pub incognito: bool,
-    pub conn_link: Option<String>,
+    pub conn_target: Option<String>,
 }
 
 impl Connect {
@@ -1566,7 +1573,7 @@ impl Connect {
     pub fn new() -> Self {
         Self {
             incognito: false,
-            conn_link: None,
+            conn_target: None,
         }
     }
 }
@@ -1576,9 +1583,9 @@ impl CommandSyntax for Connect {
 
     fn append_command_syntax(&self, buf: &mut String) {
         buf.push_str("/connect");
-        if let Some(conn_link) = &self.conn_link {
+        if let Some(conn_target) = &self.conn_target {
             buf.push(' ');
-            write!(buf, "{}", conn_link).unwrap();
+            write!(buf, "{}", conn_target).unwrap();
         }
     }
 }

@@ -224,6 +224,9 @@ pub struct BusinessChatInfo {
     #[serde(rename = "customerId")]
     pub customer_id: String,
 
+    #[serde(rename = "businessDomain", skip_serializing_if = "Option::is_none")]
+    pub business_domain: Option<SimplexDomainClaim>,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -2093,8 +2096,8 @@ pub struct CIMeta {
     #[serde(rename = "showGroupAsSender", default)]
     pub show_group_as_sender: bool,
 
-    #[serde(rename = "msgSigned", skip_serializing_if = "Option::is_none")]
-    pub msg_signed: Option<MsgSigStatus>,
+    #[serde(rename = "msgVerified", skip_serializing_if = "Option::is_none")]
+    pub msg_verified: Option<MsgVerified>,
 
     #[serde(rename = "createdAt")]
     pub created_at: UtcTime,
@@ -4219,6 +4222,16 @@ pub struct FileTransferMeta {
     pub undocumented: JsonObject,
 }
 
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum FileType {
+    #[default]
+    #[serde(rename = "normal")]
+    Normal,
+    #[serde(rename = "roster")]
+    Roster,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[non_exhaustive]
@@ -4553,6 +4566,9 @@ pub struct FullGroupPreferences {
     #[serde(rename = "comments")]
     pub comments: CommentsGroupPreference,
 
+    #[serde(rename = "signMessages")]
+    pub sign_messages: GroupPreference,
+
     #[serde(rename = "commands")]
     pub commands: Vec<ChatBotCommand>,
 
@@ -4779,6 +4795,8 @@ pub enum GroupFeature {
     Sessions,
     #[serde(rename = "comments")]
     Comments,
+    #[serde(rename = "signMessages")]
+    SignMessages,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -4867,6 +4885,14 @@ pub struct GroupInfo {
     pub group_summary: GroupSummary,
 
     #[serde(
+        rename = "rosterVersion",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_option_number_from_string",
+        default
+    )]
+    pub roster_version: Option<i64>,
+
+    #[serde(
         rename = "membersRequireAttention",
         deserialize_with = "deserialize_number_from_string"
     )]
@@ -4877,6 +4903,12 @@ pub struct GroupInfo {
 
     #[serde(rename = "groupKeys", skip_serializing_if = "Option::is_none")]
     pub group_keys: Option<GroupKeys>,
+
+    #[serde(
+        rename = "groupDomainVerified",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub group_domain_verified: Option<bool>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -5262,6 +5294,9 @@ pub struct GroupMember {
     #[serde(rename = "relayLink", skip_serializing_if = "Option::is_none")]
     pub relay_link: Option<String>,
 
+    #[serde(rename = "memberVerifiedCode", skip_serializing_if = "Option::is_none")]
+    pub member_verified_code: Option<SecurityCode>,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -5432,6 +5467,9 @@ pub struct GroupPreferences {
 
     #[serde(rename = "comments", skip_serializing_if = "Option::is_none")]
     pub comments: Option<CommentsGroupPreference>,
+
+    #[serde(rename = "signMessages", skip_serializing_if = "Option::is_none")]
+    pub sign_messages: Option<GroupPreference>,
 
     #[serde(rename = "commands", skip_serializing_if = "Option::is_none")]
     pub commands: Option<Vec<ChatBotCommand>>,
@@ -6002,6 +6040,9 @@ pub struct LocalProfile {
     #[serde(rename = "shortDescr", skip_serializing_if = "Option::is_none")]
     pub short_descr: Option<String>,
 
+    #[serde(rename = "description", skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
     #[serde(rename = "image", skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
 
@@ -6019,6 +6060,15 @@ pub struct LocalProfile {
 
     #[serde(rename = "localAlias")]
     pub local_alias: String,
+
+    #[serde(rename = "contactDomain", skip_serializing_if = "Option::is_none")]
+    pub contact_domain: Option<SimplexDomainClaim>,
+
+    #[serde(
+        rename = "contactDomainVerified",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub contact_domain_verified: Option<bool>,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
@@ -6597,6 +6647,50 @@ pub enum MsgSigStatus {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
+pub enum MsgVerified {
+    #[serde(rename = "signed")]
+    Signed {
+        #[serde(rename = "sigStatus")]
+        sig_status: MsgSigStatus,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "sigMissing")]
+    SigMissing,
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl MsgVerified {
+    pub fn make_signed(sig_status: MsgSigStatus) -> Self {
+        Self::Signed {
+            sig_status,
+            undocumented: Default::default(),
+        }
+    }
+
+    pub fn make_sig_missing() -> Self {
+        Self::SigMissing
+    }
+}
+
+impl MsgVerified {
+    pub fn signed(&self) -> Option<&MsgSigStatus> {
+        if let Self::Signed { sig_status, .. } = self {
+            Some(sig_status)
+        } else {
+            None
+        }
+    }
+    pub fn is_sig_missing(&self) -> bool {
+        matches!(self, Self::SigMissing)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct NewUser {
@@ -6806,6 +6900,18 @@ pub struct PendingContactConnection {
     pub undocumented: JsonObject,
 }
 
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum PlanResolveMode {
+    #[default]
+    #[serde(rename = "allGroups")]
+    AllGroups,
+    #[serde(rename = "unknown")]
+    Unknown,
+    #[serde(rename = "never")]
+    Never,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
@@ -6912,6 +7018,9 @@ pub struct Profile {
     #[serde(rename = "shortDescr", skip_serializing_if = "Option::is_none")]
     pub short_descr: Option<String>,
 
+    #[serde(rename = "description", skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
     #[serde(rename = "image", skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
 
@@ -6927,6 +7036,9 @@ pub struct Profile {
     #[serde(rename = "badge", skip_serializing_if = "Option::is_none")]
     pub badge: Option<BadgeProof>,
 
+    #[serde(rename = "contactDomain", skip_serializing_if = "Option::is_none")]
+    pub contact_domain: Option<SimplexDomainClaim>,
+
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]
     pub undocumented: JsonObject,
@@ -6939,8 +7051,8 @@ pub struct PublicGroupAccess {
     #[serde(rename = "groupWebPage", skip_serializing_if = "Option::is_none")]
     pub group_web_page: Option<String>,
 
-    #[serde(rename = "groupDomain", skip_serializing_if = "Option::is_none")]
-    pub group_domain: Option<String>,
+    #[serde(rename = "groupDomainClaim", skip_serializing_if = "Option::is_none")]
+    pub group_domain_claim: Option<SimplexDomainClaim>,
 
     #[serde(rename = "domainWebPage", default)]
     pub domain_web_page: bool,
@@ -7328,6 +7440,9 @@ pub struct RcvFileTransfer {
 
     #[serde(rename = "fileStatus")]
     pub file_status: RcvFileStatus,
+
+    #[serde(rename = "fileType")]
+    pub file_type: FileType,
 
     #[serde(rename = "rcvFileInline", skip_serializing_if = "Option::is_none")]
     pub rcv_file_inline: Option<InlineFileMode>,
@@ -7804,6 +7919,8 @@ pub enum RelayStatus {
     Invited,
     #[serde(rename = "accepted")]
     Accepted,
+    #[serde(rename = "acknowledgedRoster")]
+    AcknowledgedRoster,
     #[serde(rename = "active")]
     Active,
     #[serde(rename = "inactive")]
@@ -7870,6 +7987,57 @@ pub struct SimplePreference {
     pub undocumented: JsonObject,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct SimplexDomain {
+    #[serde(rename = "nameTLD")]
+    pub name_tld: SimplexTLD,
+
+    #[serde(rename = "domain")]
+    pub domain: String,
+
+    #[serde(rename = "subDomain")]
+    pub sub_domain: Vec<String>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct SimplexDomainClaim {
+    #[serde(rename = "domain")]
+    pub domain: String,
+
+    #[serde(rename = "proof", skip_serializing_if = "Option::is_none")]
+    pub proof: Option<SimplexDomainProof>,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "bon", derive(::bon::Builder))]
+#[cfg_attr(feature = "bon", builder(on(String, into)))]
+pub struct SimplexDomainProof {
+    #[serde(rename = "linkOwnerId", skip_serializing_if = "Option::is_none")]
+    pub link_owner_id: Option<String>,
+
+    #[serde(rename = "presHeader")]
+    pub pres_header: String,
+
+    #[serde(rename = "signature")]
+    pub signature: String,
+
+    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+    #[cfg_attr(feature = "bon", builder(default))]
+    pub undocumented: JsonObject,
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum SimplexLinkType {
@@ -7889,30 +8057,12 @@ pub enum SimplexLinkType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "bon", derive(::bon::Builder))]
 #[cfg_attr(feature = "bon", builder(on(String, into)))]
-pub struct SimplexNameDomain {
-    #[serde(rename = "nameTLD")]
-    pub name_tld: SimplexTLD,
-
-    #[serde(rename = "domain")]
-    pub domain: String,
-
-    #[serde(rename = "subDomain")]
-    pub sub_domain: Vec<String>,
-
-    #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
-    #[cfg_attr(feature = "bon", builder(default))]
-    pub undocumented: JsonObject,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "bon", derive(::bon::Builder))]
-#[cfg_attr(feature = "bon", builder(on(String, into)))]
 pub struct SimplexNameInfo {
     #[serde(rename = "nameType")]
     pub name_type: SimplexNameType,
 
     #[serde(rename = "nameDomain")]
-    pub name_domain: SimplexNameDomain,
+    pub name_domain: SimplexDomain,
 
     #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
     #[cfg_attr(feature = "bon", builder(default))]

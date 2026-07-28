@@ -1182,6 +1182,12 @@ pub struct ConnectionPlanResponse {
     #[serde(rename = "connLink")]
     pub conn_link: CreatedConnLink,
 
+    #[serde(rename = "planSimplexName", skip_serializing_if = "Option::is_none")]
+    pub plan_simplex_name: Option<SimplexNameInfo>,
+
+    #[serde(rename = "otherSimplexName", skip_serializing_if = "Option::is_none")]
+    pub other_simplex_name: Option<SimplexNameInfo>,
+
     #[serde(rename = "connectionPlan")]
     pub connection_plan: ConnectionPlan,
 

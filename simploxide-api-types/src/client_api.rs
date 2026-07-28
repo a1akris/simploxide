@@ -181,7 +181,7 @@ pub trait ClientApi: Sync {
     /// *Syntax:*
     ///
     /// ```
-    /// /_send <str(sendRef)>[ live=on][ ttl=<ttl>] json <json(composedMessages)>
+    /// /_send <str(sendRef)>[ live=on][ ttl=<ttl>][ sign=on] json <json(composedMessages)>
     /// ```
     fn api_send_messages(
         &self,
@@ -886,14 +886,14 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
-    /// Determine SimpleX link type and if the bot is already connected via this link.
+    /// Determine SimpleX link type and if the bot is already connected via this link or name.
     ///
     /// *Network usage*: interactive.
     ///
     /// *Syntax:*
     ///
     /// ```
-    /// /_connect plan <userId> <connectionLink>
+    /// /_connect plan <userId> <connectTarget>
     /// ```
     fn api_connect_plan(
         &self,
@@ -936,14 +936,14 @@ pub trait ClientApi: Sync {
     ///
     /// ----
     ///
-    /// Connect via SimpleX link as string in the active user profile.
+    /// Connect via SimpleX link or name as string in the active user profile.
     ///
     /// *Network usage*: interactive.
     ///
     /// *Syntax:*
     ///
     /// ```
-    /// /connect[ <connLink_>]
+    /// /connect[ <connTarget_>]
     /// ```
     fn connect(
         &self,

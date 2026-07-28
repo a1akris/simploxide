@@ -100,6 +100,8 @@ pub enum AgentErrorType {
         #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
         undocumented: JsonObject,
     },
+    #[serde(rename = "NO_NAME_SERVERS")]
+    NoNameServers,
     #[serde(rename = "PROXY")]
     Proxy {
         #[serde(rename = "proxyServer")]
@@ -265,6 +267,9 @@ impl AgentErrorType {
         } else {
             None
         }
+    }
+    pub fn is_no_name_servers(&self) -> bool {
+        matches!(self, Self::NoNameServers)
     }
     pub fn proxy(&self) -> Option<AgentErrorTypeProxyRef<'_>> {
         if let Self::Proxy {
@@ -701,6 +706,19 @@ pub enum ChatErrorType {
     ChatStoreChanged,
     #[serde(rename = "invalidConnReq")]
     InvalidConnReq,
+    #[serde(rename = "simplexDomainNotReady")]
+    SimplexDomainNotReady {
+        #[serde(rename = "simplexDomain")]
+        simplex_domain: SimplexDomain,
+
+        #[serde(rename = "simplexDomainError")]
+        simplex_domain_error: SimplexDomainError,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(rename = "notResolvedLocally")]
+    NotResolvedLocally,
     #[serde(rename = "unsupportedConnReq")]
     UnsupportedConnReq,
     #[serde(rename = "connReqMessageProhibited")]
@@ -1203,6 +1221,24 @@ impl ChatErrorType {
     pub fn is_invalid_conn_req(&self) -> bool {
         matches!(self, Self::InvalidConnReq)
     }
+    pub fn simplex_domain_not_ready(&self) -> Option<ChatErrorTypeSimplexDomainNotReadyRef<'_>> {
+        if let Self::SimplexDomainNotReady {
+            simplex_domain,
+            simplex_domain_error,
+            ..
+        } = self
+        {
+            Some(ChatErrorTypeSimplexDomainNotReadyRef {
+                simplex_domain,
+                simplex_domain_error,
+            })
+        } else {
+            None
+        }
+    }
+    pub fn is_not_resolved_locally(&self) -> bool {
+        matches!(self, Self::NotResolvedLocally)
+    }
     pub fn is_unsupported_conn_req(&self) -> bool {
         matches!(self, Self::UnsupportedConnReq)
     }
@@ -1588,6 +1624,11 @@ pub struct ChatErrorTypeInvalidDisplayNameRef<'a> {
     pub valid_name: &'a String,
 }
 #[derive(Clone, Copy)]
+pub struct ChatErrorTypeSimplexDomainNotReadyRef<'a> {
+    pub simplex_domain: &'a SimplexDomain,
+    pub simplex_domain_error: &'a SimplexDomainError,
+}
+#[derive(Clone, Copy)]
 pub struct ChatErrorTypeGroupUserRoleRef<'a> {
     pub group_info: &'a GroupInfo,
     pub required_role: &'a GroupMemberRole,
@@ -1803,6 +1844,14 @@ pub enum ErrorType {
     Expired,
     #[serde(rename = "INTERNAL")]
     Internal,
+    #[serde(rename = "NAME")]
+    Name {
+        #[serde(rename = "nameErr")]
+        name_err: NameErrorType,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
     #[serde(rename = "DUPLICATE_")]
     Duplicate,
     #[serde(untagged)]
@@ -1867,6 +1916,13 @@ impl ErrorType {
     }
     pub fn is_internal(&self) -> bool {
         matches!(self, Self::Internal)
+    }
+    pub fn name(&self) -> Option<&NameErrorType> {
+        if let Self::Name { name_err, .. } = self {
+            Some(name_err)
+        } else {
+            None
+        }
     }
     pub fn is_duplicate(&self) -> bool {
         matches!(self, Self::Duplicate)
@@ -2107,6 +2163,42 @@ impl MsgErrorType {
 pub struct MsgErrorTypeMsgSkippedRef<'a> {
     pub from_msg_id: &'a i64,
     pub to_msg_id: &'a i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
+pub enum NameErrorType {
+    #[serde(rename = "NO_RESOLVER")]
+    NoResolver,
+    #[serde(rename = "NOT_FOUND")]
+    NotFound,
+    #[serde(rename = "RESOLVER")]
+    Resolver {
+        #[serde(rename = "resolverErr")]
+        resolver_err: String,
+
+        #[serde(flatten, skip_serializing_if = "JsonObject::is_null")]
+        undocumented: JsonObject,
+    },
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl NameErrorType {
+    pub fn is_no_resolver(&self) -> bool {
+        matches!(self, Self::NoResolver)
+    }
+    pub fn is_not_found(&self) -> bool {
+        matches!(self, Self::NotFound)
+    }
+    pub fn resolver(&self) -> Option<&String> {
+        if let Self::Resolver { resolver_err, .. } = self {
+            Some(resolver_err)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2558,6 +2650,27 @@ impl SMPAgentError {
         } else {
             None
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[non_exhaustive]
+pub enum SimplexDomainError {
+    #[serde(rename = "noValidLink")]
+    NoValidLink,
+    #[serde(rename = "unknownDomain")]
+    UnknownDomain,
+    #[serde(untagged)]
+    Undocumented(JsonObject),
+}
+
+impl SimplexDomainError {
+    pub fn is_no_valid_link(&self) -> bool {
+        matches!(self, Self::NoValidLink)
+    }
+    pub fn is_unknown_domain(&self) -> bool {
+        matches!(self, Self::UnknownDomain)
     }
 }
 
@@ -4265,12 +4378,14 @@ impl_error!(
     HandshakeError,
     MsgDecryptError,
     MsgErrorType,
+    NameErrorType,
     NetworkError,
     ProxyClientError,
     ProxyError,
     RCErrorType,
     RcvMsgError,
     SMPAgentError,
+    SimplexDomainError,
     SndError,
     SrvError,
     StoreError,
