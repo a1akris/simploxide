@@ -24,8 +24,6 @@
 //! _Current implementation heavily depends on `tokio` runtime and won't work with other
 //! executors._
 
-pub mod default;
-
 mod worker;
 
 pub use simploxide_core::SimplexVersion;
@@ -57,18 +55,39 @@ type ShutdownSignal = tokio::sync::watch::Receiver<bool>;
 ///
 /// Applies only on the first [`init`] or [`init_with_config`] call. All subsequent calls reuse
 /// the already running worker thread and ignore this parameter entirely.
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct WorkerConfig {
     /// Maximum permissible event latency. Controls how long the worker thread may sleep between
     /// polling cycles when all chats are idle. The sleep interval grows linearly from zero up to
     /// this value as idle time accumulates. Sending any command resets the interval immediately by
-    /// waking the thread. Default: [`default::MAX_EVENT_LATENCY`].
-    pub max_event_latency: Option<std::time::Duration>,
+    /// waking the thread. Default: 1sec
+    pub max_event_latency: Duration,
 
     /// Maximum number of chat instances the worker thread will serve simultaneously. [`init`]
     /// returns [`CallError::Failure`] when this limit is reached. Passing `0` is valid but
-    /// prevents any chat from ever being created. Default: [`default::MAX_CHAT_INSTANCES`].
-    pub max_instances: Option<usize>,
+    /// prevents any chat from ever being created. Default: 20
+    pub max_instances: usize,
+
+    /// Maximum number of commands executed per chat instance per scheduling iteration. Higher
+    /// values improve throughput under command bursts at the cost of increased latency for other
+    /// chat instances. Default: 3
+    pub max_cmds_per_iter: usize,
+
+    /// Maximum number of events drained per chat instance per scheduling iteration. Higher values
+    /// reduce event latency under event bursts at the cost of increased command latency for other
+    /// chat instances. Default 6
+    pub max_events_per_iter: usize,
+}
+
+impl Default for WorkerConfig {
+    fn default() -> Self {
+        Self {
+            max_event_latency: Duration::from_secs(1),
+            max_instances: 20,
+            max_cmds_per_iter: 3,
+            max_events_per_iter: 6,
+        }
+    }
 }
 
 impl WorkerConfig {
@@ -77,12 +96,22 @@ impl WorkerConfig {
     }
 
     pub fn with_event_latency(mut self, duration: Duration) -> Self {
-        self.max_event_latency = Some(duration);
+        self.max_event_latency = duration;
         self
     }
 
     pub fn max_instances(mut self, max_instances: usize) -> Self {
-        self.max_instances = Some(max_instances);
+        self.max_instances = max_instances;
+        self
+    }
+
+    pub fn max_cmds_per_iter(mut self, max_cmds: usize) -> Self {
+        self.max_cmds_per_iter = max_cmds;
+        self
+    }
+
+    pub fn max_events_per_iter(mut self, max_events: usize) -> Self {
+        self.max_events_per_iter = max_events;
         self
     }
 }

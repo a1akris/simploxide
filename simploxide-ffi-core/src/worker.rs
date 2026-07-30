@@ -11,7 +11,7 @@ use std::{
 
 use crate::{
     ChatCommand, CmdReceiver, DbOpts, DefaultUser, EventTransmitter, RawClient, RawEventQueue,
-    ShutdownEmitter, WorkerConfig, default,
+    ShutdownEmitter, WorkerConfig,
 };
 
 type NewChatResponse = Result<(RawClient, RawEventQueue), InitError>;
@@ -63,25 +63,21 @@ struct WorkerThread {
     chats: Slab<Chat>,
     poll_order: RoundRobin<usize>,
     remove_queue: Vec<usize>,
-    max_instances: usize,
-    max_event_latency: Duration,
+    config: WorkerConfig,
     skipped_iterations: u8,
 }
 
 impl WorkerThread {
     fn spawn(ctrl: WorkerCtrl, config: WorkerConfig) {
         std::thread::spawn(move || {
-            let capacity = config.max_instances.unwrap_or(default::MAX_CHAT_INSTANCES);
+            let capacity = config.max_instances;
 
             WorkerThread {
                 ctrl,
                 chats: Slab::with_capacity(capacity),
                 poll_order: RoundRobin::with_capacity(capacity),
                 remove_queue: Vec::with_capacity(capacity),
-                max_instances: capacity,
-                max_event_latency: config
-                    .max_event_latency
-                    .unwrap_or(default::MAX_EVENT_LATENCY),
+                config,
                 skipped_iterations: 0,
             }
             .run();
@@ -138,7 +134,7 @@ impl WorkerThread {
                 }
 
                 let sleep_interval = std::cmp::min(
-                    self.max_event_latency,
+                    self.config.max_event_latency,
                     Duration::from_millis(
                         (self.skipped_iterations - EXTRA_SPINS) as u64 * SLEEP_STEP,
                     ),
@@ -179,7 +175,7 @@ impl WorkerThread {
     fn spawn_chat(&mut self, params: Box<NewChatParams>) {
         let responder = params.responder;
 
-        if self.chats.len() >= self.max_instances {
+        if self.chats.len() >= self.config.max_instances {
             let _ = responder.send(Err(CallError::Failure.into()));
             return;
         }
@@ -210,6 +206,8 @@ impl WorkerThread {
             ev_tx,
             shutdown: shutdown_tx,
             error: None,
+            max_cmds_per_iter: self.config.max_cmds_per_iter,
+            max_events_per_iter: self.config.max_events_per_iter,
         });
 
         let _ = responder.send(Ok((client, events)));
@@ -222,13 +220,15 @@ struct Chat {
     ev_tx: EventTransmitter,
     shutdown: ShutdownEmitter,
     error: Option<Arc<CallError>>,
+    max_cmds_per_iter: usize,
+    max_events_per_iter: usize,
 }
 
 impl Chat {
     fn handle_buffered_actions(&mut self) -> Status {
         let mut status = Status::Skipped;
 
-        for _ in 0..default::MAX_EVENTS_PER_ITER {
+        for _ in 0..self.max_events_per_iter {
             match self.chat.try_recv_msg() {
                 Ok(event) if event.is_empty() => break,
                 Ok(event) => {
@@ -245,7 +245,7 @@ impl Chat {
             }
         }
 
-        for _ in 0..default::MAX_CMDS_PER_ITER {
+        for _ in 0..self.max_cmds_per_iter {
             match self.cmd_rx.try_recv() {
                 Ok(ChatCommand::Execute(cmd, responder)) => {
                     status = Status::Executed;
@@ -309,9 +309,10 @@ impl Chat {
 
 /// A helper that ensures correct intialization of the underlying SimpleX runtime
 fn simplex_chat_init(default_user: DefaultUser, db_opts: DbOpts) -> Result<SimpleXChat, InitError> {
-    if db_opts.prefix.len() > default::MAX_DB_PREFIX_LEN
-        || default_user.display_name.len() > default::MAX_DISPLAY_NAME_LEN
-    {
+    const MAX_DB_PREFIX_LEN: usize = 256;
+    const MAX_DISPLAY_NAME_LEN: usize = 80;
+
+    if db_opts.prefix.len() > MAX_DB_PREFIX_LEN || default_user.display_name.len() > MAX_DISPLAY_NAME_LEN {
         return Err(InitError::CallError(CallError::Failure));
     }
 

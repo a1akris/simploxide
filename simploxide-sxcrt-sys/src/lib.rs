@@ -92,7 +92,8 @@ impl SimpleXChat {
 impl Drop for SimpleXChat {
     fn drop(&mut self) {
         unsafe {
-            bindings::chat_close_store(self.0);
+            let result = bindings::chat_close_store(self.0);
+            libc::free(result as *mut c_void);
         }
     }
 }

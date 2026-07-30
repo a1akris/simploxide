@@ -245,15 +245,9 @@ impl BotBuilder {
         self
     }
 
-    /// Set max permissible event latency. See [`WorkerConfig::max_event_latency`] for details
-    pub fn max_event_latency(mut self, latency: std::time::Duration) -> Self {
-        self.worker_config.max_event_latency = Some(latency);
-        self
-    }
-
-    /// Set max concurrent SimpleX-Chat instances. See [`WorkerConfig::max_instances`] for details
-    pub fn max_instances(mut self, instances: usize) -> Self {
-        self.worker_config.max_instances = Some(instances);
+    /// Override FFI worker thread settings. See [`WorkerConfig`] for available options.
+    pub fn with_worker_config(mut self, config: WorkerConfig) -> Self {
+        self.worker_config = config;
         self
     }
 
@@ -323,15 +317,9 @@ impl BotFarmBuilder {
         self
     }
 
-    /// Set max permissible event latency. See [`WorkerConfig::max_event_latency`] for details
-    pub fn max_event_latency(mut self, latency: std::time::Duration) -> Self {
-        self.worker_config.max_event_latency = Some(latency);
-        self
-    }
-
-    /// Set max concurrent SimpleX-Chat instances. See [`WorkerConfig::max_instances`] for details
-    pub fn max_instances(mut self, instances: usize) -> Self {
-        self.worker_config.max_instances = Some(instances);
+    /// Override FFI worker thread settings. See [`WorkerConfig`] for available options.
+    pub fn with_worker_config(mut self, config: WorkerConfig) -> Self {
+        self.worker_config = config;
         self
     }
 
