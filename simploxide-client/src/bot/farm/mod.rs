@@ -2,7 +2,7 @@
 
 use serde::Deserialize;
 use simploxide_api_types::{
-    NewUser, User,
+    NewUser, User, UserInfo,
     client_api::ClientApi,
     commands::{ApiDeleteUser, ApiSetActiveUser, CancelFile, ListUsers, ReceiveFile},
     responses::{CancelFileResponse, ListUsersResponse, ReceiveFileResponse, UsersListResponse},
@@ -17,7 +17,12 @@ use std::{
     sync::Arc,
 };
 
-use crate::{EventParser, EventStream, bot::BotSettings, ext::ClientApiExt as _, id::UserId};
+use crate::{
+    EventParser, EventStream,
+    bot::{BotName, BotSettings},
+    ext::ClientApiExt as _,
+    id::UserId,
+};
 
 mod demux;
 mod mux;
@@ -45,18 +50,19 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
     /// The `farm_name` is the name of the special bot managing the bot farm, it cannot be accessed
     /// directly. It is mostly used as an intermediary user deleting other users under the hood.
     pub async fn init(
-        farm_name: String,
+        farm_name: impl Into<String>,
         client: C,
         events: EventStream<P>,
     ) -> Result<Self, C::Error> {
+        let farm_name = farm_name.into();
         let mut farm_id = BotId::anybot();
         let mut active_name = String::new();
         let mut cache = HashMap::new();
         let bots = demux::FxDashMap::with_hasher(rustc_hash::FxBuildHasher);
 
-        let resp = client.list_users().await?;
+        let resp = client.users().await?;
 
-        for info in &resp.users {
+        for info in &resp {
             let bot_id: BotId = UserId::from(info).into();
 
             if info.user.active_user {
@@ -97,7 +103,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
             farm_name,
             active_name,
             bots,
-            cache,
+            cache: Cache(cache),
         };
 
         Ok(Self { state })
@@ -231,11 +237,11 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
     where
         C: Clone,
     {
-        if settings.display_name == self.state.farm_name {
+        if settings.display_name.matches(&self.state.farm_name) {
             return Err(CreateError::FarmUser);
         }
 
-        match self.state.cache.entry(settings.display_name.clone()) {
+        match self.state.cache.user_by_name(settings.display_name.clone()) {
             Entry::Occupied(mut occupied) => {
                 let bot = Bot::<C>::init_existing(
                     self.state.client.clone(),
@@ -324,16 +330,28 @@ where
             .map(|receiver| self.make_bot(user_id, receiver))
     }
 
+    #[allow(clippy::type_complexity)]
     /// Create a new SimpleX user, as a bot, and return its handle and event stream.
     ///
     /// Unlike `prepare_bot`, this is available at runtime after [`run`](crate::bot::BotFarm::run).
     /// In order to route events correctly **all** event streams are paused and don't receive any
     /// events during the bot creation process.
-    pub async fn create_bot(
+    pub fn create_bot(
         &self,
         settings: BotSettings,
+    ) -> impl Future<Output = Result<(FarmBot<C>, EventStream<P>), CreateError<C::Error>>> {
+        self.create_bot_with_hint(settings, None)
+    }
+
+    async fn create_bot_with_hint(
+        &self,
+        settings: BotSettings,
+        hint: Option<Vec<UserInfo>>,
     ) -> Result<(FarmBot<C>, EventStream<P>), CreateError<C::Error>> {
-        let user_id = self.create_inner(settings, true).await?;
+        let user_id = self
+            .create_inner(settings, Channel::new_bot(), hint)
+            .await?;
+
         let (bot, stream) = self.take_bot(user_id);
         Ok((bot, stream))
     }
@@ -350,10 +368,13 @@ where
         &self,
         settings: BotSettings,
     ) -> Result<(FarmBot<C>, EventStream<P>), CreateError<C::Error>> {
-        let resp = self.state.client.list_users().await?;
+        let resp = self.state.client.users().await?;
 
-        match resp.users.iter().find_map(|info| {
-            (info.user.profile.display_name == settings.display_name).then_some(UserId::from(info))
+        match resp.iter().find_map(|info| {
+            (settings
+                .display_name
+                .matches_new(&info.user.profile.display_name))
+            .then_some(UserId::from(info))
         }) {
             Some(user_id) => match self.state.bots.get_mut(&user_id.into()) {
                 Some(mut entry) => match entry.value_mut() {
@@ -365,18 +386,27 @@ where
                 },
                 None => Err(CreateError::Desync),
             },
-            None => self.create_bot(settings).await,
+            None => self.create_bot_with_hint(settings, Some(resp)).await,
         }
     }
 
+    #[allow(clippy::type_complexity)]
     /// Create a new SimpleX user, register it as a ghost, and return a handle to it.
     ///
     /// The ghost's events are routed to the general [`EventStream`] returned when running a farm.
-    pub async fn create_ghost(
+    pub fn create_ghost(
         &self,
         settings: BotSettings,
+    ) -> impl Future<Output = Result<FarmBot<C>, CreateError<C::Error>>> {
+        self.create_ghost_with_hint(settings, None)
+    }
+
+    async fn create_ghost_with_hint(
+        &self,
+        settings: BotSettings,
+        hint: Option<Vec<UserInfo>>,
     ) -> Result<FarmBot<C>, CreateError<C::Error>> {
-        let user_id = self.create_inner(settings, false).await?;
+        let user_id = self.create_inner(settings, Channel::Ghost, hint).await?;
         Ok(self.ghost(user_id).unwrap())
     }
 
@@ -388,11 +418,13 @@ where
         &self,
         settings: BotSettings,
     ) -> Result<FarmBot<C>, CreateError<C::Error>> {
-        let resp = self.state.client.list_users().await?;
+        let resp = self.state.client.users().await?;
 
-        match resp.users.iter().find_map(|info| {
-            (info.user.profile.display_name == settings.display_name)
-                .then_some(UserId::from(&info.user))
+        match resp.iter().find_map(|info| {
+            (settings
+                .display_name
+                .matches_new(&info.user.profile.display_name))
+            .then_some(UserId::from(&info.user))
         }) {
             Some(user_id) => match self.state.bots.get(&user_id.into()) {
                 Some(entry) => match entry.value() {
@@ -401,7 +433,7 @@ where
                 },
                 None => Err(CreateError::Desync),
             },
-            None => self.create_ghost(settings).await,
+            None => self.create_ghost_with_hint(settings, Some(resp)).await,
         }
     }
 
@@ -426,44 +458,64 @@ where
     async fn create_inner(
         &self,
         settings: BotSettings,
-        is_bot: bool,
+        channel: Channel<P>,
+        hint: Option<Vec<UserInfo>>,
     ) -> Result<UserId, CreateError<C::Error>> {
-        if settings.display_name == self.state.farm_name {
+        if settings.display_name.matches(&self.state.farm_name) {
             return Err(CreateError::FarmUser);
         }
 
         let (_guard, suspension) = oneshot::channel();
         let _ = self.state.suspender.send(suspension);
 
-        let mut resp = self
-            .state
-            .client
-            .new_user(NewUser {
-                profile: Some(Bot::<C>::default_profile(&settings.display_name)),
-                client_service: false,
-                past_timestamp: false,
-                user_chat_relay: false,
-                undocumented: Default::default(),
-            })
-            .await?;
+        let mut known_users = match hint {
+            Some(hint) => hint,
+            None => self.state.client.users().await?,
+        };
 
-        if is_bot {
-            self.state
-                .bots
-                .insert(UserId::from(&resp.user).into(), Channel::new_bot());
-        } else {
-            self.state
-                .bots
-                .insert(UserId::from(&resp.user).into(), Channel::Ghost);
+        match settings.display_name.match_user(&mut known_users) {
+            Some(user) => {
+                let user_id = UserId::from(&*user);
+
+                self.state.bots.insert(user_id.into(), channel);
+                let client = self.state.client.delegate_to(user_id);
+
+                self.init_new(client, user, settings).await
+            }
+            None => {
+                let mut resp = self
+                    .state
+                    .client
+                    .new_user(NewUser {
+                        profile: Some(Bot::<C>::default_profile(settings.display_name.current())),
+                        client_service: false,
+                        past_timestamp: false,
+                        user_chat_relay: false,
+                        undocumented: Default::default(),
+                    })
+                    .await?;
+
+                let resp = Arc::get_mut(&mut resp).unwrap();
+                let user_id = UserId::from(&resp.user);
+
+                self.state.bots.insert(user_id.into(), channel);
+                let client = self.state.client.delegate_to(user_id);
+
+                self.init_new(client, &mut resp.user, settings).await
+            }
         }
+    }
 
-        let resp = Arc::get_mut(&mut resp).unwrap();
-        let client = self.state.client.delegate_to(UserId::from(&resp.user));
-
-        match Bot::init_existing(client, &mut resp.user, settings).await {
+    async fn init_new(
+        &self,
+        client: DelegateClient<C>,
+        user: &mut User,
+        settings: BotSettings,
+    ) -> Result<UserId, CreateError<C::Error>> {
+        match Bot::init_existing(client, user, settings).await {
             Ok(bot) => Ok(bot.user_id()),
             Err(e) => {
-                if let Err(err) = self.delete(UserId::from(&resp.user)).await {
+                if let Err(err) = self.delete(UserId::from(&*user)).await {
                     log::warn!("Failed to delete incorrectly initialized bot: {err}")
                 }
                 Err(e.into())
@@ -502,7 +554,44 @@ pub struct Init<C, P> {
     farm_name: String,
     active_name: String,
     bots: BotMap<P>,
-    cache: HashMap<String, User>,
+    cache: Cache,
+}
+
+struct Cache(HashMap<String, User>);
+
+impl Cache {
+    fn user_by_name(&mut self, name: BotName) -> Entry<'_, String, User> {
+        match name {
+            BotName::Current(name) => self.0.entry(name),
+            BotName::Rename { from, to } => {
+                if self.0.contains_key(&to) {
+                    self.0.entry(to)
+                } else {
+                    for old in from {
+                        if self.0.contains_key(&old) {
+                            return self.0.entry(old);
+                        }
+                    }
+
+                    self.0.entry(to)
+                }
+            }
+        }
+    }
+}
+
+impl std::ops::Deref for Cache {
+    type Target = HashMap<String, User>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Cache {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 #[derive(Clone)]

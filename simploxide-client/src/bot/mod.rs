@@ -18,7 +18,7 @@ use simploxide_api_types::{
     AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, ConnectionPlan,
     Contact, CreatedConnLink, GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject,
     LocalProfile, MsgContent, NewUser, PaginationByTime, PlanResolveMode, Preferences, Profile,
-    User,
+    User, UserInfo,
     client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
     commands::{
         ApiAddContact, ApiConnectPlan, ApiGetChats, ApiNewGroup, ApiNewPublicGroup,
@@ -87,10 +87,8 @@ impl<C: ClientApi> Bot<C> {
     pub async fn init(client: C, settings: BotSettings) -> Result<Self, C::Error> {
         let mut users = client.users().await?;
 
-        match users.iter_mut().find_map(|info| {
-            (info.user.profile.display_name == settings.display_name).then_some(&mut info.user)
-        }) {
-            Some(user) => Self::init_existing(client, user, settings).await,
+        match settings.display_name.match_user(&mut users) {
+            Some(current) => Self::init_existing(client, current, settings).await,
             None => Self::init_new(client, settings).await,
         }
     }
@@ -117,20 +115,41 @@ impl<C: ClientApi> Bot<C> {
             user_id: user.user_id,
         };
 
-        bot.setup_auto_accept(settings.auto_accept, user.profile.contact_link.is_some())
-            .await?;
+        let mut current = extract_profile(&mut user.profile);
+
+        current.display_name = settings.display_name.current();
+        let has_existing_address = current.contact_link.is_some();
+
+        // Preserve the contact_link only when the address will remain published after init.
+        // When auto_accept is None and an address exists, setup_auto_accept will call
+        // hide_address(), so passing contact_link=Some here would cause a spurious
+        // "set contact address" event immediately before "removed contact address".
+        let keep_contact_link = settings.auto_accept.is_some() || !has_existing_address;
+        let preserved_contact_link = keep_contact_link
+            .then(|| current.contact_link.take())
+            .flatten();
 
         let mut profile = match settings.profile_settings {
             Some(BotProfileSettings::Preferences(preferences)) => {
-                let mut current_profile = extract_profile(&mut user.profile);
-                current_profile.preferences = Some(preferences);
-                current_profile
+                current.preferences = Some(preferences);
+                current.contact_link = preserved_contact_link;
+                current
             }
-            Some(BotProfileSettings::FullProfile(profile)) => profile,
-            None => Self::default_profile(user.profile.display_name.clone()),
+            Some(BotProfileSettings::FullProfile(mut new_profile)) => {
+                new_profile.contact_link = preserved_contact_link;
+                new_profile
+            }
+            None => {
+                let mut p = Self::default_profile(current.display_name);
+                p.contact_link = preserved_contact_link;
+                p
+            }
         };
         profile.image = avatar;
+
         bot.client.api_update_profile(user.user_id, profile).await?;
+        bot.setup_auto_accept(settings.auto_accept, has_existing_address)
+            .await?;
 
         Ok(bot)
     }
@@ -144,12 +163,12 @@ impl<C: ClientApi> Bot<C> {
 
         let mut bot_profile = match settings.profile_settings {
             Some(BotProfileSettings::Preferences(preferences)) => {
-                let mut profile = Self::default_profile(settings.display_name.clone());
+                let mut profile = Self::default_profile(settings.display_name.current());
                 profile.preferences = Some(preferences);
                 profile
             }
             Some(BotProfileSettings::FullProfile(profile)) => profile,
-            None => Self::default_profile(settings.display_name.clone()),
+            None => Self::default_profile(settings.display_name.current()),
         };
         bot_profile.image = avatar;
 
@@ -194,16 +213,8 @@ impl<C: ClientApi> Bot<C> {
                 undocumented: Default::default(),
             })
             .await?;
-        } else if has_existing_address {
-            self.configure_address(AddressSettings {
-                business_address: false,
-                auto_accept: None,
-                auto_reply: None,
-                undocumented: Default::default(),
-            })
-            .await?;
-
-            self.hide_address().await?;
+        } else {
+            self.delete_address().await?;
         }
 
         Ok(())
@@ -227,7 +238,22 @@ impl<C: ClientApi> Bot<C> {
         }
     }
 
-    /// Returns a minimal bot profile with conservative defaults: no files, calls, reactions, or voice.
+    /// Conservative bot preferences: full-delete on, everything else off.
+    pub fn default_preferences() -> Preferences {
+        Preferences {
+            timed_messages: preferences::timed_messages::NO,
+            full_delete: preferences::YES,
+            reactions: preferences::NO,
+            voice: preferences::NO,
+            files: preferences::NO,
+            calls: preferences::NO,
+            sessions: preferences::NO,
+            commands: None,
+            undocumented: Default::default(),
+        }
+    }
+
+    /// Minimal bot profile with [`Self::default_preferences`] and `Bot` peer type.
     pub fn default_profile(name: impl Into<String>) -> Profile {
         Profile {
             display_name: name.into(),
@@ -237,17 +263,7 @@ impl<C: ClientApi> Bot<C> {
             image: None,
             contact_link: None,
             contact_domain: None,
-            preferences: Some(Preferences {
-                timed_messages: preferences::timed_messages::NO,
-                full_delete: preferences::YES,
-                reactions: preferences::NO,
-                voice: preferences::NO,
-                files: preferences::NO,
-                calls: preferences::NO,
-                sessions: preferences::NO,
-                commands: None,
-                undocumented: Default::default(),
-            }),
+            preferences: Some(Self::default_preferences()),
             badge: None,
             peer_type: Some(ChatPeerType::Bot),
             undocumented: serde_json::Value::Null,
@@ -458,6 +474,15 @@ impl<C: ClientApi> Bot<C> {
     ) -> Result<ApiUpdateProfileResponse, C::Error> {
         let bio = bio.into();
         self.update_profile(move |profile| profile.short_descr = Some(bio))
+            .await
+    }
+
+    pub async fn set_description(
+        &self,
+        description: impl Into<String>,
+    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+        let description = description.into();
+        self.update_profile(move |profile| profile.description = Some(description))
             .await
     }
 
@@ -1112,7 +1137,7 @@ impl crate::ffi::Bot {
 /// Passed to [`Bot::init`] to configure bot identity and startup behaviour.
 #[derive(Debug, Clone)]
 pub struct BotSettings {
-    pub display_name: String,
+    pub display_name: BotName,
     /// If string is empty creates an auto-accepting address without a message. If string is not
     /// empty adds a welcome message to the address
     pub auto_accept: Option<String>,
@@ -1121,9 +1146,9 @@ pub struct BotSettings {
 }
 
 impl BotSettings {
-    pub fn new(name: impl Into<String>) -> Self {
+    pub fn new(display_name: impl Into<BotName>) -> Self {
         Self {
-            display_name: name.into(),
+            display_name: display_name.into(),
             auto_accept: None,
             profile_settings: None,
             avatar: None,
@@ -1150,6 +1175,80 @@ impl BotSettings {
     pub fn with_profile_settings(mut self, settings: BotProfileSettings) -> Self {
         self.profile_settings = Some(settings);
         self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum BotName {
+    Current(String),
+    Rename { from: Vec<String>, to: String },
+}
+
+impl<S: Into<String>> From<S> for BotName {
+    fn from(name: S) -> Self {
+        BotName::Current(name.into())
+    }
+}
+
+impl BotName {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self::Current(name.into())
+    }
+
+    pub fn rename<S: Into<String>>(
+        from: impl IntoIterator<Item = S>,
+        to: impl Into<String>,
+    ) -> Self {
+        let from = from.into_iter().map(|s| s.into()).collect();
+        let to = to.into();
+        Self::Rename { from, to }
+    }
+
+    pub(crate) fn current(&self) -> String {
+        match self {
+            Self::Current(name) | Self::Rename { from: _, to: name } => name.clone(),
+        }
+    }
+
+    pub(crate) fn matches_new(&self, name: &String) -> bool {
+        match self {
+            Self::Current(current) => current == name,
+            Self::Rename { from: _, to } => to == name,
+        }
+    }
+
+    pub(crate) fn matches_old(&self, name: &String) -> bool {
+        match self {
+            Self::Current(current) => current == name,
+            Self::Rename { from, to: _ } => from.contains(name),
+        }
+    }
+
+    pub(crate) fn matches(&self, name: &String) -> bool {
+        match self {
+            Self::Current(current) => current == name,
+            Self::Rename { from, to } => to == name || from.contains(name),
+        }
+    }
+
+    /// - Matches the current user name with the highest priority.
+    /// - Otherwise matches the first user to rename.
+    /// - Returns None if no matches were found.
+    pub(crate) fn match_user<'a>(&self, users: &'a mut [UserInfo]) -> Option<&'a mut User> {
+        let mut existing_user = None;
+
+        for info in users {
+            if self.matches_new(&info.user.profile.display_name) {
+                existing_user = Some(&mut info.user);
+                break;
+            }
+
+            if self.matches_old(&info.user.profile.display_name) {
+                existing_user.get_or_insert(&mut info.user);
+            }
+        }
+
+        existing_user
     }
 }
 

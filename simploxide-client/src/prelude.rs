@@ -2,7 +2,7 @@
 
 pub use crate::{
     ClientApi as _, StreamEvents,
-    bot::{BotProfileSettings, BotSettings, Connection},
+    bot::{BotName, BotProfileSettings, BotSettings, Connection},
     client_api::*,
     commands::*,
     events::*,

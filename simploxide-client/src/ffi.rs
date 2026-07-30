@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use crate::{
     BadResponseError, ClientApi, ClientApiError, EventParser,
-    bot::{BotProfileSettings, BotSettings},
+    bot::{BotName, BotProfileSettings, BotSettings},
     id::UserId,
     preview::ImagePreview,
     util,
@@ -181,7 +181,7 @@ fn parse_data<'de, 'r: 'de, D: 'de + serde::Deserialize<'de>>(
 /// Builder for an FFI-backed [`Bot`].
 #[derive(Clone)]
 pub struct BotBuilder {
-    display_name: String,
+    display_name: BotName,
     db_opts: DbOpts,
     default_user: Option<DefaultUser>,
     auto_accept: Option<String>,
@@ -193,7 +193,7 @@ pub struct BotBuilder {
 
 impl BotBuilder {
     /// Build a bot account (default).
-    pub fn new(name: impl Into<String>, db_opts: DbOpts) -> Self {
+    pub fn new(name: impl Into<BotName>, db_opts: DbOpts) -> Self {
         Self {
             display_name: name.into(),
             db_opts,
@@ -208,8 +208,8 @@ impl BotBuilder {
 
     /// Override the default user created for empty databases.
     ///
-    /// By default the default user name matches the bot name. This setting allows to create a user
-    /// different from an active bot
+    /// By default the default user name matches the bot name. This setting allows to create
+    /// default user different from an active bot
     pub fn with_default_user(mut self, user: DefaultUser) -> Self {
         self.default_user = Some(user);
         self
@@ -255,7 +255,7 @@ impl BotBuilder {
     pub async fn launch(self) -> Result<(Bot, EventStream), BotInitError> {
         let default_user = self
             .default_user
-            .unwrap_or_else(|| DefaultUser::bot(&self.display_name));
+            .unwrap_or_else(|| DefaultUser::bot(self.display_name.current()));
 
         let (client, events) = init_with_config(default_user, self.db_opts, self.worker_config)
             .await

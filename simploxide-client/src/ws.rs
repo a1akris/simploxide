@@ -25,7 +25,7 @@ use simploxide_ws_core::RawClient;
 
 use crate::{
     BadResponseError, ClientApi, ClientApiError, EventParser,
-    bot::{BotProfileSettings, BotSettings},
+    bot::{BotName, BotProfileSettings, BotSettings},
     id::UserId,
     preview::ImagePreview,
     util,
@@ -320,7 +320,7 @@ impl std::error::Error for ConnectError {
 
 #[derive(Clone)]
 pub struct BotBuilder {
-    name: String,
+    name: BotName,
     port: u16,
     retry_delay: std::time::Duration,
     retries: usize,
@@ -337,7 +337,7 @@ pub struct BotBuilder {
 }
 
 impl BotBuilder {
-    pub fn new(name: impl Into<String>, port: u16) -> Self {
+    pub fn new(name: impl Into<BotName>, port: u16) -> Self {
         Self {
             name: name.into(),
             port,
@@ -466,7 +466,7 @@ impl BotBuilder {
     /// [`cli::SimplexCli::kill`] after the bot finishes.
     #[cfg(feature = "cli")]
     pub async fn launch(mut self) -> Result<(Bot, EventStream, cli::SimplexCli), BotInitError> {
-        let mut builder = cli::SimplexCli::builder(&self.name, self.port)
+        let mut builder = cli::SimplexCli::builder(self.name.current(), self.port)
             .db_prefix(std::mem::take(&mut self.db_prefix));
 
         if let Some(ref mut key) = self.db_key {

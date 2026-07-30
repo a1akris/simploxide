@@ -59,7 +59,7 @@
 //! type allows interrupting event dispatching via [`StreamEvents::Break`].
 //!
 //! ```ignore
-//! async fn new_msgs(ev: Arc<NewChatItems>, bot: Bot) -> ws::ClientResult<StreamEvents> {
+//! async fn new_messages(ev: Arc<NewChatItems>, bot: Bot) -> ws::ClientResult<StreamEvents> {
 //!     for (chat, msg, content) in ev.filter_messages() {
 //!         bot.update_msg_reaction(chat, msg, Reaction::Set("👍")).await?;
 //!
