@@ -122,7 +122,7 @@ impl<C: ClientApi> Bot<C> {
 
         // Preserve the contact_link only when the address will remain published after init.
         // When auto_accept is None and an address exists, setup_auto_accept will call
-        // hide_address(), so passing contact_link=Some here would cause a spurious
+        // delete_address(), so passing contact_link=Some here would cause a spurious
         // "set contact address" event immediately before "removed contact address".
         let keep_contact_link = settings.auto_accept.is_some() || !has_existing_address;
         let preserved_contact_link = keep_contact_link

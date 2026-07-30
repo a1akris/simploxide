@@ -141,9 +141,12 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
             })
             .await?;
 
-        let user = resp.user.as_ref().unwrap();
-
         self.state.bots.remove(&user_id.into());
+
+        let Some(user) = resp.user.as_ref() else {
+            return Ok(());
+        };
+
         self.state.cache.remove(&user.profile.display_name);
 
         Ok(())
@@ -243,6 +246,7 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
 
         match self.state.cache.user_by_name(settings.display_name.clone()) {
             Entry::Occupied(mut occupied) => {
+                let old_key = occupied.key().clone();
                 let bot = Bot::<C>::init_existing(
                     self.state.client.clone(),
                     occupied.get_mut(),
@@ -250,10 +254,16 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
                 )
                 .await?;
                 let update = bot.info().await?;
+                let new_name = update.user.profile.display_name.clone();
 
-                *occupied.get_mut() = update.user.clone();
-                self.change_active_user(update.user.profile.display_name.clone());
+                if old_key == new_name {
+                    *occupied.get_mut() = update.user.clone();
+                } else {
+                    occupied.remove();
+                    self.state.cache.insert(new_name.clone(), update.user.clone());
+                }
 
+                self.change_active_user(new_name);
                 Ok(bot.user_id())
             }
             Entry::Vacant(vacant) => {
@@ -480,7 +490,13 @@ where
                 self.state.bots.insert(user_id.into(), channel);
                 let client = self.state.client.delegate_to(user_id);
 
-                self.init_new(client, user, settings).await
+                match Bot::init_existing(client, user, settings).await {
+                    Ok(bot) => Ok(bot.user_id()),
+                    Err(e) => {
+                        self.state.bots.remove(&user_id.into());
+                        Err(e.into())
+                    }
+                }
             }
             None => {
                 let mut resp = self
