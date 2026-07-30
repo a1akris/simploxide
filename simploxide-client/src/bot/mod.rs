@@ -15,11 +15,11 @@
 //! [`ffi::BotBuilder`](crate::ffi::BotBuilder) and [`ws::BotBuilder`](crate::ws::BotBuilder).
 
 use simploxide_api_types::{
-    AddressSettings, AutoAccept, CIDeleteMode, ChatListQuery, ChatPeerType, ConnectionPlan,
-    Contact, CreatedConnLink, GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject,
-    LocalProfile, MsgContent, NewUser, PaginationByTime, PlanResolveMode, Preferences, Profile,
-    User, UserInfo,
-    client_api::{ClientApi, ClientApiError as _, UndocumentedResponse},
+    AddressSettings, AutoAccept, BadgeProof, CIDeleteMode, ChatListQuery, ChatPeerType,
+    ConnectionPlan, Contact, CreatedConnLink, GroupInfo, GroupMember, GroupMemberRole,
+    GroupPreferences, GroupProfile, JsonObject, LocalProfile, MsgContent, NewUser, PaginationByTime,
+    PlanResolveMode, Preferences, Profile, SimplexDomainClaim, User, UserInfo,
+    client_api::{BadResponseError, ClientApi, ClientApiError as _, UndocumentedResponse},
     commands::{
         ApiAddContact, ApiConnectPlan, ApiGetChats, ApiNewGroup, ApiNewPublicGroup,
         ApiSetActiveUser, ApiSetProfileAddress, ApiSetUserAutoAcceptMemberContacts,
@@ -129,23 +129,31 @@ impl<C: ClientApi> Bot<C> {
             .then(|| current.contact_link.take())
             .flatten();
 
-        let mut profile = match settings.profile_settings {
+        let profile = match settings.profile_settings {
             Some(BotProfileSettings::Preferences(preferences)) => {
                 current.preferences = Some(preferences);
                 current.contact_link = preserved_contact_link;
+                current.image = avatar.or(current.image);
+                current.short_descr = settings.bio.or(current.short_descr);
+                current.description = settings.description.or(current.description);
                 current
             }
             Some(BotProfileSettings::FullProfile(mut new_profile)) => {
                 new_profile.contact_link = preserved_contact_link;
+                new_profile.image = new_profile.image.or(avatar);
+                new_profile.short_descr = new_profile.short_descr.or(settings.bio);
+                new_profile.description = new_profile.description.or(settings.description);
                 new_profile
             }
             None => {
                 let mut p = Self::default_profile(current.display_name);
                 p.contact_link = preserved_contact_link;
+                p.image = avatar;
+                p.short_descr = settings.bio;
+                p.description = settings.description;
                 p
             }
         };
-        profile.image = avatar;
 
         bot.client.api_update_profile(user.user_id, profile).await?;
         bot.setup_auto_accept(settings.auto_accept, has_existing_address)
@@ -161,16 +169,29 @@ impl<C: ClientApi> Bot<C> {
             None
         };
 
-        let mut bot_profile = match settings.profile_settings {
+        let bot_profile = match settings.profile_settings {
             Some(BotProfileSettings::Preferences(preferences)) => {
                 let mut profile = Self::default_profile(settings.display_name.current());
                 profile.preferences = Some(preferences);
+                profile.image = avatar;
+                profile.short_descr = settings.bio;
+                profile.description = settings.description;
                 profile
             }
-            Some(BotProfileSettings::FullProfile(profile)) => profile,
-            None => Self::default_profile(settings.display_name.current()),
+            Some(BotProfileSettings::FullProfile(mut profile)) => {
+                profile.image = profile.image.or(avatar);
+                profile.short_descr = profile.short_descr.or(settings.bio);
+                profile.description = profile.description.or(settings.description);
+                profile
+            }
+            None => {
+                let mut profile = Self::default_profile(settings.display_name.current());
+                profile.image = avatar;
+                profile.short_descr = settings.bio;
+                profile.description = settings.description;
+                profile
+            }
         };
-        bot_profile.image = avatar;
 
         let response = client
             .new_user(NewUser {
@@ -502,6 +523,27 @@ impl<C: ClientApi> Bot<C> {
         peer_type: ChatPeerType,
     ) -> Result<ApiUpdateProfileResponse, C::Error> {
         self.update_profile(move |profile| profile.peer_type = Some(peer_type))
+            .await
+    }
+
+    pub async fn set_badge(
+        &self,
+        badge: BadgeProof,
+    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+        self.update_profile(move |profile| profile.badge = Some(badge))
+            .await
+    }
+
+    pub async fn set_contact_domain(
+        &self,
+        domain: SimplexDomainClaim,
+    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+        self.update_profile(move |profile| profile.contact_domain = Some(domain))
+            .await
+    }
+
+    pub async fn clear_contact_domain(&self) -> Result<ApiUpdateProfileResponse, C::Error> {
+        self.update_profile(|profile| profile.contact_domain = None)
             .await
     }
 
@@ -1007,6 +1049,57 @@ impl<C: ClientApi> Bot<C> {
         self.client.update_group_profile(group_id, profile).await
     }
 
+    pub async fn update_group_profile_with<GID, F>(
+        &self,
+        group_id: GID,
+        updater: F,
+    ) -> Result<Arc<GroupUpdatedResponse>, C::Error>
+    where
+        GID: Into<GroupId>,
+        F: FnOnce(&mut GroupProfile),
+    {
+        let group_id = group_id.into();
+        let groups = self.groups().await?;
+        let Some(group) = groups.into_iter().find(|g| g.group_id == group_id.raw()) else {
+            return Err(BadResponseError::Undocumented(serde_json::json!({
+                "type": "groupNotFound",
+                "groupId": group_id.raw(),
+            }))
+            .into());
+        };
+        let mut profile = group.group_profile;
+        updater(&mut profile);
+        self.update_group_profile(group_id, profile).await
+    }
+
+    pub async fn update_group_preferences<GID, F>(
+        &self,
+        group_id: GID,
+        updater: F,
+    ) -> Result<Arc<GroupUpdatedResponse>, C::Error>
+    where
+        GID: Into<GroupId>,
+        F: FnOnce(&mut GroupPreferences),
+    {
+        self.update_group_profile_with(group_id, |profile| {
+            let mut prefs = extract_group_preferences(&mut profile.group_preferences);
+            updater(&mut prefs);
+            profile.group_preferences = Some(prefs);
+        })
+        .await
+    }
+
+    pub async fn set_group_sign_messages<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+        on: bool,
+    ) -> Result<Arc<GroupUpdatedResponse>, C::Error> {
+        self.update_group_preferences(group_id, |prefs| {
+            prefs.sign_messages = if on { preferences::group::YES } else { preferences::group::NO };
+        })
+        .await
+    }
+
     /// Stores arbitrary app-defined JSON on the group. Pass `None` to clear it.
     pub async fn set_group_custom_data<GID: Into<GroupId>>(
         &self,
@@ -1143,6 +1236,8 @@ pub struct BotSettings {
     pub auto_accept: Option<String>,
     pub profile_settings: Option<BotProfileSettings>,
     pub avatar: Option<ImagePreview>,
+    pub bio: Option<String>,
+    pub description: Option<String>,
 }
 
 impl BotSettings {
@@ -1152,11 +1247,23 @@ impl BotSettings {
             auto_accept: None,
             profile_settings: None,
             avatar: None,
+            bio: None,
+            description: None,
         }
     }
 
     pub fn with_avatar(mut self, avatar: ImagePreview) -> Self {
         self.avatar = Some(avatar);
+        self
+    }
+
+    pub fn with_bio(mut self, bio: impl Into<String>) -> Self {
+        self.bio = Some(bio.into());
+        self
+    }
+
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
         self
     }
 
@@ -1312,6 +1419,45 @@ fn extract_profile(local: &mut LocalProfile) -> Profile {
         peer_type: local.peer_type.take(),
         badge: None,
         undocumented: std::mem::take(&mut local.undocumented),
+    }
+}
+
+fn extract_group_preferences(prefs: &mut Option<GroupPreferences>) -> GroupPreferences {
+    match prefs.as_mut() {
+        Some(p) => GroupPreferences {
+            timed_messages: p.timed_messages.take(),
+            direct_messages: p.direct_messages.take(),
+            full_delete: p.full_delete.take(),
+            reactions: p.reactions.take(),
+            voice: p.voice.take(),
+            files: p.files.take(),
+            simplex_links: p.simplex_links.take(),
+            reports: p.reports.take(),
+            history: p.history.take(),
+            support: p.support.take(),
+            sessions: p.sessions.take(),
+            comments: p.comments.take(),
+            sign_messages: p.sign_messages.take(),
+            commands: p.commands.take(),
+            undocumented: std::mem::take(&mut p.undocumented),
+        },
+        None => GroupPreferences {
+            timed_messages: None,
+            direct_messages: None,
+            full_delete: None,
+            reactions: None,
+            voice: None,
+            files: None,
+            simplex_links: None,
+            reports: None,
+            history: None,
+            support: None,
+            sessions: None,
+            comments: None,
+            sign_messages: None,
+            commands: None,
+            undocumented: Default::default(),
+        },
     }
 }
 

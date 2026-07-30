@@ -188,6 +188,8 @@ pub struct BotBuilder {
     profile: Option<Profile>,
     preferences: Option<Preferences>,
     avatar: Option<ImagePreview>,
+    bio: Option<String>,
+    description: Option<String>,
     worker_config: WorkerConfig,
 }
 
@@ -202,6 +204,8 @@ impl BotBuilder {
             profile: None,
             preferences: None,
             avatar: None,
+            bio: None,
+            description: None,
             worker_config: WorkerConfig::default(),
         }
     }
@@ -230,6 +234,18 @@ impl BotBuilder {
     /// Set the bot avatar during initialisation
     pub fn with_avatar(mut self, avatar: ImagePreview) -> Self {
         self.avatar = Some(avatar);
+        self
+    }
+
+    /// Set the bot bio (`short_descr`) during initialisation. Ignored when [`Self::with_profile`] is also set.
+    pub fn with_bio(mut self, bio: impl Into<String>) -> Self {
+        self.bio = Some(bio.into());
+        self
+    }
+
+    /// Set the bot description during initialisation. Ignored when [`Self::with_profile`] is also set.
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
         self
     }
 
@@ -277,6 +293,8 @@ impl BotBuilder {
                 (None, None) => None,
             },
             avatar: self.avatar,
+            bio: self.bio,
+            description: self.description,
         };
 
         let bot = Bot::init(client, settings).await?;
