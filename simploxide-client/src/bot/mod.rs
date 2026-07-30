@@ -213,7 +213,7 @@ impl<C: ClientApi> Bot<C> {
                 undocumented: Default::default(),
             })
             .await?;
-        } else {
+        } else if has_existing_address {
             self.delete_address().await?;
         }
 
