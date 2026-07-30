@@ -19,9 +19,9 @@ const DEFAULT_PREVIEW: &str = "data:image/jpg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD
 9oADAMBAAIRAxEAPwDaKF17qgo3UVBRWjqCjdFUFFaOoKN0VQUVo6go3R0FHi13ago3R1BRWjoijdHUFFSiqCjZR1BRUo6go3RVQHh13aAK1FAVuiqCipR1BRUo6go2UV\
 QUVKOoKK0dAHg13aCjdHUFFaOoKKlHUFFSiqCipR1BRsoqgoqUdBR4Nd2oKNlHUUFSjoAqUdAFSjoAqUVAFSjoAqUdAHPd2gCoOqAqDoA2DoAuCoAqDoAqCoAqDr//2Q==";
 
-const MAX_PREVIEW_BYTES: usize = 10_000;
+const MAX_PREVIEW_BYTES: usize = 9350;
 #[cfg(feature = "multimedia")]
-const MAX_FILE_SIZE: usize = 64 * 1024 * 1024;
+const MAX_FILE_SIZE: usize = 128 * 1024 * 1024;
 
 /// Thumbnail for [`Image`](crate::messages::Image), [`Video`](crate::messages::Video), and
 /// [`Link`](crate::messages::Link) messages. Also used as bot profile pictures. The source is stored
