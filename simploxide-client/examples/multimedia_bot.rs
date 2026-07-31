@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // transcodes image previews into jpgs satisfying SimpleX-Chat preview requirements
         .with_avatar(
             ImagePreview::from_file("./examples/img/multimedia_bot_avatar.jpg")
-                .with_transcoder(Transcoder::disabled()),
+                .with_transcoder(Transcoder::avatar()),
         )
         .with_preferences(Preferences {
             timed_messages: preferences::timed_messages::yes(Duration::from_secs(3600)),
@@ -281,10 +281,8 @@ async fn process_image(
     // unauthenticated
     file.put_auth_tag().await?;
 
+    // The image preview will be automatically generated from the source data
     bot.send_msg(chat, Image::new(path).with_crypto_args(crypto_args))
-        // modifying the default image preview transcoder. The default transcoded produces pixelated
-        // previews similar to SimpleX-Chat clients, this transcoder creates blurred previews instead
-        .with_transcoder(Transcoder::thumbnail().with_blur(1.5).with_quality(80))
         .await?;
 
     Ok(())

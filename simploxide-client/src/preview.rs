@@ -21,7 +21,7 @@ QUVKOoKK0dAHg13aCjdHUFFaOoKKlHUFFSiqCipR1BRsoqgoqUdBR4Nd2oKNlHUUFSjoAqUdAFSjoAqU
 
 const MAX_PREVIEW_BYTES: usize = 9350;
 #[cfg(feature = "multimedia")]
-const MAX_FILE_SIZE: usize = 128 * 1024 * 1024;
+const MAX_FILE_SIZE: usize = 20 * 1024 * 1024;
 
 /// Thumbnail for [`Image`](crate::messages::Image), [`Video`](crate::messages::Video), and
 /// [`Link`](crate::messages::Link) messages. Also used as bot profile pictures. The source is stored
@@ -63,7 +63,8 @@ impl std::fmt::Debug for ImagePreview {
 }
 
 impl ImagePreview {
-    /// Thumbnail from raw JPEG bytes. Fails on resolve if the encoded data URI exceeds 13333 bytes.
+    /// Thumbnail from raw JPEG bytes. Fails on resolve if the encoded data URI exceeds
+    /// [`MAX_PREVIEW_BYTES`].
     pub fn from_bytes(bytes: impl Into<Vec<u8>>) -> Self {
         Self {
             source: PreviewSource::Bytes(bytes.into()),
@@ -139,21 +140,21 @@ impl ImagePreview {
 
     #[cfg(not(feature = "multimedia"))]
     /// Returns the preview as a `data:image/jpg;base64,{base64_contents}` URI. The source is
-    /// assumed to be a valid JPEG(encoding is not validated) when multimedia feature is off or is
-    /// lazily transcoded to JPEG when multimedia feature is on. Fails if the source cannot be read
-    /// or the encoded URI exceeds 13333 bytes.
+    /// assumed to be a valid JPEG(encoding is not validated) when multimedia feature is disabled or it is
+    /// lazily transcoded into JPEG when multimedia is enabled. Fails if the source cannot be read
+    /// or the encoded URI exceeds [`MAX_PREVIEW_BYTES`] bytes.
     pub async fn try_resolve(self) -> Result<String, PreviewError> {
         match self.source {
             PreviewSource::Default => Ok(default()),
             PreviewSource::Bytes(b) => try_encode_jpg_to_uri(&b),
             PreviewSource::DataUri(s) => validate_uri_preview(s),
             PreviewSource::File(path) => {
-                let bytes = read_plain_file(&path, MAX_PREVIEW_BYTES).await?;
+                let bytes = read_plain_file(&path).await?;
                 try_encode_jpg_to_uri(&bytes)
             }
             #[cfg(feature = "native_crypto")]
             PreviewSource::CryptoFile(file) => {
-                let bytes = read_crypto_file(file, MAX_PREVIEW_BYTES).await?;
+                let bytes = read_crypto_file(file).await?;
                 try_encode_jpg_to_uri(&bytes)
             }
         }
@@ -161,31 +162,27 @@ impl ImagePreview {
 
     #[cfg(feature = "multimedia")]
     /// Returns the preview as a `data:image/jpg;base64,{base64_contents}` URI. The source is
-    /// assumed to be a valid JPEG(encoding is not validated) when multimedia feature is off or is
-    /// lazily transcoded to JPEG when multimedia feature is on. Fails if the source cannot be read
-    /// or the encoded URI exceeds 13333 bytes.
+    /// assumed to be a valid JPEG(encoding is not validated) when multimedia feature is disabled or it is
+    /// lazily transcoded into JPEG when multimedia is enabled. Fails if the source cannot be read
+    /// or the encoded URI exceeds [`MAX_PREVIEW_BYTES`] bytes.
     pub async fn try_resolve(self) -> Result<String, PreviewError> {
         let bytes = match self.source {
             PreviewSource::Default => return Ok(default()),
             PreviewSource::Bytes(b) => b,
-            PreviewSource::DataUri(s) => {
-                return validate_uri_preview(s);
-            }
-            PreviewSource::File(path) => read_plain_file(&path, MAX_FILE_SIZE).await?,
+            PreviewSource::DataUri(s) => return validate_uri_preview(s),
+            PreviewSource::File(path) => read_plain_file(&path).await?,
             #[cfg(feature = "native_crypto")]
-            PreviewSource::CryptoFile(file) => read_crypto_file(file, MAX_FILE_SIZE).await?,
+            PreviewSource::CryptoFile(file) => read_crypto_file(file).await?,
         };
 
-        let jpg_bytes = if self.transcoder.is_enabled() {
-            tokio::task::spawn_blocking(move || -> Result<Vec<u8>, PreviewError> {
-                self.transcoder.transcode_to_jpg(bytes)
-            })
-            .await??
+        if self.transcoder.is_enabled() {
+            let jpg_bytes =
+                tokio::task::spawn_blocking(move || self.transcoder.transcode_to_jpg(bytes))
+                    .await??;
+            Ok(encode_to_uri(&jpg_bytes))
         } else {
-            bytes
-        };
-
-        try_encode_jpg_to_uri(&jpg_bytes)
+            try_encode_jpg_to_uri(&bytes)
+        }
     }
 }
 
@@ -201,127 +198,117 @@ pub enum PreviewKind {
 
 #[cfg(feature = "multimedia")]
 pub mod transcoder {
-    use image::{ImageReader, codecs::jpeg::JpegEncoder};
+    use image::{
+        ImageFormat, ImageReader,
+        codecs::jpeg::JpegEncoder,
+        imageops::{self, FilterType},
+    };
     use std::io::Cursor;
 
     use super::PreviewError;
 
-    /// Transcodes images of any wide-spread types to JPEG thumbnails. Default settings generate
-    /// previews similar to SimpleX-Chat previews
+    const THUMBNAIL_MAX_BYTES: usize = 10450;
+    const AVATAR_MAX_BYTES: usize = 9350;
+
+    const THUMBNAIL_SIZES: [u16; 4] = [256, 192, 128, 96];
+    const AVATAR_SIZES: [u16; 4] = [160, 128, 96, 64];
+    const PREVIEW_QUALITIES: [u8; 4] = [85, 75, 60, 45];
+
     #[derive(Debug, Clone, Copy)]
     pub struct Transcoder {
-        enabled: bool,
-        size: (u8, u8),
-        quality: u8,
-        blur: f32,
+        sizes: [u16; 4],
+        max_bytes: usize,
     }
 
     impl Default for Transcoder {
         fn default() -> Self {
-            Self::jpeg()
+            Self::thumbnail()
         }
     }
 
     impl Transcoder {
-        /// Disable transcoding entirely. Useful for pre-made and pictures thumbnails.
         pub const fn disabled() -> Self {
             Self {
-                enabled: false,
-                size: (0, 0),
-                quality: 100,
-                blur: 0.0,
+                sizes: [0; 4],
+                max_bytes: 0,
             }
         }
 
-        /// Only convert the image to JPEG(the best quality) without applying any other
-        /// transformations. Use builder methods to add transformations on top
-        pub const fn jpeg() -> Self {
-            Self {
-                enabled: true,
-                size: (0, 0),
-                quality: 100,
-                blur: 0.0,
-            }
-        }
-
-        /// The default transcoder for thumbnails. Modify defaults with builder methods.
         pub const fn thumbnail() -> Self {
             Self {
-                enabled: true,
-                size: (128, 128),
-                quality: 60,
-                blur: 0.0,
+                sizes: THUMBNAIL_SIZES,
+                max_bytes: THUMBNAIL_MAX_BYTES,
+            }
+        }
+
+        pub const fn avatar() -> Self {
+            Self {
+                sizes: AVATAR_SIZES,
+                max_bytes: AVATAR_MAX_BYTES,
             }
         }
 
         pub const fn is_enabled(&self) -> bool {
-            self.enabled
+            !self.is_disabled()
         }
 
-        /// Bound between 32x32 and 255x255
-        pub const fn with_size(mut self, x: u8, y: u8) -> Self {
-            let x: u8 = if x < 32 { 32 } else { x };
-            let y: u8 = if y < 32 { 32 } else { y };
+        pub const fn is_disabled(&self) -> bool {
+            self.max_bytes == 0 || self.sizes[0] == 0
+        }
 
-            self.size = (x, y);
+        pub const fn with_sizes(mut self, sizes: [u16; 4]) -> Self {
+            self.sizes = sizes;
             self
         }
 
-        /// Quality is bound between 1..=100 where 1 is the worst
-        pub const fn with_quality(mut self, quality: u8) -> Self {
-            if quality == 0 {
-                self.quality = 1;
-            } else if quality > 100 {
-                self.quality = 100;
-            } else {
-                self.quality = quality;
-            }
-
+        pub const fn with_max_bytes(mut self, max_bytes: usize) -> Self {
+            self.max_bytes = max_bytes;
             self
         }
 
-        /// sigma < 1.0 - no blur. sigma = 100.0 - max blur
-        pub const fn with_blur(mut self, sigma: f32) -> Self {
-            if sigma < 1.0 {
-                self.blur = 0.0;
-            } else if sigma > 100.0 {
-                self.blur = 100.0
-            } else {
-                self.blur = sigma
-            };
-
-            self
-        }
-
-        /// **WARNING**: this is a relatively expensive blocking operation, ensure that you call
-        /// this method outside the tokio executor with `tokio::spawn_blocking` or on a dedicated
-        /// thread.
         pub fn transcode_to_jpg(self, mut bytes: Vec<u8>) -> Result<Vec<u8>, PreviewError> {
-            if !self.enabled {
+            if !self.is_enabled() {
                 return Ok(bytes);
             }
 
-            let img = ImageReader::new(Cursor::new(&bytes))
-                .with_guessed_format()?
-                .decode()?;
+            let reader = ImageReader::new(Cursor::new(&bytes)).with_guessed_format()?;
 
-            let img = if self.size != (0, 0) {
-                img.thumbnail(self.size.0.into(), self.size.1.into())
-            } else {
-                img
-            };
+            if reader.format() == Some(ImageFormat::Jpeg) && bytes.len() <= self.max_bytes {
+                return Ok(bytes);
+            }
 
-            let img = if self.blur >= 1.0 {
-                img.fast_blur(self.blur)
-            } else {
-                img
-            };
+            let img = reader.decode()?;
 
-            bytes.clear();
-            let encoder = JpegEncoder::new_with_quality(&mut bytes, self.quality);
-            img.write_with_encoder(encoder)?;
+            let (orig_w, orig_h) = (img.width(), img.height());
+            let max_orig = orig_w.max(orig_h);
 
-            Ok(bytes)
+            let mut last_effective = u32::MAX;
+            for &size in &self.sizes {
+                // Never upscale: images smaller than this slot use their natural dimensions.
+                let effective = (size as u32).min(max_orig);
+                if effective == last_effective {
+                    continue;
+                }
+                last_effective = effective;
+
+                let rgb = if effective < max_orig {
+                    let resized = img.resize(effective, effective, FilterType::Lanczos3);
+                    imageops::unsharpen(&resized.to_rgb8(), 0.5, 0)
+                } else {
+                    img.to_rgb8()
+                };
+
+                for &quality in &PREVIEW_QUALITIES {
+                    bytes.clear();
+                    JpegEncoder::new_with_quality(&mut bytes, quality).encode_image(&rgb)?;
+
+                    if bytes.len() <= self.max_bytes {
+                        return Ok(bytes);
+                    }
+                }
+            }
+
+            Err(PreviewError::TooLarge)
         }
     }
 }
@@ -350,12 +337,14 @@ pub fn try_encode_jpg_to_uri(bytes: &[u8]) -> Result<String, PreviewError> {
     if bytes.len() > MAX_PREVIEW_BYTES {
         return Err(PreviewError::TooLarge);
     }
+    Ok(encode_to_uri(bytes))
+}
 
-    let mut encoded = String::with_capacity(bytes.len() * 4 / 3 + URI_HEADER.len() + 3);
+fn encode_to_uri(bytes: &[u8]) -> String {
+    let mut encoded = String::with_capacity(bytes.len() * 4 / 3 + URI_HEADER.len() + 4);
     encoded.push_str(URI_HEADER);
     BASE64_STANDARD.encode_string(bytes, &mut encoded);
-
-    Ok(encoded)
+    encoded
 }
 
 pub fn try_decode_jpg_from_uri(uri_str: &str) -> Result<Vec<u8>, UriDecodeError> {
@@ -465,15 +454,15 @@ enum PreviewSource {
     CryptoFile(CryptoFile),
 }
 
-async fn read_plain_file(path: &PathBuf, size_limit: usize) -> std::io::Result<Vec<u8>> {
+async fn read_plain_file(path: &PathBuf) -> std::io::Result<Vec<u8>> {
     let mut f = tokio::fs::File::open(&path).await?;
     let size_hint = f.seek(SeekFrom::End(0)).await?;
     f.seek(SeekFrom::Start(0)).await?;
     let size_hint: usize = util::cast_file_size(size_hint)?;
 
-    if size_hint > size_limit {
+    if size_hint > MAX_FILE_SIZE {
         return Err(util::file_is_too_large(format!(
-            "Size exceeds {size_limit} bytes"
+            "Size exceeds {MAX_FILE_SIZE} bytes"
         )));
     }
 
@@ -484,13 +473,13 @@ async fn read_plain_file(path: &PathBuf, size_limit: usize) -> std::io::Result<V
 }
 
 #[cfg(feature = "native_crypto")]
-async fn read_crypto_file(file: CryptoFile, size_limit: usize) -> std::io::Result<Vec<u8>> {
+async fn read_crypto_file(file: CryptoFile) -> std::io::Result<Vec<u8>> {
     let mut f = crate::crypto::fs::TokioMaybeCryptoFile::from_crypto_file(file).await?;
     let size_hint = f.size_hint().await?;
 
-    if size_hint > size_limit {
+    if size_hint > MAX_FILE_SIZE {
         return Err(util::file_is_too_large(format!(
-            "Size exceeds {size_limit} bytes"
+            "Size exceeds {MAX_FILE_SIZE} bytes"
         )));
     }
 
