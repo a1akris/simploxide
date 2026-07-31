@@ -260,7 +260,9 @@ impl<C: ClientApi, P: EventParser> BotFarm<Init<C, P>> {
                     *occupied.get_mut() = update.user.clone();
                 } else {
                     occupied.remove();
-                    self.state.cache.insert(new_name.clone(), update.user.clone());
+                    self.state
+                        .cache
+                        .insert(new_name.clone(), update.user.clone());
                 }
 
                 self.change_active_user(new_name);

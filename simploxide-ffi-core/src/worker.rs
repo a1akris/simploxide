@@ -312,7 +312,9 @@ fn simplex_chat_init(default_user: DefaultUser, db_opts: DbOpts) -> Result<Simpl
     const MAX_DB_PREFIX_LEN: usize = 256;
     const MAX_DISPLAY_NAME_LEN: usize = 80;
 
-    if db_opts.prefix.len() > MAX_DB_PREFIX_LEN || default_user.display_name.len() > MAX_DISPLAY_NAME_LEN {
+    if db_opts.prefix.len() > MAX_DB_PREFIX_LEN
+        || default_user.display_name.len() > MAX_DISPLAY_NAME_LEN
+    {
         return Err(InitError::CallError(CallError::Failure));
     }
 
