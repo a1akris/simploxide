@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let junior_support = farm
         .prepare_bot(
-            BotSettings::new("Carl")
+            BotSettings::new(BotName::rename(["Carl"], "Kevin"))
                 .auto_accept_with("Welcome to the ACME customer support")
                 .with_avatar(ImagePreview::from_file("examples/img/carl.jpg")),
         )

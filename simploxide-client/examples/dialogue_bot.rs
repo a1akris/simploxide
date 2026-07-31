@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .launch()
             .await?;
 
-    let address = bot.address().await?;
+    let address = bot.get_or_create_address().await?;
     println!("Bot address: {address}");
 
     let dialogue = Dialogue::new(
