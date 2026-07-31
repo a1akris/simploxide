@@ -17,13 +17,10 @@
 use simploxide_api_types::{
     AddressSettings, AutoAccept, BadgeProof, CIDeleteMode, ChatListQuery, ChatPeerType,
     ConnectionPlan, Contact, CreatedConnLink, GroupInfo, GroupMember, GroupMemberRole,
-    GroupPreferences, GroupProfile, JsonObject, LocalProfile, MsgContent, NewUser, PaginationByTime,
-    PlanResolveMode, Preferences, Profile, SimplexDomainClaim, User, UserInfo,
+    GroupPreferences, GroupProfile, JsonObject, LocalProfile, MsgContent, NewUser,
+    PaginationByTime, Preferences, Profile, SimplexDomainClaim, User, UserInfo,
     client_api::{BadResponseError, ClientApi, ClientApiError as _, UndocumentedResponse},
-    commands::{
-        ApiAddContact, ApiConnectPlan, ApiGetChats, ApiNewGroup, ApiNewPublicGroup,
-        ApiSetActiveUser, ApiSetProfileAddress, ApiSetUserAutoAcceptMemberContacts,
-    },
+    commands::ApiSetActiveUser,
     responses::{
         AcceptingContactRequestResponse, ActiveUserResponse, ApiChatsResponse,
         ApiDeleteChatResponse, ApiNewPublicGroupResponse, ApiUpdateChatItemResponse,
@@ -38,6 +35,8 @@ use simploxide_api_types::{
 };
 
 use std::sync::Arc;
+
+use futures::{FutureExt as _, TryFutureExt as _};
 
 use crate::{
     ext::{
@@ -155,7 +154,10 @@ impl<C: ClientApi> Bot<C> {
             }
         };
 
-        bot.client.api_update_profile(user.user_id, profile).await?;
+        bot.client
+            .update_profile(UserId::from_raw(user.user_id), profile)
+            .await?;
+
         bot.setup_auto_accept(settings.auto_accept, has_existing_address)
             .await?;
 
@@ -292,8 +294,8 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Get full bot user info
-    pub async fn info(&self) -> Result<Arc<ActiveUserResponse>, C::Error> {
-        self.client.show_active_user().await
+    pub fn info(&self) -> impl Future<Output = Result<Arc<ActiveUserResponse>, C::Error>> {
+        self.client.show_active_user()
     }
 
     /// Initiates the connection sequence.
@@ -307,27 +309,20 @@ impl<C: ClientApi> Bot<C> {
     ///   remaining [ConnectResponse] variants. The implementation must listen for
     ///   [crate::events::ContactConnected] or [crate::events::UserJoinedGroup] to confirm the
     ///   connection.
-    pub async fn initiate_connection(
+    pub fn initiate_connection(
         &self,
         link: impl Into<String>,
-    ) -> Result<UndocumentedResponse<ConnectResponse>, C::Error> {
-        self.client.initiate_connection(link).await
+    ) -> impl Future<Output = Result<UndocumentedResponse<ConnectResponse>, C::Error>> {
+        self.client.initiate_connection(link)
     }
 
     /// Inspect a SimpleX target before connecting: resolves its type (name, contact address, group link,
     /// or 1-time invitation) and reports whether the bot is already connected via it.
-    pub async fn check_connection_plan(
+    pub fn check_connection_plan(
         &self,
         target: impl Into<String>,
-    ) -> Result<Arc<ConnectionPlanResponse>, C::Error> {
-        self.client
-            .api_connect_plan(ApiConnectPlan {
-                user_id: self.user_id,
-                connect_target: Some(target.into()),
-                resolve_mode: PlanResolveMode::Unknown,
-                link_owner_sig: None,
-            })
-            .await
+    ) -> impl Future<Output = Result<Arc<ConnectionPlanResponse>, C::Error>> {
+        self.client.connection_plan(self.user_id(), target)
     }
 
     /// Initiate a connection only if [`ConnectionPlan`] satisfies the predicate. For example, this
@@ -364,28 +359,26 @@ impl<C: ClientApi> Bot<C> {
     /// with other bots. The [`connection.pcc_conn_id`](crate::types::PendingContactConnection::pcc_conn_id) can be matched with
     /// [crate::types::Connection::conn_id] to recognize the user connected by this link when handling the
     /// [crate::events::ContactConnected] event(see [crate::events::ContactConnected::contact])
-    pub async fn create_invitation_link(
+    pub fn create_invitation_link(
         &self,
-    ) -> Result<(String, Arc<InvitationResponse>), C::Error> {
-        let response = self
-            .client
-            .api_add_contact(ApiAddContact::new(self.user_id))
-            .await?;
-
-        let link = extract_address(&response.conn_link_invitation);
-        Ok((link, response))
+    ) -> impl Future<Output = Result<(String, Arc<InvitationResponse>), C::Error>> {
+        self.client
+            .create_invitation_link(self.user_id())
+            .map_ok(|resp| (extract_address(&resp.conn_link_invitation), resp))
     }
 
-    pub async fn create_address(&self) -> Result<String, C::Error> {
-        let response = self.client.api_create_my_address(self.user_id).await?;
-        Ok(extract_address(&response.conn_link_contact))
+    pub fn create_address(&self) -> impl Future<Output = Result<String, C::Error>> {
+        self.client
+            .create_address(self.user_id())
+            .map_ok(|resp| extract_address(&resp.conn_link_contact))
     }
 
     /// Throws [crate::types::errors::StoreError::UserContactLinkNotFound] if bot doesn't have an address. Use
     /// [Self::get_or_create_address] to ensure that address is available
-    pub async fn address(&self) -> Result<String, C::Error> {
-        let response = self.client.api_show_my_address(self.user_id).await?;
-        Ok(extract_address(&response.contact_link.conn_link_contact))
+    pub fn address(&self) -> impl Future<Output = Result<String, C::Error>> {
+        self.client
+            .show_address(self.user_id())
+            .map_ok(|resp| extract_address(&resp.contact_link.conn_link_contact))
     }
 
     pub async fn get_or_create_address(&self) -> Result<String, C::Error> {
@@ -406,43 +399,40 @@ impl<C: ClientApi> Bot<C> {
         }
     }
 
-    pub async fn configure_address(&self, settings: AddressSettings) -> Result<(), C::Error> {
+    pub fn configure_address(
+        &self,
+        settings: AddressSettings,
+    ) -> impl Future<Output = Result<(), C::Error>> {
         self.client
-            .api_set_address_settings(self.user_id, settings)
-            .await
-            .map(drop)
+            .configure_address(self.user_id(), settings)
+            .map(|r| r.map(drop))
     }
 
     /// Make address visible in bot/user profile
-    pub async fn publish_address(&self) -> Result<Arc<UserProfileUpdatedResponse>, C::Error> {
-        self.client
-            .api_set_profile_address(ApiSetProfileAddress {
-                user_id: self.user_id,
-                enable: true,
-            })
-            .await
+    pub fn publish_address(
+        &self,
+    ) -> impl Future<Output = Result<Arc<UserProfileUpdatedResponse>, C::Error>> {
+        self.client.publish_address(self.user_id())
     }
 
     /// Hide address from bot/user profile
-    pub async fn hide_address(&self) -> Result<Arc<UserProfileUpdatedResponse>, C::Error> {
+    pub fn hide_address(
+        &self,
+    ) -> impl Future<Output = Result<Arc<UserProfileUpdatedResponse>, C::Error>> {
+        self.client.hide_address(self.user_id())
+    }
+
+    pub fn delete_address(&self) -> impl Future<Output = Result<(), C::Error>> {
         self.client
-            .api_set_profile_address(ApiSetProfileAddress {
-                user_id: self.user_id,
-                enable: false,
-            })
-            .await
+            .delete_address(self.user_id())
+            .map(|r| r.map(drop))
     }
 
-    pub async fn delete_address(&self) -> Result<(), C::Error> {
-        self.client.api_delete_my_address(self.user_id).await?;
-        Ok(())
-    }
-
-    pub async fn profile(&self) -> Result<Profile, C::Error> {
-        let mut response = self.client.show_active_user().await?;
-        let response = Arc::get_mut(&mut response).unwrap();
-
-        Ok(extract_profile(&mut response.user.profile))
+    pub fn profile(&self) -> impl Future<Output = Result<Profile, C::Error>> {
+        self.client.show_active_user().map_ok(|mut resp| {
+            let resp = Arc::get_mut(&mut resp).unwrap();
+            extract_profile(&mut resp.user.profile)
+        })
     }
 
     /// Fetches the current profile and applies `updater` to it before saving.
@@ -452,59 +442,41 @@ impl<C: ClientApi> Bot<C> {
     {
         let mut profile = self.profile().await?;
         updater(&mut profile);
-        match self
-            .client
-            .api_update_profile(self.user_id, profile.clone())
+        self.client
+            .update_profile(self.user_id(), profile.clone())
             .await
-        {
-            Ok(resp) => Ok(resp),
-            Err(e) => match e.bad_response().and_then(|e| {
-                e.chat_error()
-                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
-            }) {
-                Some(err) => {
-                    profile.display_name = err.valid_name.clone();
-                    self.client.api_update_profile(self.user_id, profile).await
-                }
-                None => Err(e),
-            },
-        }
     }
 
-    pub async fn set_display_name(
+    pub fn set_display_name(
         &self,
         name: impl Into<String>,
-    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, C::Error>> {
         let name = name.into();
         self.update_profile(move |profile| profile.display_name = name)
-            .await
     }
 
-    pub async fn set_full_name(
+    pub fn set_full_name(
         &self,
         full_name: impl Into<String>,
-    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, C::Error>> {
         let full_name = full_name.into();
         self.update_profile(move |profile| profile.full_name = full_name)
-            .await
     }
 
-    pub async fn set_bio(
+    pub fn set_bio(
         &self,
         bio: impl Into<String>,
-    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, C::Error>> {
         let bio = bio.into();
         self.update_profile(move |profile| profile.short_descr = Some(bio))
-            .await
     }
 
-    pub async fn set_description(
+    pub fn set_description(
         &self,
         description: impl Into<String>,
-    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, C::Error>> {
         let description = description.into();
         self.update_profile(move |profile| profile.description = Some(description))
-            .await
     }
 
     /// Set the bot/user avatar
@@ -518,42 +490,39 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Set account type `Bot` or `Person`
-    pub async fn set_peer_type(
+    pub fn set_peer_type(
         &self,
         peer_type: ChatPeerType,
-    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, C::Error>> {
         self.update_profile(move |profile| profile.peer_type = Some(peer_type))
-            .await
     }
 
-    pub async fn set_badge(
+    pub fn set_badge(
         &self,
         badge: BadgeProof,
-    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, C::Error>> {
         self.update_profile(move |profile| profile.badge = Some(badge))
-            .await
     }
 
-    pub async fn set_contact_domain(
+    pub fn set_contact_domain(
         &self,
         domain: SimplexDomainClaim,
-    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, C::Error>> {
         self.update_profile(move |profile| profile.contact_domain = Some(domain))
-            .await
     }
 
-    pub async fn clear_contact_domain(&self) -> Result<ApiUpdateProfileResponse, C::Error> {
+    pub fn clear_contact_domain(
+        &self,
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, C::Error>> {
         self.update_profile(|profile| profile.contact_domain = None)
-            .await
     }
 
     /// Set global preferences
-    pub async fn set_preferences(
+    pub fn set_preferences(
         &self,
         preferences: Preferences,
-    ) -> Result<ApiUpdateProfileResponse, C::Error> {
+    ) -> impl Future<Output = Result<ApiUpdateProfileResponse, C::Error>> {
         self.update_profile(move |profile| profile.preferences = Some(preferences))
-            .await
     }
 
     /// Update global preferences via closure accepting current preferences
@@ -572,18 +541,16 @@ impl<C: ClientApi> Bot<C> {
         updater(&mut preferences);
         profile.preferences = Some(preferences);
 
-        self.client.api_update_profile(self.user_id, profile).await
+        self.client.update_profile(self.user_id(), profile).await
     }
 
     /// Set preferences for particular contact
-    pub async fn set_contact_preferences<CID: Into<ContactId>>(
+    pub fn set_contact_preferences<CID: Into<ContactId>>(
         &self,
         contact_id: CID,
         preferences: Preferences,
-    ) -> Result<Arc<ContactPrefsUpdatedResponse>, C::Error> {
-        self.client
-            .api_set_contact_prefs(contact_id.into().raw(), preferences)
-            .await
+    ) -> impl Future<Output = Result<Arc<ContactPrefsUpdatedResponse>, C::Error>> {
+        self.client.set_contact_prefs(contact_id, preferences)
     }
 
     /// Tweak global preferences for particular contact via closure accepting current global
@@ -602,35 +569,33 @@ impl<C: ClientApi> Bot<C> {
         let mut preferences = extract_preferences(&mut response.user.profile.preferences);
         updater(&mut preferences);
 
-        self.client
-            .api_set_contact_prefs(contact_id.into().raw(), preferences)
-            .await
+        self.client.set_contact_prefs(contact_id, preferences).await
     }
 
     /// Get all contacts known to the bot(connected or not)
-    pub async fn contacts(&self) -> Result<Vec<Contact>, C::Error> {
-        self.client.contacts(self.user_id()).await
+    pub fn contacts(&self) -> impl Future<Output = Result<Vec<Contact>, C::Error>> {
+        self.client.contacts(self.user_id())
     }
 
     /// Get all groups known to the bot
-    pub async fn groups(&self) -> Result<Vec<GroupInfo>, C::Error> {
-        self.client.groups(self.user_id()).await
+    pub fn groups(&self) -> impl Future<Output = Result<Vec<GroupInfo>, C::Error>> {
+        self.client.groups(self.user_id())
     }
 
     /// Accept contact request
-    pub async fn accept_contact<CRID: Into<ContactRequestId>>(
+    pub fn accept_contact<CRID: Into<ContactRequestId>>(
         &self,
         contact_request_id: CRID,
-    ) -> Result<Arc<AcceptingContactRequestResponse>, <C as ClientApi>::Error> {
-        self.client.accept_contact(contact_request_id).await
+    ) -> impl Future<Output = Result<Arc<AcceptingContactRequestResponse>, C::Error>> {
+        self.client.accept_contact(contact_request_id)
     }
 
     /// Reject contact request
-    pub async fn reject_contact<CRID: Into<ContactRequestId>>(
+    pub fn reject_contact<CRID: Into<ContactRequestId>>(
         &self,
         contact_request_id: CRID,
-    ) -> Result<Arc<ContactRequestRejectedResponse>, <C as ClientApi>::Error> {
-        self.client.reject_contact(contact_request_id).await
+    ) -> impl Future<Output = Result<Arc<ContactRequestRejectedResponse>, C::Error>> {
+        self.client.reject_contact(contact_request_id)
     }
 
     /// Send a message. See the [`messages`](crate::messages) module for details
@@ -652,8 +617,8 @@ impl<C: ClientApi> Bot<C> {
     }
 
     /// Returns a list of all known chat IDs
-    pub async fn chat_ids(&self) -> Result<impl Iterator<Item = ChatId>, C::Error> {
-        self.chat_ids_with(|_| true).await
+    pub fn chat_ids(&self) -> impl Future<Output = Result<impl Iterator<Item = ChatId>, C::Error>> {
+        self.chat_ids_with(|_| true)
     }
 
     /// Returns a list of all known chat IDs matching the filter `f`.
@@ -681,14 +646,16 @@ impl<C: ClientApi> Bot<C> {
     ///    .deliver()
     ///    .await?;
     /// ```
-    pub async fn prepare_broadcast<M: MessageLike>(
+    pub fn prepare_broadcast<M: MessageLike>(
         &self,
         msg: M,
-    ) -> Result<
-        MulticastBuilder<'_, impl 'static + Send + Iterator<Item = ChatId>, C, M::Kind>,
-        C::Error,
+    ) -> impl Future<
+        Output = Result<
+            MulticastBuilder<'_, impl 'static + Send + Iterator<Item = ChatId>, C, M::Kind>,
+            C::Error,
+        >,
     > {
-        self.prepare_broadcast_with(msg, |_| true).await
+        self.prepare_broadcast_with(msg, |_| true)
     }
 
     /// Generate a [MulticastBuilder] that is ready to send messages to chats matching the filter
@@ -700,22 +667,22 @@ impl<C: ClientApi> Bot<C> {
     ///    .deliver()
     ///    .await?;
     /// ```
-    pub async fn prepare_broadcast_with<M, F>(
+    pub fn prepare_broadcast_with<M, F>(
         &self,
         msg: M,
         f: F,
-    ) -> Result<
-        MulticastBuilder<'_, impl 'static + Send + Iterator<Item = ChatId>, C, M::Kind>,
-        C::Error,
+    ) -> impl Future<
+        Output = Result<
+            MulticastBuilder<'_, impl 'static + Send + Iterator<Item = ChatId>, C, M::Kind>,
+            C::Error,
+        >,
     >
     where
         F: 'static + Send + FnMut(&ChatId) -> bool,
         M: MessageLike,
     {
-        let ids = self.chat_ids_with(f).await?;
         let (msg, kind) = msg.into_builder_parts();
-
-        Ok(MulticastBuilder {
+        self.chat_ids_with(f).map_ok(move |ids| MulticastBuilder {
             client: self.client(),
             chat_ids: ids,
             ttl: None,
@@ -725,39 +692,36 @@ impl<C: ClientApi> Bot<C> {
         })
     }
 
-    pub async fn update_msg<CID: Into<ChatId>, MID: Into<MessageId>>(
+    pub fn update_msg<CID: Into<ChatId>, MID: Into<MessageId>>(
         &self,
         chat_id: CID,
         message_id: MID,
         new_content: MsgContent,
-    ) -> Result<ApiUpdateChatItemResponse, C::Error> {
-        self.client
-            .update_message(chat_id, message_id, new_content)
-            .await
+    ) -> impl Future<Output = Result<ApiUpdateChatItemResponse, C::Error>> {
+        self.client.update_message(chat_id, message_id, new_content)
     }
 
-    pub async fn delete_msg<CID: Into<ChatId>, MID: Into<MessageId>>(
+    pub fn delete_msg<CID: Into<ChatId>, MID: Into<MessageId>>(
         &self,
         chat_id: CID,
         message_id: MID,
         mode: CIDeleteMode,
-    ) -> Result<Arc<ChatItemsDeletedResponse>, C::Error> {
-        self.client.delete_message(chat_id, message_id, mode).await
+    ) -> impl Future<Output = Result<Arc<ChatItemsDeletedResponse>, C::Error>> {
+        self.client.delete_message(chat_id, message_id, mode)
     }
 
-    pub async fn batch_delete_msgs<CID: Into<ChatId>, I: IntoIterator<Item = MessageId>>(
+    pub fn batch_delete_msgs<CID: Into<ChatId>, I: IntoIterator<Item = MessageId>>(
         &self,
         chat_id: CID,
         message_ids: I,
         mode: CIDeleteMode,
-    ) -> Result<Arc<ChatItemsDeletedResponse>, C::Error> {
+    ) -> impl Future<Output = Result<Arc<ChatItemsDeletedResponse>, C::Error>> {
         self.client
             .batch_delete_messages(chat_id, message_ids, mode)
-            .await
     }
 
     /// Applies multiple reactions to a message. Returns one result per reaction.
-    pub async fn batch_msg_reactions<
+    pub fn batch_msg_reactions<
         CID: Into<ChatId>,
         MID: Into<MessageId>,
         I: IntoIterator<Item = Reaction>,
@@ -766,21 +730,19 @@ impl<C: ClientApi> Bot<C> {
         chat_id: CID,
         message_id: MID,
         reactions: I,
-    ) -> Vec<Result<Arc<ChatItemReactionResponse>, C::Error>> {
+    ) -> impl Future<Output = Vec<Result<Arc<ChatItemReactionResponse>, C::Error>>> {
         self.client
             .batch_message_reactions(chat_id, message_id, reactions)
-            .await
     }
 
-    pub async fn update_msg_reaction<CID: Into<ChatId>, MID: Into<MessageId>>(
+    pub fn update_msg_reaction<CID: Into<ChatId>, MID: Into<MessageId>>(
         &self,
         chat_id: CID,
         message_id: MID,
         reaction: Reaction,
-    ) -> Vec<Result<Arc<ChatItemReactionResponse>, C::Error>> {
+    ) -> impl Future<Output = Vec<Result<Arc<ChatItemReactionResponse>, C::Error>>> {
         self.client
             .update_message_reaction(chat_id, message_id, reaction)
-            .await
     }
 
     /// Starts background file download. Catch `RcvFile*` events to track the progress
@@ -788,265 +750,206 @@ impl<C: ClientApi> Bot<C> {
         self.client.accept_file(file_id)
     }
 
-    pub async fn reject_file<FID: Into<FileId>>(
+    pub fn reject_file<FID: Into<FileId>>(
         &self,
         file_id: FID,
-    ) -> Result<CancelFileResponse, C::Error> {
-        self.client.reject_file(file_id).await
+    ) -> impl Future<Output = Result<CancelFileResponse, C::Error>> {
+        self.client.reject_file(file_id)
     }
 
-    pub async fn delete_chat<CID: Into<ChatId>>(
+    pub fn delete_chat<CID: Into<ChatId>>(
         &self,
         chat_id: CID,
         mode: DeleteMode,
-    ) -> Result<ApiDeleteChatResponse, C::Error> {
-        self.client.delete_chat(chat_id, mode).await
+    ) -> impl Future<Output = Result<ApiDeleteChatResponse, C::Error>> {
+        self.client.delete_chat(chat_id, mode)
     }
 
     /// Create a new group. The bot's user becomes the owner.
-    pub async fn create_group(
+    pub fn create_group(
         &self,
-        mut profile: GroupProfile,
-    ) -> Result<Arc<GroupCreatedResponse>, C::Error> {
-        match self
-            .client
-            .api_new_group(ApiNewGroup::new(self.user_id, profile.clone()))
-            .await
-        {
-            Ok(resp) => Ok(resp),
-            Err(e) => match e.bad_response().and_then(|e| {
-                e.chat_error()
-                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
-            }) {
-                Some(err) => {
-                    profile.display_name = err.valid_name.clone();
-                    self.client
-                        .api_new_group(ApiNewGroup::new(self.user_id, profile))
-                        .await
-                }
-                None => Err(e),
-            },
-        }
+        profile: GroupProfile,
+    ) -> impl Future<Output = Result<Arc<GroupCreatedResponse>, C::Error>> {
+        self.client.create_group(self.user_id(), profile)
     }
 
     /// Create a new public group with relay members. The bot's user becomes the owner.
     /// Relay IDs can be obtained from [`Bot::default_relays`]
-    pub async fn create_public_group<I: IntoIterator<Item = RelayId>>(
+    pub fn create_public_group<I: IntoIterator<Item = RelayId>>(
         &self,
         relay_ids: I,
-        mut profile: GroupProfile,
-    ) -> Result<ApiNewPublicGroupResponse, C::Error> {
-        let relays: Vec<_> = relay_ids.into_iter().map(|id| id.raw()).collect();
-
-        match self
-            .client
-            .api_new_public_group(ApiNewPublicGroup::new(
-                self.user_id,
-                relays.clone(),
-                profile.clone(),
-            ))
-            .await
-        {
-            Ok(resp) => Ok(resp),
-            Err(e) => match e.bad_response().and_then(|e| {
-                e.chat_error()
-                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
-            }) {
-                Some(err) => {
-                    profile.display_name = err.valid_name.clone();
-                    self.client
-                        .api_new_public_group(ApiNewPublicGroup::new(self.user_id, relays, profile))
-                        .await
-                }
-                None => Err(e),
-            },
-        }
+        profile: GroupProfile,
+    ) -> impl Future<Output = Result<ApiNewPublicGroupResponse, C::Error>> {
+        self.client
+            .create_public_group(self.user_id(), relay_ids, profile)
     }
 
     /// Enable or disable automatically accepting contacts from group members.
-    pub async fn set_auto_accept_member_contacts(
+    pub fn set_auto_accept_member_contacts(
         &self,
         on: bool,
-    ) -> Result<Arc<CmdOkResponse>, C::Error> {
+    ) -> impl Future<Output = Result<Arc<CmdOkResponse>, C::Error>> {
         self.client
-            .api_set_user_auto_accept_member_contacts(ApiSetUserAutoAcceptMemberContacts {
-                user_id: self.user_id,
-                on_off: on,
-            })
-            .await
+            .set_auto_accept_member_contacts(self.user_id(), on)
     }
 
     /// Sends a group invitation to a contact.
-    pub async fn add_member<GID: Into<GroupId>, CID: Into<ContactId>>(
+    pub fn add_member<GID: Into<GroupId>, CID: Into<ContactId>>(
         &self,
         group_id: GID,
         contact_id: CID,
         role: GroupMemberRole,
-    ) -> Result<Arc<SentGroupInvitationResponse>, C::Error> {
-        self.client.add_member(group_id, contact_id, role).await
+    ) -> impl Future<Output = Result<Arc<SentGroupInvitationResponse>, C::Error>> {
+        self.client.add_member(group_id, contact_id, role)
     }
 
     /// Accepts a pending group invitation.
-    pub async fn join_group<GID: Into<GroupId>>(
+    pub fn join_group<GID: Into<GroupId>>(
         &self,
         group_id: GID,
-    ) -> Result<Arc<UserAcceptedGroupSentResponse>, C::Error> {
-        self.client.join_group(group_id).await
+    ) -> impl Future<Output = Result<Arc<UserAcceptedGroupSentResponse>, C::Error>> {
+        self.client.join_group(group_id)
     }
 
     /// Confirms a pending group membership request.
-    pub async fn accept_member<GID: Into<GroupId>, MID: Into<MemberId>>(
+    pub fn accept_member<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
         member_id: MID,
         role: GroupMemberRole,
-    ) -> Result<Arc<MemberAcceptedResponse>, C::Error> {
-        self.client.accept_member(group_id, member_id, role).await
+    ) -> impl Future<Output = Result<Arc<MemberAcceptedResponse>, C::Error>> {
+        self.client.accept_member(group_id, member_id, role)
     }
 
-    pub async fn set_members_role<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+    pub fn set_members_role<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
         &self,
         group_id: GID,
         member_ids: I,
         role: GroupMemberRole,
-    ) -> Result<Arc<MembersRoleUserResponse>, C::Error> {
-        self.client
-            .set_members_role(group_id, member_ids, role)
-            .await
+    ) -> impl Future<Output = Result<Arc<MembersRoleUserResponse>, C::Error>> {
+        self.client.set_members_role(group_id, member_ids, role)
     }
 
-    pub async fn set_member_role<GID: Into<GroupId>, MID: Into<MemberId>>(
+    pub fn set_member_role<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
         member_id: MID,
         role: GroupMemberRole,
-    ) -> Result<Arc<MembersRoleUserResponse>, C::Error> {
-        self.client.set_member_role(group_id, member_id, role).await
+    ) -> impl Future<Output = Result<Arc<MembersRoleUserResponse>, C::Error>> {
+        self.client.set_member_role(group_id, member_id, role)
     }
 
     /// Blocks members so their messages are hidden for everyone in the group.
-    pub async fn block_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+    pub fn block_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
         &self,
         group_id: GID,
         member_ids: I,
-    ) -> Result<Arc<MembersBlockedForAllUserResponse>, C::Error> {
-        self.client
-            .block_members_for_all(group_id, member_ids)
-            .await
+    ) -> impl Future<Output = Result<Arc<MembersBlockedForAllUserResponse>, C::Error>> {
+        self.client.block_members_for_all(group_id, member_ids)
     }
 
     /// Reverses a previous [`block_members_for_all`](Self::block_members_for_all).
-    pub async fn unblock_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+    pub fn unblock_members_for_all<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
         &self,
         group_id: GID,
         member_ids: I,
-    ) -> Result<Arc<MembersBlockedForAllUserResponse>, C::Error> {
-        self.client
-            .unblock_members_for_all(group_id, member_ids)
-            .await
+    ) -> impl Future<Output = Result<Arc<MembersBlockedForAllUserResponse>, C::Error>> {
+        self.client.unblock_members_for_all(group_id, member_ids)
     }
 
     /// Blocks a member so their messages are hidden for everyone in the group.
-    pub async fn block_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
+    pub fn block_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
         member_id: MID,
-    ) -> Result<Arc<MembersBlockedForAllUserResponse>, C::Error> {
-        self.client.block_member_for_all(group_id, member_id).await
+    ) -> impl Future<Output = Result<Arc<MembersBlockedForAllUserResponse>, C::Error>> {
+        self.client.block_member_for_all(group_id, member_id)
     }
 
     /// Reverses a previous [`block_member_for_all`](Self::block_member_for_all).
-    pub async fn unblock_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
+    pub fn unblock_member_for_all<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
         member_id: MID,
-    ) -> Result<Arc<MembersBlockedForAllUserResponse>, C::Error> {
-        self.client
-            .unblock_member_for_all(group_id, member_id)
-            .await
+    ) -> impl Future<Output = Result<Arc<MembersBlockedForAllUserResponse>, C::Error>> {
+        self.client.unblock_member_for_all(group_id, member_id)
     }
 
     /// Removes members from the group, preserving their past messages.
-    pub async fn remove_members<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
+    pub fn remove_members<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
         &self,
         group_id: GID,
         member_ids: I,
-    ) -> Result<Arc<UserDeletedMembersResponse>, C::Error> {
-        self.client.remove_members(group_id, member_ids).await
+    ) -> impl Future<Output = Result<Arc<UserDeletedMembersResponse>, C::Error>> {
+        self.client.remove_members(group_id, member_ids)
     }
 
     /// Removes members from the group and deletes their messages.
-    pub async fn remove_members_with_messages<
-        GID: Into<GroupId>,
-        I: IntoIterator<Item = MemberId>,
-    >(
+    pub fn remove_members_with_messages<GID: Into<GroupId>, I: IntoIterator<Item = MemberId>>(
         &self,
         group_id: GID,
         member_ids: I,
-    ) -> Result<Arc<UserDeletedMembersResponse>, C::Error> {
+    ) -> impl Future<Output = Result<Arc<UserDeletedMembersResponse>, C::Error>> {
         self.client
             .remove_members_with_messages(group_id, member_ids)
-            .await
     }
 
     /// Removes a member from the group, preserving their past messages.
-    pub async fn remove_member<GID: Into<GroupId>, MID: Into<MemberId>>(
+    pub fn remove_member<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
         member_id: MID,
-    ) -> Result<Arc<UserDeletedMembersResponse>, C::Error> {
-        self.client.remove_member(group_id, member_id).await
+    ) -> impl Future<Output = Result<Arc<UserDeletedMembersResponse>, C::Error>> {
+        self.client.remove_member(group_id, member_id)
     }
 
     /// Removes a member from the group and deletes their messages.
-    pub async fn remove_member_with_messages<GID: Into<GroupId>, MID: Into<MemberId>>(
+    pub fn remove_member_with_messages<GID: Into<GroupId>, MID: Into<MemberId>>(
         &self,
         group_id: GID,
         member_id: MID,
-    ) -> Result<Arc<UserDeletedMembersResponse>, C::Error> {
-        self.client
-            .remove_member_with_messages(group_id, member_id)
-            .await
+    ) -> impl Future<Output = Result<Arc<UserDeletedMembersResponse>, C::Error>> {
+        self.client.remove_member_with_messages(group_id, member_id)
     }
 
-    pub async fn leave_group<GID: Into<GroupId>>(
+    pub fn leave_group<GID: Into<GroupId>>(
         &self,
         group_id: GID,
-    ) -> Result<Arc<LeftMemberUserResponse>, C::Error> {
-        self.client.leave_group(group_id).await
+    ) -> impl Future<Output = Result<Arc<LeftMemberUserResponse>, C::Error>> {
+        self.client.leave_group(group_id)
     }
 
-    pub async fn list_members<GID: Into<GroupId>>(
+    pub fn list_members<GID: Into<GroupId>>(
         &self,
         group_id: GID,
-    ) -> Result<Vec<GroupMember>, C::Error> {
-        self.client.list_members(group_id).await
+    ) -> impl Future<Output = Result<Vec<GroupMember>, C::Error>> {
+        self.client.list_members(group_id)
     }
 
     /// Deletes messages for all group members. Requires admin or owner role.
-    pub async fn moderate_messages<GID: Into<GroupId>, I: IntoIterator<Item = MessageId>>(
+    pub fn moderate_messages<GID: Into<GroupId>, I: IntoIterator<Item = MessageId>>(
         &self,
         group_id: GID,
         message_ids: I,
-    ) -> Result<Arc<ChatItemsDeletedResponse>, C::Error> {
-        self.client.moderate_messages(group_id, message_ids).await
+    ) -> impl Future<Output = Result<Arc<ChatItemsDeletedResponse>, C::Error>> {
+        self.client.moderate_messages(group_id, message_ids)
     }
 
     /// Deletes a message for all group members. Requires admin or owner role.
-    pub async fn moderate_message<GID: Into<GroupId>, MID: Into<MessageId>>(
+    pub fn moderate_message<GID: Into<GroupId>, MID: Into<MessageId>>(
         &self,
         group_id: GID,
         message_id: MID,
-    ) -> Result<Arc<ChatItemsDeletedResponse>, C::Error> {
-        self.client.moderate_message(group_id, message_id).await
+    ) -> impl Future<Output = Result<Arc<ChatItemsDeletedResponse>, C::Error>> {
+        self.client.moderate_message(group_id, message_id)
     }
 
-    pub async fn update_group_profile<GID: Into<GroupId>>(
+    pub fn update_group_profile<GID: Into<GroupId>>(
         &self,
         group_id: GID,
         profile: GroupProfile,
-    ) -> Result<Arc<GroupUpdatedResponse>, C::Error> {
-        self.client.update_group_profile(group_id, profile).await
+    ) -> impl Future<Output = Result<Arc<GroupUpdatedResponse>, C::Error>> {
+        self.client.update_group_profile(group_id, profile)
     }
 
     pub async fn update_group_profile_with<GID, F>(
@@ -1072,11 +975,11 @@ impl<C: ClientApi> Bot<C> {
         self.update_group_profile(group_id, profile).await
     }
 
-    pub async fn update_group_preferences<GID, F>(
+    pub fn update_group_preferences<GID, F>(
         &self,
         group_id: GID,
         updater: F,
-    ) -> Result<Arc<GroupUpdatedResponse>, C::Error>
+    ) -> impl Future<Output = Result<Arc<GroupUpdatedResponse>, C::Error>>
     where
         GID: Into<GroupId>,
         F: FnOnce(&mut GroupPreferences),
@@ -1086,104 +989,107 @@ impl<C: ClientApi> Bot<C> {
             updater(&mut prefs);
             profile.group_preferences = Some(prefs);
         })
-        .await
     }
 
-    pub async fn set_group_sign_messages<GID: Into<GroupId>>(
+    pub fn set_group_sign_messages<GID: Into<GroupId>>(
         &self,
         group_id: GID,
         on: bool,
-    ) -> Result<Arc<GroupUpdatedResponse>, C::Error> {
-        self.update_group_preferences(group_id, |prefs| {
-            prefs.sign_messages = if on { preferences::group::YES } else { preferences::group::NO };
+    ) -> impl Future<Output = Result<Arc<GroupUpdatedResponse>, C::Error>> {
+        self.update_group_preferences(group_id, move |prefs| {
+            prefs.sign_messages = if on {
+                preferences::group::YES
+            } else {
+                preferences::group::NO
+            };
         })
-        .await
     }
 
     /// Stores arbitrary app-defined JSON on the group. Pass `None` to clear it.
-    pub async fn set_group_custom_data<GID: Into<GroupId>>(
+    pub fn set_group_custom_data<GID: Into<GroupId>>(
         &self,
         group_id: GID,
         data: Option<JsonObject>,
-    ) -> Result<Arc<CmdOkResponse>, C::Error> {
-        self.client.set_group_custom_data(group_id, data).await
+    ) -> impl Future<Output = Result<Arc<CmdOkResponse>, C::Error>> {
+        self.client.set_group_custom_data(group_id, data)
     }
 
     /// Stores arbitrary app-defined JSON on the contact. Pass `None` to clear it.
-    pub async fn set_contact_custom_data<CID: Into<ContactId>>(
+    pub fn set_contact_custom_data<CID: Into<ContactId>>(
         &self,
         contact_id: CID,
         data: Option<JsonObject>,
-    ) -> Result<Arc<CmdOkResponse>, C::Error> {
-        self.client.set_contact_custom_data(contact_id, data).await
+    ) -> impl Future<Output = Result<Arc<CmdOkResponse>, C::Error>> {
+        self.client.set_contact_custom_data(contact_id, data)
     }
 
-    pub async fn create_group_link<GID: Into<GroupId>>(
+    pub fn create_group_link<GID: Into<GroupId>>(
         &self,
         group_id: GID,
         role: GroupMemberRole,
-    ) -> Result<Arc<GroupLinkCreatedResponse>, C::Error> {
-        self.client.create_group_link(group_id, role).await
+    ) -> impl Future<Output = Result<Arc<GroupLinkCreatedResponse>, C::Error>> {
+        self.client.create_group_link(group_id, role)
     }
 
     /// Changes the default role assigned to members who join via the group link.
-    pub async fn set_group_link_role<GID: Into<GroupId>>(
+    pub fn set_group_link_role<GID: Into<GroupId>>(
         &self,
         group_id: GID,
         role: GroupMemberRole,
-    ) -> GroupLinkResult<C> {
-        self.client.set_group_link_role(group_id, role).await
+    ) -> impl Future<Output = GroupLinkResult<C>> {
+        self.client.set_group_link_role(group_id, role)
     }
 
-    pub async fn delete_group_link<GID: Into<GroupId>>(
+    pub fn delete_group_link<GID: Into<GroupId>>(
         &self,
         group_id: GID,
-    ) -> Result<Arc<GroupLinkDeletedResponse>, C::Error> {
-        self.client.delete_group_link(group_id).await
+    ) -> impl Future<Output = Result<Arc<GroupLinkDeletedResponse>, C::Error>> {
+        self.client.delete_group_link(group_id)
     }
 
-    pub async fn get_group_link<GID: Into<GroupId>>(&self, group_id: GID) -> GroupLinkResult<C> {
-        self.client.get_group_link(group_id).await
-    }
-
-    pub async fn get_group_relays<GID: Into<GroupId>>(
+    pub fn get_group_link<GID: Into<GroupId>>(
         &self,
         group_id: GID,
-    ) -> GetGroupRelaysResponse<C> {
-        self.client.get_group_relays(group_id).await
+    ) -> impl Future<Output = GroupLinkResult<C>> {
+        self.client.get_group_link(group_id)
     }
 
-    pub async fn add_group_relays<GID: Into<GroupId>, I: IntoIterator<Item = RelayId>>(
+    pub fn get_group_relays<GID: Into<GroupId>>(
+        &self,
+        group_id: GID,
+    ) -> impl Future<Output = GetGroupRelaysResponse<C>> {
+        self.client.get_group_relays(group_id)
+    }
+
+    pub fn add_group_relays<GID: Into<GroupId>, I: IntoIterator<Item = RelayId>>(
         &self,
         group_id: GID,
         relay_ids: I,
-    ) -> AddGroupRelaysResponse<C> {
-        self.client.add_group_relays(group_id, relay_ids).await
+    ) -> impl Future<Output = AddGroupRelaysResponse<C>> {
+        self.client.add_group_relays(group_id, relay_ids)
     }
 
-    pub async fn add_group_relay<GID: Into<GroupId>, RID: Into<RelayId>>(
+    pub fn add_group_relay<GID: Into<GroupId>, RID: Into<RelayId>>(
         &self,
         group_id: GID,
         relay_id: RID,
-    ) -> AddGroupRelaysResponse<C> {
-        self.client.add_group_relay(group_id, relay_id).await
+    ) -> impl Future<Output = AddGroupRelaysResponse<C>> {
+        self.client.add_group_relay(group_id, relay_id)
     }
 
     /// Get chats with time-based pagination. Prefer this over [`Bot::contacts`] / [`Bot::groups`]
     /// for large databases as it avoids loading all records into memory at once.
-    pub async fn get_chats(
+    pub fn get_chats(
         &self,
         pagination: PaginationByTime,
         query: ChatListQuery,
-    ) -> Result<Arc<ApiChatsResponse>, C::Error> {
-        self.client
-            .api_get_chats(ApiGetChats::new(self.user_id, pagination, query))
-            .await
+    ) -> impl Future<Output = Result<Arc<ApiChatsResponse>, C::Error>> {
+        self.client.get_chats(self.user_id(), pagination, query)
     }
 
     /// Get a list of default user relays
-    pub async fn default_relays(&self) -> Result<Vec<RelayId>, C::Error> {
-        self.client.default_relays().await
+    pub fn default_relays(&self) -> impl Future<Output = Result<Vec<RelayId>, C::Error>> {
+        self.client.default_relays()
     }
 
     /// Accept an incoming remote control session from a SimpleX Desktop client.
@@ -1194,12 +1100,12 @@ impl<C: ClientApi> Bot<C> {
     /// # Deadlock warning
     ///
     /// See [`CtrlHandle::accept_remote_ctrl`](crate::remote::CtrlHandle::accept_remote_ctrl).
-    pub async fn accept_remote_ctrl(
+    pub fn accept_remote_ctrl(
         &self,
         handle: &crate::remote::CtrlHandle,
         link: &str,
-    ) -> Result<(), crate::remote::CtrlError<C::Error>> {
-        handle.accept_remote_ctrl(&self.client, link).await
+    ) -> impl Future<Output = Result<(), crate::remote::CtrlError<C::Error>>> {
+        handle.accept_remote_ctrl(&self.client, link)
     }
 }
 
@@ -1331,6 +1237,7 @@ impl BotName {
         }
     }
 
+    #[cfg(feature = "farm")]
     pub(crate) fn matches(&self, name: &String) -> bool {
         match self {
             Self::Current(current) => current == name,

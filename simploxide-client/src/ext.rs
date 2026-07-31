@@ -2,26 +2,33 @@
 
 use futures::FutureExt as _;
 use simploxide_api_types::{
-    AChatItem, CIDeleteMode, CIFile, ChatDeleteMode, ChatItem, Contact, CryptoFile, GroupInfo,
-    GroupMember, GroupMemberRole, GroupProfile, JsonObject, MsgContent, MsgReaction, NewUser,
+    AChatItem, AddressSettings, CIDeleteMode, CIFile, ChatDeleteMode, ChatItem, ChatListQuery,
+    Contact, CryptoFile, GroupInfo, GroupMember, GroupMemberRole, GroupProfile, JsonObject,
+    MsgContent, MsgReaction, NewUser, PaginationByTime, PlanResolveMode, Preferences, Profile,
     UpdatedMessage, UserInfo,
     client_api::{
         AllowUndocumentedResponses as _, BadResponseError, ClientApi, ClientApiError as _,
         ExtractResponse as _, UndocumentedResponse,
     },
     commands::{
-        ApiBlockMembersForAll, ApiChatItemReaction, ApiListGroups, ApiRemoveMembers,
-        ApiSetContactCustomData, ApiSetGroupCustomData, ApiUpdateChatItem, Connect, ReceiveFile,
+        ApiAddContact, ApiBlockMembersForAll, ApiChatItemReaction, ApiConnectPlan, ApiGetChats,
+        ApiListGroups, ApiNewGroup, ApiNewPublicGroup, ApiRemoveMembers, ApiSetContactCustomData,
+        ApiSetGroupCustomData, ApiSetProfileAddress, ApiSetUserAutoAcceptMemberContacts,
+        ApiUpdateChatItem, Connect, ReceiveFile,
     },
     responses::{
         AcceptingContactRequestResponse, ActiveUserResponse, ApiAddGroupRelaysResponse,
-        ApiDeleteChatResponse, ApiUpdateChatItemResponse, CancelFileResponse,
+        ApiChatsResponse, ApiDeleteChatResponse, ApiNewPublicGroupResponse,
+        ApiUpdateChatItemResponse, ApiUpdateProfileResponse, CancelFileResponse,
         ChatItemReactionResponse, ChatItemsDeletedResponse, CmdOkResponse, ConnectResponse,
-        ContactRequestRejectedResponse, GroupLinkCreatedResponse, GroupLinkDeletedResponse,
-        GroupLinkResponse, GroupRelaysResponse, GroupUpdatedResponse, LeftMemberUserResponse,
-        MemberAcceptedResponse, MembersBlockedForAllUserResponse, MembersRoleUserResponse,
-        ReceiveFileResponse, RelayGroupAllowedResponse, SentGroupInvitationResponse,
-        UserAcceptedGroupSentResponse, UserDeletedMembersResponse,
+        ConnectionPlanResponse, ContactPrefsUpdatedResponse, ContactRequestRejectedResponse,
+        GroupCreatedResponse, GroupLinkCreatedResponse, GroupLinkDeletedResponse,
+        GroupLinkResponse, GroupRelaysResponse, GroupUpdatedResponse, InvitationResponse,
+        LeftMemberUserResponse, MemberAcceptedResponse, MembersBlockedForAllUserResponse,
+        MembersRoleUserResponse, ReceiveFileResponse, RelayGroupAllowedResponse,
+        SentGroupInvitationResponse, UserAcceptedGroupSentResponse, UserContactLinkCreatedResponse,
+        UserContactLinkDeletedResponse, UserContactLinkResponse, UserContactLinkUpdatedResponse,
+        UserDeletedMembersResponse, UserProfileUpdatedResponse,
     },
 };
 
@@ -46,7 +53,27 @@ pub type RejectContactResponse<C> =
 pub type RejectFileResponse<C> = Result<CancelFileResponse, <C as ClientApi>::Error>;
 
 pub type ContactsResponse<C> = Result<Vec<Contact>, <C as ClientApi>::Error>;
+pub type SetContactPreferencesResponse<C> =
+    Result<Arc<ContactPrefsUpdatedResponse>, <C as ClientApi>::Error>;
 pub type GroupsResponse<C> = Result<Vec<GroupInfo>, <C as ClientApi>::Error>;
+
+pub type CreateInvitationLinkResponse<C> = Result<Arc<InvitationResponse>, <C as ClientApi>::Error>;
+pub type CreateAddressResponse<C> =
+    Result<Arc<UserContactLinkCreatedResponse>, <C as ClientApi>::Error>;
+pub type CreateGroupLinkResult<C> = Result<Arc<GroupLinkCreatedResponse>, <C as ClientApi>::Error>;
+pub type GroupLinkResult<C> = Result<Arc<GroupLinkResponse>, <C as ClientApi>::Error>;
+pub type DeleteGroupLinkResult<C> = Result<Arc<GroupLinkDeletedResponse>, <C as ClientApi>::Error>;
+
+pub type ShowAddressResponse<C> = Result<Arc<UserContactLinkResponse>, <C as ClientApi>::Error>;
+pub type ConfigureAddressResponse<C> =
+    Result<Arc<UserContactLinkUpdatedResponse>, <C as ClientApi>::Error>;
+pub type SetProfileAddressResponse<C> =
+    Result<Arc<UserProfileUpdatedResponse>, <C as ClientApi>::Error>;
+pub type DeleteAddressResponse<C> =
+    Result<Arc<UserContactLinkDeletedResponse>, <C as ClientApi>::Error>;
+
+pub type UpdateProfileResponse<C> = Result<ApiUpdateProfileResponse, <C as ClientApi>::Error>;
+pub type ConnectionPlanResult<C> = Result<Arc<ConnectionPlanResponse>, <C as ClientApi>::Error>;
 
 pub type DeleteChatResponse<C> = Result<ApiDeleteChatResponse, <C as ClientApi>::Error>;
 pub type DeleteMessageResponse<C> = Result<Arc<ChatItemsDeletedResponse>, <C as ClientApi>::Error>;
@@ -58,28 +85,33 @@ pub type UpdateMessageResponse<C> = Result<ApiUpdateChatItemResponse, <C as Clie
 pub type NewUserResponse<C> = Result<Arc<ActiveUserResponse>, <C as ClientApi>::Error>;
 pub type UsersResponse<C> = Result<Vec<UserInfo>, <C as ClientApi>::Error>;
 
-pub type AddMemberResponse<C> = Result<Arc<SentGroupInvitationResponse>, <C as ClientApi>::Error>;
+pub type CreateGroupResponse<C> = Result<Arc<GroupCreatedResponse>, <C as ClientApi>::Error>;
+pub type CreatePublicGroupResponse<C> = Result<ApiNewPublicGroupResponse, <C as ClientApi>::Error>;
 pub type JoinGroupResponse<C> = Result<Arc<UserAcceptedGroupSentResponse>, <C as ClientApi>::Error>;
+pub type LeaveGroupResponse<C> = Result<Arc<LeftMemberUserResponse>, <C as ClientApi>::Error>;
+pub type AddMemberResponse<C> = Result<Arc<SentGroupInvitationResponse>, <C as ClientApi>::Error>;
+pub type SetAutoAcceptMemberContactsResponse<C> =
+    Result<Arc<CmdOkResponse>, <C as ClientApi>::Error>;
 pub type AcceptMemberResponse<C> = Result<Arc<MemberAcceptedResponse>, <C as ClientApi>::Error>;
 pub type SetMembersRoleResponse<C> = Result<Arc<MembersRoleUserResponse>, <C as ClientApi>::Error>;
 pub type BlockMembersResponse<C> =
     Result<Arc<MembersBlockedForAllUserResponse>, <C as ClientApi>::Error>;
 pub type RemoveMembersResponse<C> =
     Result<Arc<UserDeletedMembersResponse>, <C as ClientApi>::Error>;
-pub type LeaveGroupResponse<C> = Result<Arc<LeftMemberUserResponse>, <C as ClientApi>::Error>;
 pub type ListMembersResponse<C> = Result<Vec<GroupMember>, <C as ClientApi>::Error>;
 pub type UpdateGroupProfileResponse<C> = Result<Arc<GroupUpdatedResponse>, <C as ClientApi>::Error>;
+
 pub type SetContactCustomDataResponse<C> = Result<Arc<CmdOkResponse>, <C as ClientApi>::Error>;
 pub type SetGroupCustomDataResponse<C> = Result<Arc<CmdOkResponse>, <C as ClientApi>::Error>;
-pub type CreateGroupLinkResult<C> = Result<Arc<GroupLinkCreatedResponse>, <C as ClientApi>::Error>;
-pub type GroupLinkResult<C> = Result<Arc<GroupLinkResponse>, <C as ClientApi>::Error>;
-pub type DeleteGroupLinkResult<C> = Result<Arc<GroupLinkDeletedResponse>, <C as ClientApi>::Error>;
+
 pub type GetGroupRelaysResponse<C> = Result<Arc<GroupRelaysResponse>, <C as ClientApi>::Error>;
 pub type AddGroupRelaysResponse<C> = Result<ApiAddGroupRelaysResponse, <C as ClientApi>::Error>;
 pub type AllowRelayGroupsResponse<C> =
     Result<Arc<RelayGroupAllowedResponse>, <C as ClientApi>::Error>;
 
 pub type DefaultRelaysResponse<C> = Result<Vec<RelayId>, <C as ClientApi>::Error>;
+
+pub type GetChatsResponse<C> = Result<Arc<ApiChatsResponse>, <C as ClientApi>::Error>;
 
 pub trait ClientApiExt: ClientApi {
     fn users(&self) -> impl Future<Output = UsersResponse<Self>>;
@@ -366,6 +398,86 @@ pub trait ClientApiExt: ClientApi {
     ) -> impl Future<Output = AllowRelayGroupsResponse<Self>>;
 
     fn default_relays(&self) -> impl Future<Output = DefaultRelaysResponse<Self>>;
+
+    fn create_invitation_link<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = CreateInvitationLinkResponse<Self>>;
+
+    fn create_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = CreateAddressResponse<Self>>;
+
+    fn show_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = ShowAddressResponse<Self>>;
+
+    fn configure_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        settings: AddressSettings,
+    ) -> impl Future<Output = ConfigureAddressResponse<Self>>;
+
+    fn publish_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = SetProfileAddressResponse<Self>>;
+
+    fn hide_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = SetProfileAddressResponse<Self>>;
+
+    fn delete_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = DeleteAddressResponse<Self>>;
+
+    fn update_profile<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        profile: Profile,
+    ) -> impl Future<Output = UpdateProfileResponse<Self>>;
+
+    fn set_contact_prefs<CID: Into<ContactId>>(
+        &self,
+        contact_id: CID,
+        preferences: Preferences,
+    ) -> impl Future<Output = SetContactPreferencesResponse<Self>>;
+
+    fn connection_plan<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        target: impl Into<String>,
+    ) -> impl Future<Output = ConnectionPlanResult<Self>>;
+
+    fn create_group<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        profile: GroupProfile,
+    ) -> impl Future<Output = CreateGroupResponse<Self>>;
+
+    fn create_public_group<UID: Into<UserId>, I: IntoIterator<Item = RelayId>>(
+        &self,
+        user_id: UID,
+        relay_ids: I,
+        profile: GroupProfile,
+    ) -> impl Future<Output = CreatePublicGroupResponse<Self>>;
+
+    fn set_auto_accept_member_contacts<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        on: bool,
+    ) -> impl Future<Output = SetAutoAcceptMemberContactsResponse<Self>>;
+
+    fn get_chats<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        pagination: PaginationByTime,
+        query: ChatListQuery,
+    ) -> impl Future<Output = GetChatsResponse<Self>>;
 }
 
 impl<C> ClientApiExt for C
@@ -750,6 +862,179 @@ where
         group_id: GID,
     ) -> impl Future<Output = AllowRelayGroupsResponse<Self>> {
         self.api_allow_relay_group(group_id.into().raw())
+    }
+
+    fn create_invitation_link<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = CreateInvitationLinkResponse<Self>> {
+        self.api_add_contact(ApiAddContact::new(user_id.into().raw()))
+    }
+
+    fn create_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = CreateAddressResponse<Self>> {
+        self.api_create_my_address(user_id.into().raw())
+    }
+
+    fn show_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = ShowAddressResponse<Self>> {
+        self.api_show_my_address(user_id.into().raw())
+    }
+
+    fn configure_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        settings: AddressSettings,
+    ) -> impl Future<Output = ConfigureAddressResponse<Self>> {
+        self.api_set_address_settings(user_id.into().raw(), settings)
+    }
+
+    fn publish_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = SetProfileAddressResponse<Self>> {
+        self.api_set_profile_address(ApiSetProfileAddress {
+            user_id: user_id.into().raw(),
+            enable: true,
+        })
+    }
+
+    fn hide_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = SetProfileAddressResponse<Self>> {
+        self.api_set_profile_address(ApiSetProfileAddress {
+            user_id: user_id.into().raw(),
+            enable: false,
+        })
+    }
+
+    fn delete_address<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+    ) -> impl Future<Output = DeleteAddressResponse<Self>> {
+        self.api_delete_my_address(user_id.into().raw())
+    }
+
+    async fn update_profile<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        mut profile: Profile,
+    ) -> UpdateProfileResponse<Self> {
+        let user_id = user_id.into().raw();
+        match self.api_update_profile(user_id, profile.clone()).await {
+            Ok(resp) => Ok(resp),
+            Err(e) => match e.bad_response().and_then(|e| {
+                e.chat_error()
+                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
+            }) {
+                Some(err) => {
+                    profile.display_name = err.valid_name.clone();
+                    self.api_update_profile(user_id, profile).await
+                }
+                None => Err(e),
+            },
+        }
+    }
+
+    fn set_contact_prefs<CID: Into<ContactId>>(
+        &self,
+        contact_id: CID,
+        preferences: Preferences,
+    ) -> impl Future<Output = SetContactPreferencesResponse<C>> {
+        self.api_set_contact_prefs(contact_id.into().raw(), preferences)
+    }
+
+    fn connection_plan<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        target: impl Into<String>,
+    ) -> impl Future<Output = ConnectionPlanResult<Self>> {
+        self.api_connect_plan(ApiConnectPlan {
+            user_id: user_id.into().raw(),
+            connect_target: Some(target.into()),
+            resolve_mode: PlanResolveMode::Unknown,
+            link_owner_sig: None,
+        })
+    }
+
+    async fn create_group<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        mut profile: GroupProfile,
+    ) -> CreateGroupResponse<Self> {
+        let user_id = user_id.into().raw();
+        match self
+            .api_new_group(ApiNewGroup::new(user_id, profile.clone()))
+            .await
+        {
+            Ok(resp) => Ok(resp),
+            Err(e) => match e.bad_response().and_then(|e| {
+                e.chat_error()
+                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
+            }) {
+                Some(err) => {
+                    profile.display_name = err.valid_name.clone();
+                    self.api_new_group(ApiNewGroup::new(user_id, profile)).await
+                }
+                None => Err(e),
+            },
+        }
+    }
+
+    async fn create_public_group<UID: Into<UserId>, I: IntoIterator<Item = RelayId>>(
+        &self,
+        user_id: UID,
+        relay_ids: I,
+        mut profile: GroupProfile,
+    ) -> CreatePublicGroupResponse<Self> {
+        let user_id = user_id.into().raw();
+        let relays: Vec<_> = relay_ids.into_iter().map(|id| id.raw()).collect();
+        match self
+            .api_new_public_group(ApiNewPublicGroup::new(
+                user_id,
+                relays.clone(),
+                profile.clone(),
+            ))
+            .await
+        {
+            Ok(resp) => Ok(resp),
+            Err(e) => match e.bad_response().and_then(|e| {
+                e.chat_error()
+                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
+            }) {
+                Some(err) => {
+                    profile.display_name = err.valid_name.clone();
+                    self.api_new_public_group(ApiNewPublicGroup::new(user_id, relays, profile))
+                        .await
+                }
+                None => Err(e),
+            },
+        }
+    }
+
+    fn set_auto_accept_member_contacts<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        on: bool,
+    ) -> impl Future<Output = SetAutoAcceptMemberContactsResponse<Self>> {
+        self.api_set_user_auto_accept_member_contacts(ApiSetUserAutoAcceptMemberContacts {
+            user_id: user_id.into().raw(),
+            on_off: on,
+        })
+    }
+
+    fn get_chats<UID: Into<UserId>>(
+        &self,
+        user_id: UID,
+        pagination: PaginationByTime,
+        query: ChatListQuery,
+    ) -> impl Future<Output = GetChatsResponse<Self>> {
+        self.api_get_chats(ApiGetChats::new(user_id.into().raw(), pagination, query))
     }
 
     async fn default_relays(&self) -> DefaultRelaysResponse<Self> {
