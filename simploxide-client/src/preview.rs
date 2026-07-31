@@ -149,12 +149,12 @@ impl ImagePreview {
             PreviewSource::Bytes(b) => try_encode_jpg_to_uri(&b),
             PreviewSource::DataUri(s) => validate_uri_preview(s),
             PreviewSource::File(path) => {
-                let bytes = read_plain_file(&path).await?;
+                let bytes = read_plain_file(&path, MAX_PREVIEW_BYTES).await?;
                 try_encode_jpg_to_uri(&bytes)
             }
             #[cfg(feature = "native_crypto")]
             PreviewSource::CryptoFile(file) => {
-                let bytes = read_crypto_file(file).await?;
+                let bytes = read_crypto_file(file, MAX_PREVIEW_BYTES).await?;
                 try_encode_jpg_to_uri(&bytes)
             }
         }
@@ -170,9 +170,9 @@ impl ImagePreview {
             PreviewSource::Default => return Ok(default()),
             PreviewSource::Bytes(b) => b,
             PreviewSource::DataUri(s) => return validate_uri_preview(s),
-            PreviewSource::File(path) => read_plain_file(&path).await?,
+            PreviewSource::File(path) => read_plain_file(&path, MAX_FILE_SIZE).await?,
             #[cfg(feature = "native_crypto")]
-            PreviewSource::CryptoFile(file) => read_crypto_file(file).await?,
+            PreviewSource::CryptoFile(file) => read_crypto_file(file, MAX_FILE_SIZE).await?,
         };
 
         if self.transcoder.is_enabled() {
@@ -454,15 +454,15 @@ enum PreviewSource {
     CryptoFile(CryptoFile),
 }
 
-async fn read_plain_file(path: &PathBuf) -> std::io::Result<Vec<u8>> {
+async fn read_plain_file(path: &PathBuf, size_limit: usize) -> std::io::Result<Vec<u8>> {
     let mut f = tokio::fs::File::open(&path).await?;
     let size_hint = f.seek(SeekFrom::End(0)).await?;
     f.seek(SeekFrom::Start(0)).await?;
     let size_hint: usize = util::cast_file_size(size_hint)?;
 
-    if size_hint > MAX_FILE_SIZE {
+    if size_hint > size_limit {
         return Err(util::file_is_too_large(format!(
-            "Size exceeds {MAX_FILE_SIZE} bytes"
+            "Size exceeds {size_limit} bytes"
         )));
     }
 
@@ -473,13 +473,13 @@ async fn read_plain_file(path: &PathBuf) -> std::io::Result<Vec<u8>> {
 }
 
 #[cfg(feature = "native_crypto")]
-async fn read_crypto_file(file: CryptoFile) -> std::io::Result<Vec<u8>> {
+async fn read_crypto_file(file: CryptoFile, size_limit: usize) -> std::io::Result<Vec<u8>> {
     let mut f = crate::crypto::fs::TokioMaybeCryptoFile::from_crypto_file(file).await?;
     let size_hint = f.size_hint().await?;
 
-    if size_hint > MAX_FILE_SIZE {
+    if size_hint > size_limit {
         return Err(util::file_is_too_large(format!(
-            "Size exceeds {MAX_FILE_SIZE} bytes"
+            "Size exceeds {size_limit} bytes"
         )));
     }
 
