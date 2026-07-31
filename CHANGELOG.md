@@ -1,3 +1,32 @@
+# v0.14.0 - High quality image preview generation and SimpleX-Chat 7.0.0 support
+
+- The redesigned transcoders don't require manual configuration anymore and
+  generate the best possible previews within the given byte budget
+  automatically.
+
+- Fixed a bug where `Bot::init` would result in "set contact address, removed
+  contact address" event sequence on restart
+
+- Full Bot-API parity: `ClientApiExt` type-safe wrappers fully cover the
+  existing `ClientApi` now. All methods are now exposed at the `bot` level too.
+
+- Ability to rename existing bots gracefully via `BotName::rename(["Old name
+  1", "Old name 2"], "New name")` instructs `Bot::init` to find and rename an
+  existing user before starting. New `BotName` type impls `From<S:
+  Into<String>>` so string literals can be kept as is in the old code.
+
+- `MessageBuilder` and `MulticastBuilder` gain a `.sign(bool)` method for
+  sending signed messages in groups.
+
+- `simploxide-ffi-core` `WorkerConfig` is now fully configurable from the
+  `simploxide-client`.
+
+- Update types to support SimpleX-Chat `v7.0.0`
+
+- Update `tokio-tungstenite` to `0.30`
+
+[Full diff](https://github.com/a1akris/simploxide/compare/v0.13.0...v0.14.0)
+
 # v0.13.0 - Remote control support
 
 - New `remote` module for accepting incoming SimpleX Desktop remote control

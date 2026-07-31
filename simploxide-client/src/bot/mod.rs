@@ -952,6 +952,8 @@ impl<C: ClientApi> Bot<C> {
         self.client.update_group_profile(group_id, profile)
     }
 
+    /// *WARN:* the current impl does full group scan because the Bot API doesn't expose a method to
+    /// get gropu by ID.
     pub async fn update_group_profile_with<GID, F>(
         &self,
         group_id: GID,
