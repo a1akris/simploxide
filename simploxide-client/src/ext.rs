@@ -779,12 +779,28 @@ where
         )
     }
 
-    fn update_group_profile<GID: Into<GroupId>>(
+    async fn update_group_profile<GID: Into<GroupId>>(
         &self,
         group_id: GID,
-        profile: GroupProfile,
-    ) -> impl Future<Output = UpdateGroupProfileResponse<Self>> {
-        self.api_update_group_profile(group_id.into().raw(), profile)
+        mut profile: GroupProfile,
+    ) -> UpdateGroupProfileResponse<Self> {
+        let group_id = group_id.into().raw();
+        match self
+            .api_update_group_profile(group_id, profile.clone())
+            .await
+        {
+            Ok(resp) => Ok(resp),
+            Err(e) => match e.bad_response().and_then(|e| {
+                e.chat_error()
+                    .and_then(|e| e.error().and_then(|e| e.invalid_display_name()))
+            }) {
+                Some(err) => {
+                    profile.display_name = err.valid_name.clone();
+                    self.api_update_group_profile(group_id, profile).await
+                }
+                None => Err(e),
+            },
+        }
     }
 
     fn set_group_custom_data<GID: Into<GroupId>>(
