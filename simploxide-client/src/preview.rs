@@ -12,16 +12,17 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const DEFAULT_PREVIEW: &str = "data:image/jpg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/\
+pub const DEFAULT_PREVIEW: &str = "data:image/jpg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/\
 2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/\
 2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCABVAIADASIAAhEBAxEB/\
 8QAFgABAQEAAAAAAAAAAAAAAAAAAAEE/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/EABgBAQEBAQEAAAAAAAAAAAAAAAMCAQUE/8QAFhEBAQEAAAAAAAAAAAAAAAAAAAER/\
 9oADAMBAAIRAxEAPwDaKF17qgo3UVBRWjqCjdFUFFaOoKN0VQUVo6go3R0FHi13ago3R1BRWjoijdHUFFSiqCjZR1BRUo6go3RVQHh13aAK1FAVuiqCipR1BRUo6go2UV\
 QUVKOoKK0dAHg13aCjdHUFFaOoKKlHUFFSiqCipR1BRsoqgoqUdBR4Nd2oKNlHUUFSjoAqUdAFSjoAqUVAFSjoAqUdAHPd2gCoOqAqDoA2DoAuCoAqDoAqCoAqDr//2Q==";
 
-const MAX_PREVIEW_BYTES: usize = 9350;
 #[cfg(feature = "multimedia")]
-const MAX_FILE_SIZE: usize = 20 * 1024 * 1024;
+pub const MAX_FILE_SIZE: usize = 20 * 1024 * 1024;
+
+const MAX_PREVIEW_BYTES: usize = 9350;
 
 /// Thumbnail for [`Image`](crate::messages::Image), [`Video`](crate::messages::Video), and
 /// [`Link`](crate::messages::Link) messages. Also used as bot profile pictures. The source is stored
@@ -207,11 +208,11 @@ pub mod transcoder {
 
     use super::PreviewError;
 
-    const THUMBNAIL_MAX_BYTES: usize = 10450;
-    const AVATAR_MAX_BYTES: usize = 9350;
+    pub const THUMBNAIL_MAX_BYTES: usize = 10450;
+    pub const AVATAR_MAX_BYTES: usize = 9350;
 
-    const THUMBNAIL_SIZES: [u16; 4] = [256, 192, 128, 96];
-    const AVATAR_SIZES: [u16; 4] = [160, 128, 96, 64];
+    pub const THUMBNAIL_SIZES: [u16; 4] = [256, 192, 128, 96];
+    pub const AVATAR_SIZES: [u16; 4] = [160, 128, 96, 64];
     const PREVIEW_QUALITIES: [u8; 4] = [85, 75, 60, 45];
 
     #[derive(Debug, Clone, Copy)]
@@ -314,7 +315,9 @@ pub mod transcoder {
 }
 
 #[cfg(feature = "multimedia")]
-pub use transcoder::Transcoder;
+pub use transcoder::{
+    AVATAR_MAX_BYTES, AVATAR_SIZES, THUMBNAIL_MAX_BYTES, THUMBNAIL_SIZES, Transcoder,
+};
 
 const URI_HEADER: &str = "data:image/jpg;base64,";
 
