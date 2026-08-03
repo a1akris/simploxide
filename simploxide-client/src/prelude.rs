@@ -5,6 +5,7 @@ pub use crate::{
     bot::{BotName, BotProfileSettings, BotSettings, Connection},
     client_api::*,
     commands::*,
+    est_size::EstSize as _,
     events::*,
     ext::{
         ClientApiExt as _, DeleteMode, FileSourceExt as _, FilterChatItems as _, GroupLinkExt as _,

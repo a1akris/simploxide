@@ -141,6 +141,7 @@ pub mod xftp;
 
 pub mod bot;
 pub mod dispatcher;
+pub mod est_size;
 pub mod ext;
 pub mod id;
 pub mod messages;
