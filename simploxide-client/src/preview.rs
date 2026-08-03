@@ -213,7 +213,12 @@ pub mod transcoder {
 
     pub const THUMBNAIL_SIZES: [u16; 4] = [256, 192, 128, 96];
     pub const AVATAR_SIZES: [u16; 4] = [160, 128, 96, 64];
-    const PREVIEW_QUALITIES: [u8; 4] = [85, 75, 60, 45];
+    const PREVIEW_QUALITIES: [[u8; 4]; 4] = [
+        [85, 75, 60, 50],
+        [90, 80, 65, 55],
+        [95, 85, 75, 65],
+        [100, 90, 80, 70],
+    ];
 
     #[derive(Debug, Clone, Copy)]
     pub struct Transcoder {
@@ -284,7 +289,7 @@ pub mod transcoder {
             let max_orig = orig_w.max(orig_h);
 
             let mut last_effective = u32::MAX;
-            for &size in &self.sizes {
+            for (tier, &size) in self.sizes.iter().enumerate() {
                 // Never upscale: images smaller than this slot use their natural dimensions.
                 let effective = (size as u32).min(max_orig);
                 if effective == last_effective {
@@ -299,7 +304,7 @@ pub mod transcoder {
                     img.to_rgb8()
                 };
 
-                for &quality in &PREVIEW_QUALITIES {
+                for &quality in &PREVIEW_QUALITIES[tier] {
                     bytes.clear();
                     JpegEncoder::new_with_quality(&mut bytes, quality).encode_image(&rgb)?;
 
