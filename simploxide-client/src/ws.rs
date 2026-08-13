@@ -4,8 +4,9 @@
 //! For lower-level access, [`connect`] and [`retry_connect`] return a [`Client`] and an
 //! [`EventStream`](crate::EventStream) directly.
 
-use std::sync::Arc;
+use std::{ffi, sync::Arc};
 
+use futures::TryFutureExt as _;
 pub use simploxide_ws_core::{
     self as core, Error as CoreError, Event as CoreEvent, Result as CoreResult, SimplexVersion,
     VersionError, tungstenite::Error as WsError,
@@ -185,8 +186,11 @@ impl From<RawClient> for Client {
 }
 
 impl Client {
-    pub fn version(&self) -> impl Future<Output = Result<SimplexVersion, VersionError>> {
-        self.inner.version()
+    pub async fn version(&self) -> Result<SimplexVersion, VersionError> {
+        tokio::time::timeout(std::time::Duration::from_secs(2), self.inner.version())
+            .await
+            .map_err(|_| VersionError::Timeout)
+            .flatten()
     }
 
     /// Initiates a graceful shutdown for the underlying web socket connection. See
@@ -320,43 +324,21 @@ impl std::error::Error for ConnectError {
 
 #[derive(Clone)]
 pub struct BotBuilder {
-    name: BotName,
-    port: u16,
-    retry_delay: std::time::Duration,
-    retries: usize,
-    auto_accept: Option<String>,
-    profile: Option<Profile>,
-    preferences: Option<Preferences>,
-    avatar: Option<ImagePreview>,
-    bio: Option<String>,
-    description: Option<String>,
+    inner: WsBotBuilder,
+    settings: BotSettings,
     #[cfg(feature = "cli")]
-    db_prefix: String,
-    #[cfg(feature = "cli")]
-    db_key: Option<String>,
-    #[cfg(feature = "cli")]
-    extra_args: Vec<std::ffi::OsString>,
+    cli: cli::SimplexCliBuilder,
 }
 
 impl BotBuilder {
     pub fn new(name: impl Into<BotName>, port: u16) -> Self {
+        let name = name.into();
+
         Self {
-            name: name.into(),
-            port,
-            retry_delay: std::time::Duration::from_secs(1),
-            retries: 5,
-            auto_accept: None,
-            profile: None,
-            preferences: None,
-            avatar: None,
-            bio: None,
-            description: None,
+            inner: WsBotBuilder::new(port),
             #[cfg(feature = "cli")]
-            db_prefix: "bot".into(),
-            #[cfg(feature = "cli")]
-            db_key: None,
-            #[cfg(feature = "cli")]
-            extra_args: Vec::new(),
+            cli: cli::SimplexCli::builder(name.current(), port),
+            settings: BotSettings::new(name),
         }
     }
 
@@ -366,109 +348,108 @@ impl BotBuilder {
     /// "{dir}/{prefix}" creates a {dir} with `{prefix}_agent.db` and `{prefix}_chat.db`;
     /// "{prefix}" creates `{prefix}_agent.db` and `{prefix}_chat.db` at the current dir
     pub fn db_prefix(mut self, prefix: impl Into<String>) -> Self {
-        self.db_prefix = prefix.into();
+        self.cli = self.cli.db_prefix(prefix);
         self
     }
 
     #[cfg(feature = "cli")]
     /// Database encryption key.
     pub fn db_key(mut self, key: impl Into<String>) -> Self {
-        self.db_key = Some(key.into());
+        self.cli = self.cli.db_key(key);
         self
     }
 
-    /// Delay between connection retry attempt. Default: 1s
-    pub fn connect_retry_delay(mut self, delay: std::time::Duration) -> Self {
-        self.retry_delay = delay;
-        self
-    }
-
-    /// Number of connection retry attempts. Default: 5
-    pub fn retries(mut self, n: usize) -> Self {
-        self.retries = n;
-        self
-    }
-
-    /// Create public address and auto accept users
-    pub fn auto_accept(mut self) -> Self {
-        self.auto_accept = Some(String::default());
-        self
-    }
-
-    /// Set a welcome message. This automatically creates a public address with enabled auto_accept
-    pub fn auto_accept_with(mut self, welcome_message: impl Into<String>) -> Self {
-        self.auto_accept = Some(welcome_message.into());
-        self
-    }
-
-    /// Set the bot avatar during initialisation
-    pub fn with_avatar(mut self, avatar: ImagePreview) -> Self {
-        self.avatar = Some(avatar);
-        self
-    }
-
-    /// Set the bot bio (`short_descr`) during initialisation. Ignored when [`Self::with_profile`] is also set.
-    pub fn with_bio(mut self, bio: impl Into<String>) -> Self {
-        self.bio = Some(bio.into());
-        self
-    }
-
-    /// Set the bot description during initialisation. Ignored when [`Self::with_profile`] is also set.
-    pub fn with_description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
-        self
-    }
-
-    /// Update/create the whole bot profile on launch
-    pub fn with_profile(mut self, profile: Profile) -> Self {
-        self.profile = Some(profile);
-        self
-    }
-
-    /// Apply these preferences to the bot's profile during initialisation.
-    pub fn with_preferences(mut self, prefs: Preferences) -> Self {
-        self.preferences = Some(prefs);
+    /// Pass extra argument to the `simplex-chat` process.
+    #[cfg(feature = "cli")]
+    pub fn arg(mut self, arg: impl Into<ffi::OsString>) -> Self {
+        self.cli = self.cli.arg(arg);
         self
     }
 
     /// Pass extra arguments to the `simplex-chat` process.
     #[cfg(feature = "cli")]
-    pub fn cli_args<I, S>(mut self, args: I) -> Self
+    pub fn args<J, S>(mut self, args: J) -> Self
     where
-        I: IntoIterator<Item = S>,
+        J: IntoIterator<Item = S>,
         S: Into<std::ffi::OsString>,
     {
-        self.extra_args.extend(args.into_iter().map(|s| s.into()));
+        self.cli = self.cli.args(args);
+        self
+    }
+
+    /// Delay between connection retry attempt. Default: 1s
+    pub fn connect_retry_delay(mut self, delay: std::time::Duration) -> Self {
+        self.inner.retry_delay = delay;
+        self
+    }
+
+    /// Number of connection retry attempts. Default: 5
+    pub fn retries(mut self, n: usize) -> Self {
+        self.inner.retries = n;
+        self
+    }
+
+    /// Create public address and auto accept users
+    pub fn auto_accept(mut self) -> Self {
+        self.settings.auto_accept = Some(String::default());
+        self
+    }
+
+    /// Set a welcome message. This automatically creates a public address with enabled auto_accept
+    pub fn auto_accept_with(mut self, welcome_message: impl Into<String>) -> Self {
+        self.settings.auto_accept = Some(welcome_message.into());
+        self
+    }
+
+    /// Set the bot avatar during initialisation
+    pub fn with_avatar(mut self, avatar: ImagePreview) -> Self {
+        self.settings.avatar = Some(avatar);
+        self
+    }
+
+    /// Set the bot bio (`short_descr`) during initialisation. Ignored when [`Self::with_profile`] is also set.
+    pub fn with_bio(mut self, bio: impl Into<String>) -> Self {
+        self.settings.bio = Some(bio.into());
+        self
+    }
+
+    /// Set the bot description during initialisation. Ignored when [`Self::with_profile`] is also set.
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.settings.description = Some(description.into());
+        self
+    }
+
+    /// Update/create the whole bot profile on launch
+    pub fn with_profile(mut self, profile: Profile) -> Self {
+        self.settings = self
+            .settings
+            .merge_profile_settings(BotProfileSettings::FullProfile(profile));
+
+        self
+    }
+
+    /// Apply these preferences to the bot's profile during initialisation.
+    pub fn with_preferences(mut self, prefs: Preferences) -> Self {
+        self.settings = self
+            .settings
+            .merge_profile_settings(BotProfileSettings::Preferences(prefs));
+
         self
     }
 
     /// Connect to an already-running `simplex-chat` instance.
-    pub async fn connect(self) -> Result<(Bot, EventStream), BotInitError> {
-        let url = format!("ws://127.0.0.1:{}", self.port);
+    pub fn connect(self) -> impl Future<Output = Result<(Bot, EventStream), BotInitError>> {
+        Self::connect_inner(self.inner, self.settings)
+    }
 
-        let (client, events) = retry_connect(url, self.retry_delay, self.retries)
-            .await
-            .map_err(BotInitError::Connect)?;
+    async fn connect_inner(
+        inner: WsBotBuilder,
+        settings: BotSettings,
+    ) -> Result<(Bot, EventStream), BotInitError> {
+        let (client, events) = inner.into_connection().await?;
 
         #[cfg(feature = "xftp")]
         let (client, events) = events.hook_xftp(client);
-
-        let settings = BotSettings {
-            display_name: self.name,
-            auto_accept: self.auto_accept,
-            profile_settings: match (self.profile, self.preferences) {
-                (Some(mut profile), Some(preferences)) => {
-                    profile.preferences = Some(preferences);
-                    Some(BotProfileSettings::FullProfile(profile))
-                }
-                (Some(profile), None) => Some(BotProfileSettings::FullProfile(profile)),
-                (None, Some(preferences)) => Some(BotProfileSettings::Preferences(preferences)),
-                (None, None) => None,
-            },
-            avatar: self.avatar,
-            bio: self.bio,
-            description: self.description,
-        };
 
         let bot = Bot::init(client, settings).await?;
 
@@ -478,26 +459,15 @@ impl BotBuilder {
         Ok((bot, events))
     }
 
-    /// Spawn `simplex-chat`, then connect and initialise.
+    /// Spawn `simplex-chat` CLI process, then connect and initialise.
     ///
     /// Returns `(bot, events, cli)`. The caller is responsible for calling
     /// [`cli::SimplexCli::kill`] after the bot finishes.
     #[cfg(feature = "cli")]
-    pub async fn launch(mut self) -> Result<(Bot, EventStream, cli::SimplexCli), BotInitError> {
-        let mut builder = cli::SimplexCli::builder(self.name.current(), self.port)
-            .db_prefix(std::mem::take(&mut self.db_prefix));
+    pub async fn launch(self) -> Result<(Bot, EventStream, cli::SimplexCli), BotInitError> {
+        let cli = gracefully_spawn_cli(self.cli).await?;
+        let (bot, events) = Self::connect_inner(self.inner, self.settings).await?;
 
-        if let Some(ref mut key) = self.db_key {
-            builder = builder.db_key(std::mem::take(key));
-        }
-
-        let cli = builder
-            .args(std::mem::take(&mut self.extra_args))
-            .spawn()
-            .await
-            .map_err(BotInitError::CliSpawn)?;
-
-        let (bot, events) = self.connect().await?;
         Ok((bot, events, cli))
     }
 }
@@ -506,31 +476,21 @@ impl BotBuilder {
 #[derive(Clone)]
 pub struct BotFarmBuilder {
     name: String,
-    port: u16,
-    retry_delay: std::time::Duration,
-    retries: usize,
+    inner: WsBotBuilder,
     #[cfg(feature = "cli")]
-    db_prefix: String,
-    #[cfg(feature = "cli")]
-    db_key: Option<String>,
-    #[cfg(feature = "cli")]
-    extra_args: Vec<std::ffi::OsString>,
+    cli: cli::SimplexCliBuilder,
 }
 
 #[cfg(feature = "farm")]
 impl BotFarmBuilder {
     pub fn new(name: impl Into<String>, port: u16) -> Self {
+        let name = name.into();
+
         Self {
-            name: name.into(),
-            port,
-            retry_delay: std::time::Duration::from_secs(1),
-            retries: 5,
             #[cfg(feature = "cli")]
-            db_prefix: "bot".into(),
-            #[cfg(feature = "cli")]
-            db_key: None,
-            #[cfg(feature = "cli")]
-            extra_args: Vec::new(),
+            cli: cli::SimplexCli::builder(name.clone(), port),
+            inner: WsBotBuilder::new(port),
+            name,
         }
     }
 
@@ -540,49 +500,55 @@ impl BotFarmBuilder {
     /// "{dir}/{prefix}" creates a {dir} with `{prefix}_agent.db` and `{prefix}_chat.db`;
     /// "{prefix}" creates `{prefix}_agent.db` and `{prefix}_chat.db` at the current dir
     pub fn db_prefix(mut self, prefix: impl Into<String>) -> Self {
-        self.db_prefix = prefix.into();
+        self.cli = self.cli.db_prefix(prefix);
         self
     }
 
     #[cfg(feature = "cli")]
     /// Database encryption key.
     pub fn db_key(mut self, key: impl Into<String>) -> Self {
-        self.db_key = Some(key.into());
+        self.cli = self.cli.db_key(key);
+        self
+    }
+
+    /// Pass extra argument to the `simplex-chat` process.
+    #[cfg(feature = "cli")]
+    pub fn arg(mut self, arg: impl Into<ffi::OsString>) -> Self {
+        self.cli = self.cli.arg(arg);
+        self
+    }
+
+    /// Pass extra arguments to the `simplex-chat` process.
+    #[cfg(feature = "cli")]
+    pub fn args<J, S>(mut self, args: J) -> Self
+    where
+        J: IntoIterator<Item = S>,
+        S: Into<std::ffi::OsString>,
+    {
+        self.cli = self.cli.args(args);
         self
     }
 
     /// Delay between connection retry attempt. Default: 1s
     pub fn connect_retry_delay(mut self, delay: std::time::Duration) -> Self {
-        self.retry_delay = delay;
+        self.inner.retry_delay = delay;
         self
     }
 
     /// Number of connection retry attempts. Default: 5
     pub fn retries(mut self, n: usize) -> Self {
-        self.retries = n;
-        self
-    }
-
-    #[cfg(feature = "cli")]
-    /// Pass extra arguments to the `simplex-chat` process.
-    pub fn cli_args<I, S>(mut self, args: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<std::ffi::OsString>,
-    {
-        self.extra_args.extend(args.into_iter().map(|s| s.into()));
+        self.inner.retries = n;
         self
     }
 
     /// Connect to an already-running `simplex-chat` instance.
-    pub async fn connect(self) -> Result<InitFarm, BotInitError> {
-        let url = format!("ws://127.0.0.1:{}", self.port);
+    pub fn connect(self) -> impl Future<Output = Result<InitFarm, BotInitError>> {
+        Self::connect_inner(self.name, self.inner)
+    }
 
-        let (client, events) = retry_connect(url, self.retry_delay, self.retries)
-            .await
-            .map_err(BotInitError::Connect)?;
-
-        let farm = crate::bot::BotFarm::init(self.name, client, events).await?;
+    async fn connect_inner(name: String, inner: WsBotBuilder) -> Result<InitFarm, BotInitError> {
+        let (client, events) = inner.into_connection().await?;
+        let farm = crate::bot::BotFarm::init(name, client, events).await?;
         Ok(farm)
     }
 
@@ -591,22 +557,51 @@ impl BotFarmBuilder {
     ///
     /// Returns `(farm, cli)`. The caller is responsible for calling
     /// [`cli::SimplexCli::kill`] after the farm finishes.
-    pub async fn launch(mut self) -> Result<(InitFarm, cli::SimplexCli), BotInitError> {
-        let mut builder = cli::SimplexCli::builder(&self.name, self.port)
-            .db_prefix(std::mem::take(&mut self.db_prefix));
-
-        if let Some(ref mut key) = self.db_key {
-            builder = builder.db_key(std::mem::take(key));
-        }
-
-        let cli = builder
-            .args(std::mem::take(&mut self.extra_args))
-            .spawn()
-            .await
-            .map_err(BotInitError::CliSpawn)?;
-
-        let farm = self.connect().await?;
+    pub async fn launch(self) -> Result<(InitFarm, cli::SimplexCli), BotInitError> {
+        let cli = gracefully_spawn_cli(self.cli).await?;
+        let farm = Self::connect_inner(self.name, self.inner).await?;
         Ok((farm, cli))
+    }
+}
+
+#[derive(Clone)]
+struct WsBotBuilder {
+    port: u16,
+    retry_delay: std::time::Duration,
+    retries: usize,
+}
+
+impl WsBotBuilder {
+    fn new(port: u16) -> Self {
+        Self {
+            port,
+            retry_delay: std::time::Duration::from_secs(1),
+            retries: 5,
+        }
+    }
+
+    fn into_connection(self) -> impl Future<Output = Result<(Client, EventStream), BotInitError>> {
+        let url = format!("ws://127.0.0.1:{}", self.port);
+        retry_connect(url, self.retry_delay, self.retries).map_err(BotInitError::Connect)
+    }
+}
+
+#[cfg(feature = "cli")]
+async fn gracefully_spawn_cli(
+    cli: cli::SimplexCliBuilder,
+) -> Result<cli::SimplexCli, BotInitError> {
+    let port = cli.port();
+
+    match cli.spawn().await {
+        Ok(cli) => Ok(cli),
+        Err(e) => {
+            let err_str = e.to_string();
+            if err_str.contains("(Address already in use)") {
+                Ok(cli::SimplexCli::external(port))
+            } else {
+                Err(BotInitError::CliSpawn(e))
+            }
+        }
     }
 }
 

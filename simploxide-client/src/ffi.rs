@@ -6,6 +6,7 @@
 //!
 //! Requires AGPL-3.0 and additional build configuration. See `simploxide-sxcrt-sys`.
 
+use futures::TryFutureExt as _;
 pub use simploxide_ffi_core::{
     CallError, DbOpts, DefaultUser, Event as CoreEvent, InitError as CoreInitError, RawClient,
     Result as CoreResult, SimplexVersion, VersionError, WorkerConfig,
@@ -181,32 +182,18 @@ fn parse_data<'de, 'r: 'de, D: 'de + serde::Deserialize<'de>>(
 /// Builder for an FFI-backed [`Bot`].
 #[derive(Clone)]
 pub struct BotBuilder {
-    display_name: BotName,
-    db_opts: DbOpts,
-    default_user: Option<DefaultUser>,
-    auto_accept: Option<String>,
-    profile: Option<Profile>,
-    preferences: Option<Preferences>,
-    avatar: Option<ImagePreview>,
-    bio: Option<String>,
-    description: Option<String>,
-    worker_config: WorkerConfig,
+    inner: FfiBotBuilder,
+    settings: BotSettings,
 }
 
 impl BotBuilder {
     /// Build a bot account (default).
     pub fn new(name: impl Into<BotName>, db_opts: DbOpts) -> Self {
+        let name = name.into();
+
         Self {
-            display_name: name.into(),
-            db_opts,
-            default_user: None,
-            auto_accept: None,
-            profile: None,
-            preferences: None,
-            avatar: None,
-            bio: None,
-            description: None,
-            worker_config: WorkerConfig::default(),
+            inner: FfiBotBuilder::new(name.current(), db_opts),
+            settings: BotSettings::new(name),
         }
     }
 
@@ -215,89 +202,72 @@ impl BotBuilder {
     /// By default the default user name matches the bot name. This setting allows to create
     /// default user different from an active bot
     pub fn with_default_user(mut self, user: DefaultUser) -> Self {
-        self.default_user = Some(user);
+        self.inner.default_user = Some(user);
         self
     }
 
     /// Create public address and auto accept users
     pub fn auto_accept(mut self) -> Self {
-        self.auto_accept = Some(String::default());
+        self.settings.auto_accept = Some(String::default());
         self
     }
 
     /// [Self::auto_accept] with a welcome message
     pub fn auto_accept_with(mut self, welcome_message: impl Into<String>) -> Self {
-        self.auto_accept = Some(welcome_message.into());
+        self.settings.auto_accept = Some(welcome_message.into());
         self
     }
 
     /// Set the bot avatar during initialisation
     pub fn with_avatar(mut self, avatar: ImagePreview) -> Self {
-        self.avatar = Some(avatar);
+        self.settings.avatar = Some(avatar);
         self
     }
 
     /// Set the bot bio (`short_descr`) during initialisation. Ignored when [`Self::with_profile`] is also set.
     pub fn with_bio(mut self, bio: impl Into<String>) -> Self {
-        self.bio = Some(bio.into());
+        self.settings.bio = Some(bio.into());
         self
     }
 
     /// Set the bot description during initialisation. Ignored when [`Self::with_profile`] is also set.
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
+        self.settings.description = Some(description.into());
         self
     }
 
     /// Update/create the whole bot profile on launch
     pub fn with_profile(mut self, profile: Profile) -> Self {
-        self.profile = Some(profile);
+        self.settings = self
+            .settings
+            .merge_profile_settings(BotProfileSettings::FullProfile(profile));
+
         self
     }
 
     /// Apply these preferences to the bot's profile during initialisation.
     pub fn with_preferences(mut self, prefs: Preferences) -> Self {
-        self.preferences = Some(prefs);
+        self.settings = self
+            .settings
+            .merge_profile_settings(BotProfileSettings::Preferences(prefs));
+
         self
     }
 
     /// Override FFI worker thread settings. See [`WorkerConfig`] for available options.
     pub fn with_worker_config(mut self, config: WorkerConfig) -> Self {
-        self.worker_config = config;
+        self.inner.worker_config = config;
         self
     }
 
     /// Initialise the SimpleX FFI runtime and return a ready-to-use bot.
     pub async fn launch(self) -> Result<(Bot, EventStream), BotInitError> {
-        let default_user = self
-            .default_user
-            .unwrap_or_else(|| DefaultUser::bot(self.display_name.current()));
-
-        let (client, events) = init_with_config(default_user, self.db_opts, self.worker_config)
-            .await
-            .map_err(BotInitError::Init)?;
+        let (client, events) = self.inner.into_instance().await?;
 
         #[cfg(feature = "xftp")]
         let (client, events) = events.hook_xftp(client);
 
-        let settings = BotSettings {
-            display_name: self.display_name,
-            auto_accept: self.auto_accept,
-            profile_settings: match (self.profile, self.preferences) {
-                (Some(mut profile), Some(preferences)) => {
-                    profile.preferences = Some(preferences);
-                    Some(BotProfileSettings::FullProfile(profile))
-                }
-                (Some(profile), None) => Some(BotProfileSettings::FullProfile(profile)),
-                (None, Some(preferences)) => Some(BotProfileSettings::Preferences(preferences)),
-                (None, None) => None,
-            },
-            avatar: self.avatar,
-            bio: self.bio,
-            description: self.description,
-        };
-
-        let bot = Bot::init(client, settings).await?;
+        let bot = Bot::init(client, self.settings).await?;
 
         let mut events = events;
         events.set_owner(bot.user_id());
@@ -309,20 +279,14 @@ impl BotBuilder {
 #[cfg(feature = "farm")]
 #[derive(Clone)]
 pub struct BotFarmBuilder {
-    display_name: String,
-    db_opts: DbOpts,
-    default_user: Option<DefaultUser>,
-    worker_config: WorkerConfig,
+    inner: FfiBotBuilder,
 }
 
 #[cfg(feature = "farm")]
 impl BotFarmBuilder {
     pub fn new(name: impl Into<String>, db_opts: DbOpts) -> Self {
         Self {
-            display_name: name.into(),
-            db_opts,
-            default_user: None,
-            worker_config: WorkerConfig::default(),
+            inner: FfiBotBuilder::new(name.into(), db_opts),
         }
     }
 
@@ -331,28 +295,57 @@ impl BotFarmBuilder {
     /// By default the default user name matches the bot name. This setting allows to create a user
     /// different from an active bot
     pub fn with_default_user(mut self, user: DefaultUser) -> Self {
-        self.default_user = Some(user);
+        self.inner.default_user = Some(user);
         self
     }
 
     /// Override FFI worker thread settings. See [`WorkerConfig`] for available options.
     pub fn with_worker_config(mut self, config: WorkerConfig) -> Self {
-        self.worker_config = config;
+        self.inner.worker_config = config;
         self
     }
 
     /// Initialise the SimpleX FFI runtime and return a farm
     pub async fn launch(self) -> Result<InitFarm, BotInitError> {
+        let display_name = self.inner.display_name();
+        let (client, events) = self.inner.into_instance().await?;
+
+        let bot = crate::bot::BotFarm::init(display_name, client, events).await?;
+        Ok(bot)
+    }
+}
+
+#[derive(Clone)]
+struct FfiBotBuilder {
+    display_name: String,
+    db_opts: DbOpts,
+    default_user: Option<DefaultUser>,
+    worker_config: WorkerConfig,
+}
+
+impl FfiBotBuilder {
+    fn new(display_name: String, db_opts: DbOpts) -> Self {
+        Self {
+            display_name,
+            db_opts,
+            default_user: None,
+            worker_config: WorkerConfig::default(),
+        }
+    }
+
+    fn into_instance(self) -> impl Future<Output = Result<(Client, EventStream), BotInitError>> {
         let default_user = self
             .default_user
             .unwrap_or_else(|| DefaultUser::bot(&self.display_name));
 
-        let (client, events) = init_with_config(default_user, self.db_opts, self.worker_config)
-            .await
-            .map_err(BotInitError::Init)?;
+        init_with_config(default_user, self.db_opts, self.worker_config).map_err(BotInitError::Init)
+    }
 
-        let bot = crate::bot::BotFarm::init(self.display_name, client, events).await?;
-        Ok(bot)
+    fn display_name(&self) -> String {
+        self.default_user
+            .as_ref()
+            .map(|u| u.display_name.clone())
+            .unwrap_or_else(|| self.display_name.clone())
     }
 }
 

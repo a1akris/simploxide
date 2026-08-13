@@ -1191,6 +1191,58 @@ impl BotSettings {
         self.profile_settings = Some(settings);
         self
     }
+
+    /// Applies `new_settings` keeping old values where `new_settings` fields are unset.
+    pub fn merge_profile_settings(mut self, new_settings: BotProfileSettings) -> Self {
+        let Some(old_settings) = self.profile_settings else {
+            return self.with_profile_settings(new_settings);
+        };
+
+        match (old_settings, new_settings) {
+            (
+                BotProfileSettings::FullProfile(old_profile),
+                BotProfileSettings::FullProfile(new_profile),
+            ) => {
+                self.profile_settings = Some(BotProfileSettings::FullProfile(merge_profiles(
+                    old_profile,
+                    new_profile,
+                )));
+
+                self
+            }
+            (
+                BotProfileSettings::FullProfile(mut old_profile),
+                BotProfileSettings::Preferences(new_preferences),
+            ) => {
+                old_profile.preferences =
+                    merge_opt_preferences(old_profile.preferences, Some(new_preferences));
+
+                self.profile_settings = Some(BotProfileSettings::FullProfile(old_profile));
+                self
+            }
+            (
+                BotProfileSettings::Preferences(old_preferences),
+                BotProfileSettings::FullProfile(mut new_profile),
+            ) => {
+                new_profile.preferences =
+                    merge_opt_preferences(Some(old_preferences), new_profile.preferences);
+
+                self.profile_settings = Some(BotProfileSettings::FullProfile(new_profile));
+                self
+            }
+            (
+                BotProfileSettings::Preferences(old_preferences),
+                BotProfileSettings::Preferences(new_preferences),
+            ) => {
+                self.profile_settings = Some(BotProfileSettings::Preferences(merge_preferences(
+                    old_preferences,
+                    new_preferences,
+                )));
+
+                self
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1395,4 +1447,41 @@ fn extract_preferences(preferences: &mut Option<Preferences>) -> Preferences {
             undocumented: Default::default(),
         },
     }
+}
+
+fn merge_profiles(mut old: Profile, new: Profile) -> Profile {
+    old.display_name = new.display_name;
+    old.full_name = new.full_name;
+    old.short_descr = new.short_descr.or(old.short_descr);
+    old.description = new.description.or(old.description);
+    old.image = new.image.or(old.image);
+    old.contact_link = new.contact_link.or(old.contact_link);
+    old.preferences = merge_opt_preferences(old.preferences, new.preferences);
+    old.peer_type = new.peer_type.or(old.peer_type);
+    old.badge = new.badge.or(old.badge);
+    old.contact_domain = new.contact_domain.or(old.contact_domain);
+
+    old
+}
+
+fn merge_opt_preferences(
+    old: Option<Preferences>,
+    new: Option<Preferences>,
+) -> Option<Preferences> {
+    match (old, new) {
+        (Some(old_prefs), Some(new_prefs)) => Some(merge_preferences(old_prefs, new_prefs)),
+        (old_prefs, new_prefs) => new_prefs.or(old_prefs),
+    }
+}
+
+fn merge_preferences(mut old: Preferences, new: Preferences) -> Preferences {
+    old.timed_messages = new.timed_messages.or(old.timed_messages);
+    old.full_delete = new.full_delete.or(old.full_delete);
+    old.reactions = new.reactions.or(old.reactions);
+    old.voice = new.voice.or(old.voice);
+    old.files = new.files.or(old.files);
+    old.calls = new.calls.or(old.calls);
+    old.sessions = new.sessions.or(old.sessions);
+    old.commands = new.commands.or(old.commands);
+    old
 }

@@ -29,7 +29,7 @@ fullcli = ["cli", "native_crypto", "cancellation", "multimedia", "xftp", "farm"]
 fullffi = ["ffi", "native_crypto", "cancellation", "multimedia", "xftp", "farm"]
 multimedia = ["dep:image"]
 native_crypto = ["crypto", "dep:salsa20", "dep:poly1305", "dep:subtle"]
-websocket = ["dep:simploxide-ws-core"]
+websocket = ["dep:simploxide-ws-core", "tokio/time"]
 xftp = ["dep:dashmap", "dep:rustc-hash"]
 
 [dependencies]
