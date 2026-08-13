@@ -27,7 +27,8 @@ serde_json.workspace = true
 serde.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
 
+rustc-hash = "2"
+simploxide-core = { version = "0.8.0", path = "../simploxide-core" }
+tokio-stream = "0.1"
 tokio-tungstenite = { version = "0.30", default-features = false, features = ["connect"] }
 tokio-util = "0.7"
-tokio-stream = "0.1"
-simploxide-core = { version = "0.8.0", path = "../simploxide-core" }

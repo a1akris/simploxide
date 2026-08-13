@@ -4,7 +4,7 @@ use crate::transmission;
 
 use super::{Error, RequestId, Response, Result, ShutdownEmitter};
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite;
 use tokio_util::sync::CancellationToken;
@@ -255,7 +255,7 @@ enum ClientCommand {
 
 #[derive(Default)]
 struct InnerRouter {
-    table: HashMap<RequestId, Responder>,
+    table: rustc_hash::FxHashMap<RequestId, Responder>,
 }
 
 impl InnerRouter {

@@ -187,7 +187,7 @@ impl SimplexCliBuilder {
         // Ctrl-C still kills all child processes on Linux by default dropping the web socket
         // connection and interrupting the graceful shutdown logic. This call "unlinks" CLI from
         // its parent process allowing the graceful shutdown to complete.
-        #[cfg(all(unix))]
+        #[cfg(unix)]
         cmd.process_group(0);
 
         cmd.arg("-d")
