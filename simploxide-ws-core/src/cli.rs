@@ -1,13 +1,11 @@
 pub use simploxide_core::SimplexVersion;
 
-use tokio::process::{Child, Command};
-
-use std::{
-    ffi::OsString,
-    io,
-    iter::{Chain, Empty, Once},
-    process::Stdio,
+use tokio::{
+    io::AsyncReadExt as _,
+    process::{Child, Command},
 };
+
+use std::{ffi::OsString, io, process::Stdio};
 
 /// An instance representing the running SimpleX CLI. Ensure to call [`SimplexCli::kill`] manually
 /// to avoid zombie/hang processes on Linux. The Drop impl tries its best to reap the process if it
@@ -21,12 +19,22 @@ use std::{
 pub struct SimplexCli {
     handle: Option<Child>,
     port: u16,
-    version: SimplexVersion,
+    version: Option<SimplexVersion>,
 }
 
 impl SimplexCli {
     const MIN_SUPPORTED_VERSION: SimplexVersion = simploxide_core::MIN_SUPPORTED_VERSION;
     const MAX_SUPPORTED_VERSION: SimplexVersion = simploxide_core::MAX_SUPPORTED_VERSION;
+
+    /// Represents an external CLI process running on the `port`. [`Self::kill`] will be no-op and
+    /// [`Self::version`] won't be known for this instance.
+    pub fn external(port: u16) -> Self {
+        Self {
+            port,
+            handle: None,
+            version: None,
+        }
+    }
 
     /// Begin building a [`SimplexCli`] that will spawn a `simplex-chat` process.
     ///
@@ -37,7 +45,7 @@ impl SimplexCli {
             default_bot_name: default_bot_name.into(),
             db_path: "bot".into(),
             db_key: None,
-            extra_args: std::iter::empty(),
+            extra_args: vec![],
         }
     }
 
@@ -45,8 +53,10 @@ impl SimplexCli {
         self.port
     }
 
-    pub fn version(&self) -> &SimplexVersion {
-        &self.version
+    /// `None` for external CLI process. Use `.version` method of the client to get the external
+    /// CLI version.
+    pub fn version(&self) -> Option<SimplexVersion> {
+        self.version
     }
 
     /// Kills the child process and waits for it to exit.
@@ -86,18 +96,16 @@ impl Drop for SimplexCli {
 ///     .spawn()
 ///     .await?;
 /// ```
-pub struct SimplexCliBuilder<I = Empty<OsString>> {
+#[derive(Clone)]
+pub struct SimplexCliBuilder {
     port: u16,
     default_bot_name: String,
     db_path: String,
     db_key: Option<String>,
-    extra_args: I,
+    extra_args: Vec<OsString>,
 }
 
-impl<I> SimplexCliBuilder<I>
-where
-    I: Iterator<Item = OsString>,
-{
+impl SimplexCliBuilder {
     /// Sets the path to the SimpleX database directory (defaults to `"."`).
     pub fn db_prefix(mut self, path: impl Into<String>) -> Self {
         self.db_path = path.into();
@@ -111,28 +119,25 @@ where
     }
 
     /// Adds an extra command argument
-    pub fn arg(self, arg: impl Into<OsString>) -> SimplexCliBuilder<Chain<I, Once<OsString>>> {
-        SimplexCliBuilder {
-            port: self.port,
-            default_bot_name: self.default_bot_name,
-            db_path: self.db_path,
-            db_key: self.db_key,
-            extra_args: self.extra_args.chain(std::iter::once(arg.into())),
-        }
+    pub fn arg(mut self, arg: impl Into<OsString>) -> Self {
+        self.extra_args.push(arg.into());
+        self
     }
 
     /// Adds multiple extra command arguments
-    pub fn args<J>(self, args: J) -> SimplexCliBuilder<Chain<I, J::IntoIter>>
+    pub fn args<J, S>(mut self, args: J) -> Self
     where
-        J: IntoIterator<Item = OsString>,
+        J: IntoIterator<Item = S>,
+        S: Into<OsString>,
     {
-        SimplexCliBuilder {
-            port: self.port,
-            default_bot_name: self.default_bot_name,
-            db_path: self.db_path,
-            db_key: self.db_key,
-            extra_args: self.extra_args.chain(args),
-        }
+        self.extra_args
+            .extend(args.into_iter().map(|arg| arg.into()));
+
+        self
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
     }
 
     /// Spawns the `simplex-chat` process and returns a [`SimplexCli`] handle.
@@ -176,13 +181,13 @@ where
         let mut cmd = Command::new(sxc_cmd);
         cmd.stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null());
+            .stderr(Stdio::piped());
 
         // `simploxide` users may install Ctrl-C handlers to handle graceful shutdown. However,
         // Ctrl-C still kills all child processes on Linux by default dropping the web socket
-        // connection interrupting the graceful shutdown logic. This call "unlinks" CLI from its
-        // parent process allowing the graceful shutdown phase to complete
-        #[cfg(unix)]
+        // connection and interrupting the graceful shutdown logic. This call "unlinks" CLI from
+        // its parent process allowing the graceful shutdown to complete.
+        #[cfg(all(unix))]
         cmd.process_group(0);
 
         cmd.arg("-d")
@@ -190,7 +195,8 @@ where
             .arg("-p")
             .arg(self.port.to_string())
             .arg("--create-bot-display-name")
-            .arg(&self.default_bot_name);
+            .arg(&self.default_bot_name)
+            .arg("--yes-migrate");
 
         if let Some(ref key) = self.db_key {
             cmd.arg("-k").arg(key);
@@ -199,20 +205,24 @@ where
         cmd.args(self.extra_args);
 
         let mut handle = cmd.spawn()?;
+        let mut stderr = handle.stderr.take().expect("stderr is piped");
 
         if let Ok(ret) =
             tokio::time::timeout(std::time::Duration::from_secs(2), handle.wait()).await
         {
             let exit = ret?;
+            let mut errors = String::with_capacity(4096);
+            let _ = stderr.read_to_string(&mut errors).await;
+
             return Err(io::Error::other(format!(
-                "SimpleX-CLI terminated unexpectedly: {exit}"
+                "SimpleX-CLI terminated unexpectedly: {exit}\n==== STDERR ====\n{errors}"
             )));
         }
 
         Ok(SimplexCli {
             handle: Some(handle),
             port: self.port,
-            version,
+            version: Some(version),
         })
     }
 }

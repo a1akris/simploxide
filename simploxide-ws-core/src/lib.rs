@@ -215,11 +215,12 @@ impl RawClient {
     /// response as normal. If `disconnect` wins first, the `send` future will receive
     /// [`tungstenite::Error::AlreadyClosed`].
     ///
-    /// However, in the second case the request could have already been buffered and delivered to the
-    /// server by another thread while `disconnect` was executing on the current thread, meaning the
-    /// send command ran even though the client received an error. Do not use `AlreadyClosed` as a
-    /// proof that the command was not executed. To guarantee ordering, await all `send` futures to
-    /// completion before calling `disconnect`.
+    /// However, in the second case the request could have already been buffered and delivered to
+    /// the server by another thread while `disconnect` was executing on the current thread,
+    /// meaning the send command ran even though the client received an error. Thus `AlreadyClosed`
+    /// doesn't tell that the command wasn't executed, it only tells that the response wasn't
+    /// received because web socket connection was dropped. `.await` all `send` futures to
+    /// completion before calling `disconnect` to avoid this confusion.
     pub fn disconnect(mut self) -> impl Future<Output = ()> {
         self.router.shutdown();
         async move {
@@ -233,6 +234,7 @@ pub enum VersionError {
     Ws(Error),
     InvalidJson(serde_json::Error),
     ParseError(String),
+    Timeout,
 }
 
 impl From<Error> for VersionError {
@@ -252,6 +254,9 @@ impl std::fmt::Display for VersionError {
                     "Cannot parse version, expected format: '<major>.<minor>.<patch>.<hotfix>', got {s:?}"
                 )
             }
+            Self::Timeout => {
+                write!(f, "Cannot get version, request timed out")
+            }
         }
     }
 }
@@ -261,7 +266,7 @@ impl std::error::Error for VersionError {
         match self {
             Self::Ws(e) => Some(e),
             Self::InvalidJson(e) => Some(e),
-            Self::ParseError(_) => None,
+            Self::ParseError(_) | Self::Timeout => None,
         }
     }
 }
