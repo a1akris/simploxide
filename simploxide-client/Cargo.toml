@@ -45,7 +45,7 @@ simploxide-ws-core = { version = "0.5.0", path = "../simploxide-ws-core", option
 simploxide-ffi-core = { version = "0.5.0", path = "../simploxide-ffi-core", optional = true }
 simploxide-api-types = { version = "0.12.0", path = "../simploxide-api-types" }
 
-base64 = "0.22"
+base64 = "0.23"
 poly1305 = { version = "0.9", features = ["zeroize"], optional = true }
 rand = { version = "0.10", optional = true }
 salsa20 = { version = "0.11", features = ["zeroize"], optional = true }
